@@ -1,10 +1,12 @@
 # Raspberry Pi to Roon Network Bridge
+These are my notes for turning a Raspberry Pi running Raspberry Pi OS into a Roon network bridge, complete with support for the Flirc USB IR Receiver
 
 ## Basics for IR support on a Raspberry Pi
-These are my notes for turning a Raspberry Pi running Raspberry Pi OS into a Roon network bridge, complete with support for the Flirc USB IR Receiver
+Although RoPieee includes support for the Flirc USB IR Receiver, you may have valid reasons for using a different operating system. That's the problem this guide aims to solve. Regardless, to get started, you'll need to purchase the Flirc USB IR Receiver. Here's a link to purchase that also includes the required downloads for configuration:
+
 https://flirc.tv/products/flirc-usb-receiver
 
-The IR receiver allows the Raspberry Pi to receive events from a an IR remote control with a 5-way controller plus the "Back" button. This adds support for the following commands:
+This IR receiver allows the Raspberry Pi to receive events from a an IR remote control with a 5-way controller plus the "Back" button. This adds support for the following commands:
 - KEY_UP
 - KEY_DOWN
 - KEY_LEFT
