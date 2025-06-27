@@ -183,6 +183,7 @@ EOT
 ```
 
 ## Prepare and test roon-ir-remote
+```
 cd roon-ir-remote
 patch -p1 roon-ir-remote.patch
 pyenv virtualenv roon-ir-remote
@@ -191,6 +192,7 @@ pip3 install --upgrade pip pylint pytest
 pip3 install -r requirements.txt
 python roon_remote.py
 ```
+
 The first time the program tries to connec to your Roon Server, it will wait for you to authorize the extension. You'll do this on the Extensions tab of Roon Settings. If this fails, just type CTRL-C and try the command again.
 
 Play some music in Roon and test the 5-way controller to make sure things are working. You should be able to control the volume (if your zone supports it), skip to the next and previous track, and start/stop playback. When you are finished testing, type CTRL-C.
