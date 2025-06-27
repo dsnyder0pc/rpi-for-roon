@@ -148,7 +148,8 @@ index 64a8317..db5ead8 100644
 EOT
 ```
 
-## Create a config file for your Roon environment. To do this, it's important that you provide values to the two variables to match your environment and Roon zone:
+## Create a config file for your Roon environment
+To do this, it's important that you provide values to the two variables to match your environment and Roon zone:
 ```
 MY_EMAIL_ADDRESS="Put your email address here"
 MY_ROON_ZONE="Enter Roon zone name here EXACTLY as it is spelled in the Roon UI"
@@ -179,13 +180,23 @@ cat <<EOT> roon-ir-remote/app_info.json
   }
 }
 EOT
+```
+
+## Prepare and test roon-ir-remote
 cd roon-ir-remote
 patch -p1 roon-ir-remote.patch
 pyenv virtualenv roon-ir-remote
 pyenv activate roon-ir-remote
 pip3 install --upgrade pip pylint pytest
-pip3 install -r requirements.txt 
+pip3 install -r requirements.txt
+python roon_remote.py
+```
+The first time the program tries to connec to your Roon Server, it will wait for you to authorize the extension. You'll do this on the Extensions tab of Roon Settings. If this fails, just type CTRL-C and try the command again.
 
+Play some music in Roon and test the 5-way controller to make sure things are working. You should be able to control the volume (if your zone supports it), skip to the next and previous track, and start/stop playback. When you are finished testing, type CTRL-C.
+
+## Create a systemd service for roon-ir-remote so that it runs in the background
+```
 cat <<EOT | sudo tee /etc/systemd/system/roon-ir-remote.service
 [Unit]
 Description=Roon IR Remote Service
@@ -217,18 +228,7 @@ RestartSec=5
 # This tells systemd to start the service during the normal multi-user boot process
 WantedBy=multi-user.target
 EOT
-```
 
-## Test roon-ir-remote
-```
-python roon_remote.py
-```
-The first time the program tries to connec to your Roon Server, it will wait for you to authorize the extension. You'll do this on the Extensions tab of Roon Settings. If this fails, just type CTRL-C and try the command again.
-
-Play some music in Roon and test the 5-way controller to make sure things are working. You should be able to control the volume (if your zone supports it), skip to the next and previous track, and start/stop playback. When you are finished testing, type CTRL-C.
-
-## Create a systemd service for roon-ir-remote so that it runs in the background
-```
 sudo systemctl daemon-reload
 sudo systemctl enable roon-ir-remote.service
 sudo systemctl start roon-ir-remote.service
