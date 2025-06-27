@@ -72,7 +72,7 @@ sudo bash ./roonbridge-installer-linuxarmv8.sh
 ## Prepare and patch Sebastian Mangels' roon-ir-remote software
 ```
 git clone https://github.com/smangels/roon-ir-remote.git
-cat <<'EOT' > roon-ir-remote.patch
+cat <<'EOT' > roon-ir-remote/roon-ir-remote.patch
 diff --git a/roon_remote.py b/roon_remote.py
 index 64a8317..db5ead8 100644
 --- a/roon_remote.py
