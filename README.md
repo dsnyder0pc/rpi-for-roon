@@ -185,7 +185,7 @@ EOT
 ## Prepare and test roon-ir-remote
 ```
 cd roon-ir-remote
-patch -p1 roon-ir-remote.patch
+patch -p1 < roon-ir-remote.patch
 pyenv virtualenv roon-ir-remote
 pyenv activate roon-ir-remote
 pip3 install --upgrade pip pylint pytest
