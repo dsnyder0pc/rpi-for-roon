@@ -194,7 +194,7 @@ pip3 install -r requirements.txt
 python roon_remote.py
 ```
 
-The first time the program tries to connec to your Roon Server, it will wait for you to authorize the extension. You'll do this on the Extensions tab of Roon Settings. If this fails, just type CTRL-C and try running it again:
+The first time the program tries to connect to your Roon Server, it will wait for you to authorize the extension. You'll do this on the Extensions tab of Roon Settings. If this fails, just type CTRL-C and try running it again:
 
 ```
 python roon_remote.py
