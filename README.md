@@ -14,11 +14,11 @@ This IR receiver allows the Raspberry Pi to receive events from a an IR remote c
 - KEY_ENTER
 - KEY_ESC
 
-These commands can be mapped to actions applied to a specific Roon zone, giving you the ability to use almost any IR remote control with a 5-way controller to implement Play/Pause/Skip/Stop plus volume Up/Down
+These commands can be mapped to actions applied to a specific Roon zone, giving you the ability to use almost any IR remote control with a 5-way controller to implement Play/Pause/Skip/Stop plus volume Up/Down in Roon.
 
 This works by first programming the Flirc USB with these six IR codes from your remote. You'll use software from the "Downloads" page on the flirc website above.
 
-After programming the Flirc USB (typically using a Windows or macOS PC), you'll move it to the Raspberry Pi. To verify that all is working as expected, run these commands:
+After programming the Flirc USB (typically using a Windows or macOS PC), you'll move it to the Raspberry Pi. To verify that all is working as expected, SSH into your Raspberry Pi and run these commands:
 ```
 sudo apt install -y evtest
 evtest
