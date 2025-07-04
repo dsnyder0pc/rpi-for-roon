@@ -41,7 +41,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 **Optional Upgrades:**
 * [iFi Audio iPower Elite](https://www.amazon.com/gp/product/B08S622SM7/) (to provide clean power to the Diretta Target)
-* [Flirc USB IR Receiver](https://www.amazon.com/gp/product/B0DHG99WLJ/) (to add remote control capabilities to the Diretta Host)
+* [Flirc USB IR Receiver and Remote](https://www.amazon.com/gp/product/B0DHG99WLJ/) (to add remote control capabilities to the Diretta Host)
 
 #### Software & Licensing Costs
 
