@@ -24,11 +24,11 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 A complete bill of materials is provided below. While other parts can be substituted, using these specific components improves the chances of a successful build.
 
 **Core Components (from [pishop.us](https://www.pishop.us/) or similar supplier):**
-* 2 x Raspberry Pi 4 Model B/4GB
-* 2 x MicroSD Card Extreme Pro - 32 GB
-* 2 x Raspberry Pi 4 Case, Red/White
-* 2 x Raspberry Pi 45W USB-C Power Supply - White
-* 1 x Aluminum Heatsink for Raspberry Pi 4B (3-Pack)
+* 2 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/)
+* 2 x Aluminum Heatsink Sets for Raspberry Pi 4B (check the box to add heatsinks on the PRi 4 producet page)
+* 2 x [MicroSD Card Extreme Pro - 32 GB](https://www.pishop.us/product/microsd-card-extreme-pro-32-gb-class-10-blank/)
+* 2 x [Raspberry Pi 4 Case, Red/White](https://www.pishop.us/product/raspberry-pi-4-case-red-white/)
+* 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
 
 **Additional Networking Components:**
 * 1 x [Cable Matters USB 3.0 to Ethernet Adapter](https://www.amazon.com/dp/B00AQM8586) (for the Diretta Host)
