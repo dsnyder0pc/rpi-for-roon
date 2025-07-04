@@ -29,6 +29,8 @@ A complete bill of materials is provided below. While other parts can be substit
 * 2 x [MicroSD Card Extreme Pro - 32 GB](https://www.pishop.us/product/microsd-card-extreme-pro-32-gb-class-10-blank/)
 * 2 x [Raspberry Pi 4 Case, Red/White](https://www.pishop.us/product/raspberry-pi-4-case-red-white/)
 * 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
+* 1 x [Micro-HDMI to Standard HDMI (A/M), 1m Cable, White](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
+* 1 x [Raspberry Pi Official Keyboard - Red/White](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 
 **Additional Networking Components:**
 * 1 x [Cable Matters USB 3.0 to Ethernet Adapter](https://www.amazon.com/dp/B00AQM8586) (for the Diretta Host)
