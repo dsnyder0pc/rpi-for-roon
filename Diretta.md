@@ -29,12 +29,12 @@ A complete bill of materials is provided below. While other parts can be substit
 * 2 x [MicroSD Card Extreme Pro - 32 GB](https://www.pishop.us/product/microsd-card-extreme-pro-32-gb-class-10-blank/)
 * 2 x [Raspberry Pi 4 Case, Red/White](https://www.pishop.us/product/raspberry-pi-4-case-red-white/)
 * 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
-* 1 x [Micro-HDMI to Standard HDMI (A/M), 1m Cable, White](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
+* 1 x [Micro-HDMI to Standard HDMI (A/M), 2m Cable, White](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Raspberry Pi Official Keyboard - Red/White](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 
 **Additional Networking Components:**
 * 1 x [Cable Matters USB 3.0 to Ethernet Adapter](https://www.amazon.com/dp/B00AQM8586) (for the Diretta Host)
-* 1 x [Short CAT6 Ethernet Patch Cable](https://www.amazon.com/dp/B00AJHCAPC) (for the point-to-point link)
+* 1 x [Short CAT6 Ethernet Patch Cable](https://www.amazon.com/Cable-Matters-Ethernet-Patch-White/dp/B0CP9WYXKS/) (for the point-to-point link)
 
 **Required Audio Component:**
 * 1 x USB DAC
@@ -104,7 +104,7 @@ sudo timedatectl set-timezone America/Phoenix
 
 #### 3.4. Create a New Administrative User
 
-It's good security practice to create your own user and disable the default one.
+Optional, but if you wish, you may create a new administrative user for yourself. For example, I'm using `dsnyder`
 
 ```bash
 # Create the new user (e.g., 'dsnyder')
@@ -131,7 +131,7 @@ For convenience, you can allow your new user to run `sudo` commands without a pa
 
 #### 3.6. Secure the Default User
 
-Remove the default `audiolinux` user from the `wheel` group to revoke its `sudo` privileges.
+Remove the default `audiolinux` user from the `wheel` group, which confers passwordless administrative access per the previous step. AudioLInux shipps with a curated set of commands that the default user can run without a password, and these are generally sufficient.
 
 1.  Edit the group file: `sudo vi /etc/group`
 2.  Find the line for the `wheel` group: `wheel:x:998:audiolinux,dsnyder`
@@ -144,10 +144,11 @@ Remove the default `audiolinux` user from the `wheel` group to revoke its `sudo`
 
 #### 4.1. Workaround for Pacman Update Issue
 
-A known issue can prevent the system from updating due to conflicting NVIDIA firmware files (even though the RPi doesn't use them). Move these files before updating.
+A [known issue](https://archlinux.org/news/linux-firmware-2025061312fe085f-5-upgrade-requires-manual-intervention/) can prevent the system from updating due to conflicting NVIDIA firmware files (even though the RPi doesn't use them). To progress with the system upgrade, first remove `linux-firmware`, then reinstall it as part of the upgrade:
 
 ```bash
-sudo mv -v /usr/lib/firmware/nvidia/ad10[3467] /root/
+sudo pacman -Rdd linux-firmware
+sudo pacman -Syu linux-firmware
 ```
 
 #### 4.2. Run System and Menu Updates
