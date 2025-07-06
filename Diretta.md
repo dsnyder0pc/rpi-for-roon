@@ -2,6 +2,13 @@
 
 This guide provides comprehensive, step-by-step instructions for configuring two Raspberry Pi devices as a dedicated Diretta Host and Diretta Target. This setup uses a direct, point-to-point Ethernet connection between the two devices for the ultimate in network isolation and audio performance.
 
+If you are located in the US, expect to pay around $432 in total to complete this build:
+- Hardware ($245)
+- One year AudioLinux subscription ($69)
+- Diretta Target license ($118)
+
+However, I highly recommend the remote control, which adds $63, bringing the total to **$495.**
+
 The **Diretta Host** will connect to your main network (for Roon Core, etc.) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC.
 
 ## Table of Contents
