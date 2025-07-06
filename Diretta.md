@@ -30,13 +30,13 @@ A complete bill of materials is provided below. While other parts can be substit
 * 2 x [Raspberry Pi 4 Case, Red/White](https://www.pishop.us/product/raspberry-pi-4-case-red-white/)
 * 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
 
+**Required Networking Components:**
+* 1 x [Plugable USB3 to Ethernet Adapter](https://www.amazon.com/dp/B00AQM8586) (for the Diretta Host)
+* 1 x [Short CAT6 Ethernet Patch Cable](https://www.amazon.com/Cable-Matters-Ethernet-Patch-White/dp/B0CP9WYXKS/) (for the point-to-point link)
+
 **Optional, but helpful for troubleshooting:**
 * 1 x [Micro-HDMI to Standard HDMI (A/M), 2m Cable, White](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Raspberry Pi Official Keyboard - Red/White](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
-
-**Additional Networking Components:**
-* 1 x [Plugable USB3 to Ethernet Adapter](https://www.amazon.com/dp/B00AQM8586) (for the Diretta Host)
-* 1 x [Short CAT6 Ethernet Patch Cable](https://www.amazon.com/Cable-Matters-Ethernet-Patch-White/dp/B0CP9WYXKS/) (for the point-to-point link)
 
 **Required Audio Component:**
 * 1 x USB DAC
