@@ -35,7 +35,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [Raspberry Pi Official Keyboard - Red/White](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 
 **Additional Networking Components:**
-* 1 x [Cable Matters USB 3.0 to Ethernet Adapter](https://www.amazon.com/dp/B00AQM8586) (for the Diretta Host)
+* 1 x [Plugable USB3 to Ethernet Adapter](https://www.amazon.com/dp/B00AQM8586) (for the Diretta Host)
 * 1 x [Short CAT6 Ethernet Patch Cable](https://www.amazon.com/Cable-Matters-Ethernet-Patch-White/dp/B0CP9WYXKS/) (for the point-to-point link)
 
 **Required Audio Component:**
