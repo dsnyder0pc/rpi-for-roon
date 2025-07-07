@@ -55,6 +55,10 @@ A complete bill of materials is provided below. While other parts can be substit
 **Required Audio Component:**
 * 1 x USB DAC
 
+**Required Build Tools:**
+* Laptop or desktop PC running Linux, macOS, or Microsoft Windows with [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install)
+* An SD or microSD card reader
+
 #### Software & Licensing Costs
 
 * **AudioLinux:** An "Unlimited" license is recommended, which is currently **$139**. This allows for installation on multiple devices within the same location.
