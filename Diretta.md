@@ -56,7 +56,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [iFi LAN iSilencer](https://www.amazon.com/iFi-LAN-iSilencer-Electrical-Ethernet/dp/B0BV72SW8V/) (LAN filtering for the Diretta Target)
 
 **Required Audio Component:**
-* 1 x USB DAC
+* 1 x USB DAC or DDC
 
 **Required Build Tools:**
 * Laptop or desktop PC running Linux, macOS, or Microsoft Windows with [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install)
