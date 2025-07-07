@@ -58,6 +58,7 @@ A complete bill of materials is provided below. While other parts can be substit
 **Required Build Tools:**
 * Laptop or desktop PC running Linux, macOS, or Microsoft Windows with [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install)
 * An SD or microSD card reader
+* An HDMI TV or display (optional, but useful for troubleshooting)
 
 #### Software & Licensing Costs
 
