@@ -160,6 +160,8 @@ Remove the default `audiolinux` user from the `wheel` group, which confers passw
 
 **At this point, reboot the device (`sudo reboot`). Log back in with your new user account before proceeding.**
 
+Repeat the above steps for the second Raspberry Pi once you're able to login to the first one.
+
 ### 4. System Updates (Perform on Both Devices)
 
 #### 4.1. Workaround for Pacman Update Issue
