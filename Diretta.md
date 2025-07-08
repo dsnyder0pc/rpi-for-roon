@@ -28,14 +28,12 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 
 #### Hardware
 
-A complete bill of materials is provided below. While other parts can be substituted, using these specific components improves the chances of a successful build.
+A complete bill of materials is provided below. While other parts can be substituted, using these specific components improves the chances of a successful build. In particular, although the Raspberry Pi 5 is often mentioned within the context of Diretta, Energy Efficient Ethernet (EEE), also known as IEEE 802.3az, can NOT be disabled on the RPi5. EEE can be a significant problem when using the Diretta Protocol because Diretta is highly sensitive to timing. It relies on consistent and predictable data flow between the Host (sending side) and Target (receiving side) to optimize audio quality. Therefore, until there's a hardware change or firmware fix, the RPi5 is not suitable for this build.
 
 **Core Components (from [pishop.us](https://www.pishop.us/) or similar supplier):**
-* 1 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/) (Diretta Host)
-* 1 x Aluminum Heatsink for Raspberry Pi 4B (3-Pack) (check the box to add heatsinks on the PRi 4 producet page)
-* 1 x [Raspberry Pi 4 Case, Red/White](https://www.pishop.us/product/raspberry-pi-4-case-red-white/)
-* 1 x [Raspberry Pi 5/2GB](https://www.pishop.us/product/raspberry-pi-5-2gb/) (Diretta Target)
-* 1 x [Pi5 Passive Cooling Open CNC Case](https://www.pishop.us/product/pi5-passive-cooling-open-cnc-case-black/)
+* 2 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/) (Diretta Host)
+* 2 x Aluminum Heatsink for Raspberry Pi 4B (3-Pack) (check the box to add heatsinks on the PRi 4 producet page)
+* 2 x [Raspberry Pi 4 Case, Red/White](https://www.pishop.us/product/raspberry-pi-4-case-red-white/)
 * 2 x [MicroSD Card Extreme Pro - 32 GB](https://www.pishop.us/product/microsd-card-extreme-pro-32-gb-class-10-blank/)
 * 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
 
@@ -49,8 +47,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 **Optional Upgrades:**
 * 1 x [Flirc USB IR Receiver and Remote](https://www.amazon.com/gp/product/B0DHG99WLJ/) (to add remote control capabilities to the Diretta Host)
-* 1 x [Argon ONE V2 Aluminum Case for Raspberry Pi 4](https://www.amazon.com/Argon-Raspberry-Aluminum-Heatsink-Supports/dp/B07WP8WC3V/)
-* 1 x [Argon ONE V3 Raspberry Pi 5 Case](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/)
+* 2 x [Argon ONE V2 Aluminum Case for Raspberry Pi 4](https://www.amazon.com/Argon-Raspberry-Aluminum-Heatsink-Supports/dp/B07WP8WC3V/)
 * 1 x [AudioQuest Forest Ethernet Cable 0.75 M](https://www.amazon.com/AudioQuest-RJ-Forest-Ethernet-0-75m/dp/B0073H82U8/)
 * 1 x [iFi Audio iPower Elite](https://www.amazon.com/gp/product/B08S622SM7/) (to provide clean power to the Diretta Target)
 * 1 x [iFi LAN iSilencer](https://www.amazon.com/iFi-LAN-iSilencer-Electrical-Ethernet/dp/B0BV72SW8V/) (LAN filtering for the Diretta Target)
