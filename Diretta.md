@@ -28,10 +28,15 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 
 #### Hardware
 
-A complete bill of materials is provided below. While other parts can be substituted, using these specific components improves the chances of a successful build. In particular, although the Raspberry Pi 5 is often mentioned within the context of Diretta, Energy Efficient Ethernet (EEE), also known as IEEE 802.3az, can NOT be disabled on the RPi5. EEE can be a significant problem when using the Diretta Protocol because Diretta is highly sensitive to timing. It relies on consistent and predictable data flow between the Host (sending side) and Target (receiving side) to optimize audio quality. Therefore, until there's a hardware change or firmware fix, the RPi5 is not suitable for this build.
+A complete bill of materials is provided below. While other parts can be substituted, using these specific components improves the chances of a successful build.
+
+#### About Diretta and the Raspberry Pi 5
+Although the Raspberry Pi 5 is often mentioned within the context of Diretta, Energy Efficient Ethernet (EEE), also known as IEEE 802.3az, can NOT be disabled on the RPi5. EEE can be a significant problem when using the Diretta Protocol because Diretta is highly sensitive to timing and packet loss. It relies on consistent and predictable data flow between the Host (sending side) and Target (receiving side) to optimize audio quality. Therefore, until there's a hardware change or firmware fix, the RPi5 generally is not suitable for this build.
+
+However, it _may_ be possible, and even slightly advantageous, to use an RPi5 for the Diretta Target as long as the Diretta Host is an RPi4. My observation is that EEE in AudioLinux is disabled by default on the RPi4. When the two are directly connected RPi5 will see that its link partner (the RPi4) is not offering EEE, and therefore the entire link will be established without EEE being enabled.
 
 **Core Components (from [pishop.us](https://www.pishop.us/) or similar supplier):**
-* 2 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/) (Diretta Host)
+* 2 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/)
 * 2 x Aluminum Heatsink for Raspberry Pi 4B (3-Pack) (check the box to add heatsinks on the PRi 4 producet page)
 * 2 x [Raspberry Pi 4 Case, Red/White](https://www.pishop.us/product/raspberry-pi-4-case-red-white/)
 * 2 x [MicroSD Card Extreme Pro - 32 GB](https://www.pishop.us/product/microsd-card-extreme-pro-32-gb-class-10-blank/)
