@@ -31,9 +31,9 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 A complete bill of materials is provided below. While other parts can be substituted, using these specific components improves the chances of a successful build.
 
 #### About Diretta and the Raspberry Pi 5
-Although the Raspberry Pi 5 is often mentioned within the context of Diretta, Energy Efficient Ethernet (EEE), also known as IEEE 802.3az, can NOT be disabled on the RPi5. EEE can be a significant problem when using the Diretta Protocol because Diretta is highly sensitive to timing and packet loss. It relies on consistent and predictable data flow between the Host (sending side) and Target (receiving side) to optimize audio quality. Therefore, until there's a hardware change or firmware fix, the RPi5 generally is not suitable for this build.
+Although the Raspberry Pi 5 is often mentioned within the context of Diretta, Energy Efficient Ethernet (EEE), also known as IEEE 802.3az, can *not* be disabled on the RPi5. EEE can be a significant problem when using the Diretta Protocol because Diretta is highly sensitive to timing and packet loss. It relies on consistent and predictable data flow between the Host (sending side) and Target (receiving side) to optimize audio quality. Therefore, until there's a hardware change or firmware fix, the RPi5 generally is not suitable for this build.
 
-However, it _may_ be possible, and even slightly advantageous, to use an RPi5 for the Diretta Target as long as the Diretta Host is an RPi4. My observation is that EEE in AudioLinux is disabled by default on the RPi4. When the two are directly connected RPi5 will see that its link partner (the RPi4) is not offering EEE, and therefore the entire link will be established without EEE being enabled.
+However, it _may_ be possible, and even slightly advantageous, to use a RPi5 for the Diretta Target as long as the Diretta Host is a RPi4. My observation is that EEE in AudioLinux is disabled by default on the RPi4. When the two are directly connected, the RPi5 will see that its link partner (the RPi4) is not offering EEE, and therefore the entire link will be established without EEE being enabled.
 
 **Core Components (from [pishop.us](https://www.pishop.us/) or similar supplier):**
 * 2 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/)
