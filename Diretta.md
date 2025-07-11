@@ -400,9 +400,12 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
     * Select **INSTALL/UPDATE Roonbridge**.
     * The installation will proceed, and the Roon Bridge service will be enabled and started automatically upon completion.
 
-2.  **Reboot Both Devices:** For a clean start, `sudo reboot` both the Host and Target.
+2.  **Minimize disk I/O on the Diretta Target (optional but recommended for optimal performance)
+    * Chang `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
 
-3.  **Configure Roon:**
+3.  **Reboot Both Devices:** For a clean start, `sudo reboot` both the Host and Target.
+
+4.  **Configure Roon:**
     * Open Roon on your control device.
     * Go to `Settings` -> `Audio`.
     * Under the "Diretta" section, you should see your device. The name will be based on your DAC.
