@@ -400,7 +400,7 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
     * Select **INSTALL/UPDATE Roonbridge**.
     * The installation will proceed, and the Roon Bridge service will be enabled and started automatically upon completion.
 
-2.  **Minimize disk I/O on the Diretta Target (optional but recommended for optimal performance)
+2.  **Minimize disk I/O on the Diretta Target:** (optional but recommended for optimal performance)
     * Chang `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
 
 3.  **Reboot Both Devices:** For a clean start, `sudo reboot` both the Host and Target.
