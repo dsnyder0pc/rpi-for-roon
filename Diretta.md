@@ -742,6 +742,7 @@ Now, the fan will be controlled by the daemon, and the power button will have fu
 #### Step 7: Verify the service
 ```
 systemctl status argononed.service
+journalctl -u argononed.service -b
 ```
 
 #### Step 8: Review Fan Mode and Settings:
