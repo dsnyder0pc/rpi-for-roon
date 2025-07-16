@@ -229,6 +229,32 @@ In this section, we will create the network configuration files that will activa
     sudo systemctl enable iptables.service
     ```
 
+4.  **Disable Energy Efficient Ethernet on Diretta Host** (if using an RPi5 for the Target)
+
+    ```
+    sudo nano /etc/systemd/system/disable-eee.service
+    ```
+
+    Paste the following content into the file:
+    ```
+[Unit]
+Description=Disable EEE on eth0
+Wants=network.target
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/ethtool --set-eee end0 eee off
+
+[Install]
+WantedBy=multi-user.target
+    ```
+
+    Enable the service to apply this configuration change on boot:
+    ```
+    sudo systemctl enable disable-eee.service
+    ```
+
 #### 5.2. Pre-configure the Diretta Target
 
 On the **Diretta Target**, create the `end0.network` file. This configures its static IP and tells it to use the Diretta Host as its gateway for all internet traffic.
