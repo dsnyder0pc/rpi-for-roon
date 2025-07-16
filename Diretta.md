@@ -20,7 +20,8 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 6.  [Convenient & Secure SSH Access](#6-convenient--secure-ssh-access)
 7.  [Diretta Software Installation & Configuration](#7-diretta-software-installation--configuration)
 8.  [Final Steps & Roon Integration](#8-final-steps--roon-integration)
-9.  [Appendix: Optional IR Remote Control Setup](#9-appendix-optional-ir-remote-control-setup)
+9.  [Appendix 1: Optional IR Remote Control Setup](#9-appendix-1-optional-ir-remote-control-setup)
+10. [Appendix 2: ARGON One Fan Control](#10-appendix-2-argon-one-fan-control)
 
 ---
 
@@ -414,7 +415,7 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
 
 Your dedicated Diretta link is now fully configured for pristine, isolated audio playback.
 
-### 9. Appendix: Optional IR Remote Control Setup
+### 9. Appendix 1: Optional IR Remote Control Setup
 
 This appendix provides instructions for installing and configuring the optional Flirc USB IR receiver on the **Diretta Host**. This will allow you to control Roon playback (Play/Pause, Next/Previous Track) using a standard infrared remote via a Python script that directly reads the device events.
 
@@ -712,7 +713,7 @@ sudo journalctl -u roon-ir-remote.service -f
 #### Step 9: Profit\! 📈
 Congrats if you got all of this working. If not, go through it again and let me know where the process failed.
 
-### 10. Appendix: ARGON One Fan Control
+### 10. Appendix 2: ARGON One Fan Control
 If you decoded to use an ARGON One case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However AudioLinux is based on Arch Linux, so you'll have to follow these steps instead.
 
 #### Step 1: Skip the `argon1.sh` script in the manual
