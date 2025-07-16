@@ -244,6 +244,11 @@ Gateway=172.20.0.1
 DNS=172.16.8.1
 ```
 
+Add an /etc/hosts entry for the Diretta Host:
+```
+printf "172.20.0.1\tdiretta-host host\n" | sudo tee -a /etc/hosts
+```
+
 **Important:** Remove the old en.network file if present:
 ```
 sudo rm -fv /etc/systemd/network/en.network
