@@ -145,7 +145,7 @@ sudo passwd dsnyder
 For convenience, you can allow your new user to run `sudo` commands without a password.
 
 ```
-printf 'dsnyder\t\tALL = (ALL) NOPASSWD: ALL'\n | sudo tee /etc/sudoers.d/dsnyder
+printf 'dsnyder\t\tALL = (ALL) NOPASSWD: ALL\n' | sudo tee /etc/sudoers.d/dsnyder
 ```
 
 **At this point, reboot the device (`sudo reboot`). Log back in with your new user account before proceeding.**
