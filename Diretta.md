@@ -91,7 +91,8 @@ After flashing, you must configure each Raspberry Pi individually to avoid netwo
 3.  Once the first device has rebooted with its new unique configuration, power it down.
 4.  Now, power on the **second** Raspberry Pi and repeat **all of Section 3** for it.
 
-The default user is `audiolinux` with password `audiolinux0`.
+The default SSH user is `audiolinux` with password `audiolinux`.
+The default sudo/root password is `audiolinux0`.
 
 #### 3.1. Regenerate the Machine ID
 
@@ -710,3 +711,43 @@ sudo journalctl -u roon-ir-remote.service -f
 
 #### Step 9: Profit\! 📈
 Congrats if you got all of this working. If not, go through it again and let me know where the process failed.
+
+### 10. Appendix: ARGON One Fan Control
+If you decoded to use an ARGON One case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However AudioLinux is based on Arch Linux, so you'll have to follow these steps instead.
+
+#### Step 1: Skip the `argon1.sh` script in the manual
+The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work, so skip this step and follow the steps below instead.
+
+#### Step 2: Clone the repository:
+```
+git clone https://aur.archlinux.org/argonone-c-git.git
+cd argonone-c-git
+```
+
+#### Step 3: Build and install the package:
+```
+makepkg -si
+```
+
+#### Step 4: Configure your system:
+You need to enable the I2C interface, which the case uses to communicate with the Raspberry Pi. Edit `/boot/config.txt` and add the following lines near the top:
+```
+dtparam=i2c_arm=on
+dtparam=i2c-1=on
+```
+*Note:* You'll uncomment the first line and add the second line right below it.
+
+#### Step 5: Enable and start the service:
+After installation and configuration, enable and start the `systemd` service for the Argon One case:
+```
+sudo systemctl enable argononed.service
+sudo systemctl start argononed.service
+```
+
+#### Step 6: Reboot:
+Finally, reboot your Raspberry Pi for all changes to take effect:
+```
+sudo sync; sudo reboot
+```
+
+Now, the fan will be controlled by the daemon, and the power button will have full functionality. You can configure the fan behavior by editing the configuration file located at `/etc/argononed.conf`.
