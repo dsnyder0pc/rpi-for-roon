@@ -720,11 +720,6 @@ dtoverlay=argonone
 ```
 echo 'KERNEL=="i2c-[0-9]*", MODE="0666"' | sudo tee /etc/udev/rules.d/99-i2c.rules
 ```
-After installation and configuration, enable and start the `systemd` service for the Argon One case:
-```
-sudo systemctl enable argononed.service
-sudo systemctl start argononed.service
-```
 
 #### Step 4: Install the Argon One Package
 ```
