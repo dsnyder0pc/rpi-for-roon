@@ -132,7 +132,7 @@ Optional, but if you wish, you may create a new administrative user for yourself
 
 ```bash
 # Create the new user (e.g., 'dsnyder')
-sudo useradd -m -G input,realtime,video,audio,wheel -s /bin/bash dsnyder
+sudo useradd -m -G input,realtime,video,audio -s /bin/bash dsnyder
 
 # Set a strong password for the new user
 sudo passwd dsnyder
@@ -144,23 +144,9 @@ sudo passwd dsnyder
 
 For convenience, you can allow your new user to run `sudo` commands without a password.
 
-1.  Run `sudo visudo`.
-2.  Find the line `## Same thing without a password`.
-3.  Uncomment the line below it by removing the `#` prefix. It should look like this:
-    ```
-    ## Same thing without a password
-    %wheel ALL=(ALL) NOPASSWD: ALL
-    ```
-4.  Save and exit the editor.
-
-#### 3.6. Secure the Default User
-
-Remove the default `audiolinux` user from the `wheel` group, which confers passwordless administrative access per the previous step. AudioLInux shipps with a curated set of commands that the default user can run without a password, and these are generally sufficient.
-
-1.  Edit the group file: `sudo nano /etc/group`
-2.  Find the line for the `wheel` group: `wheel:x:998:audiolinux,dsnyder`
-3.  Remove `audiolinux` from this line: `wheel:x:998:dsnyder`
-4.  Save and exit.
+```
+printf 'dsnyder\t\tALL = (ALL) NOPASSWD: ALL' | sudo tee /etc/sudoers.d/dsnyder
+```
 
 **At this point, reboot the device (`sudo reboot`). Log back in with your new user account before proceeding.**
 
