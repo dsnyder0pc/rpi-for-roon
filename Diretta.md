@@ -157,7 +157,7 @@ For convenience, you can allow your new user to run `sudo` commands without a pa
 
 Remove the default `audiolinux` user from the `wheel` group, which confers passwordless administrative access per the previous step. AudioLInux shipps with a curated set of commands that the default user can run without a password, and these are generally sufficient.
 
-1.  Edit the group file: `sudo vi /etc/group`
+1.  Edit the group file: `sudo nano /etc/group`
 2.  Find the line for the `wheel` group: `wheel:x:998:audiolinux,dsnyder`
 3.  Remove `audiolinux` from this line: `wheel:x:998:dsnyder`
 4.  Save and exit.
@@ -204,7 +204,7 @@ In this section, we will create the network configuration files that will activa
 2.  **Create Network Files:**
     Create the following two files on the **Diretta Host**. The `end0.network` file sets the static IP for the future point-to-point link. The `enp.network` file ensures the USB Ethernet adapter continues to get an IP from your main LAN.
 
-    *File: `sudo vi /etc/systemd/network/end0.network`*
+    *File: `sudo nano /etc/systemd/network/end0.network`*
     ```ini
     [Match]
     Name=end0
@@ -213,7 +213,7 @@ In this section, we will create the network configuration files that will activa
     Address=172.20.0.1/24
     ```
 
-    *File: `sudo vi /etc/systemd/network/enp.network`*
+    *File: `sudo nano /etc/systemd/network/enp.network`*
     ```ini
     [Match]
     Name=enp*
@@ -237,7 +237,7 @@ In this section, we will create the network configuration files that will activa
 
 On the **Diretta Target**, create the `end0.network` file. This configures its static IP and tells it to use the Diretta Host as its gateway for all internet traffic.
 
-*File: `sudo vi /etc/systemd/network/end0.network`*
+*File: `sudo nano /etc/systemd/network/end0.network`*
 ```ini
 [Match]
 Name=end0
@@ -719,36 +719,77 @@ If you decoded to use an ARGON One case for your Raspberry Pi, the default insta
 #### Step 1: Skip the `argon1.sh` script in the manual
 The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work, so skip this step and follow the steps below instead.
 
-#### Step 2: Clone the repository:
-```
-git clone https://aur.archlinux.org/argonone-c-git.git
-cd argonone-c-git
-```
-
-#### Step 3: Build and install the package:
-```
-makepkg -si
-```
-
-#### Step 4: Configure your system:
-You need to enable the I2C interface, which the case uses to communicate with the Raspberry Pi. Edit `/boot/config.txt` and add the following lines near the top:
+#### Step 2: Configure your system:
+You need to enable the I2C interface, which the case uses to communicate with the Raspberry Pi. Edit `/boot/config.txt` and uncommont following line near the top:
 ```
 dtparam=i2c_arm=on
-dtparam=i2c-1=on
 ```
-*Note:* You'll uncomment the first line and add the second line right below it.
 
-#### Step 5: Enable and start the service:
+Also, add the following where you see the other `dtoverlay` statements:
+```
+dtoverlay=argonone
+```
+
+#### Step 3: Configure `udev` permissions
+```
+echo 'KERNEL=="i2c-[0-9]*", MODE="0666"' | sudo tee /etc/udev/rules.d/99-i2c.rules
+```
 After installation and configuration, enable and start the `systemd` service for the Argon One case:
 ```
 sudo systemctl enable argononed.service
 sudo systemctl start argononed.service
 ```
 
-#### Step 6: Reboot:
+#### Step 4: Install the Argon One Package
+```
+yay -S argonone-c-git
+```
+
+#### Step 5: Enable the Service
+```
+sudo systemctl enable argononed.service
+```
+
+#### Step 6: Reboot
 Finally, reboot your Raspberry Pi for all changes to take effect:
 ```
 sudo sync; sudo reboot
 ```
 
-Now, the fan will be controlled by the daemon, and the power button will have full functionality. You can configure the fan behavior by editing the configuration file located at `/etc/argononed.conf`.
+Now, the fan will be controlled by the daemon, and the power button will have full functionality.
+
+#### Step 7: Verify the service
+```
+systemctl status argononed.service
+```
+
+#### Step 8: Review Fan Mode and Settings:
+To see the current configuration values, run the following command:
+```
+$ sudo argonone-cli --decode
+```
+
+To adjust those values, you must create a config file. Use these values to start:
+```
+sudo nano /etc/argononed.conf
+```
+Add these lines:
+```
+[Schedule]
+temp0=55
+fan0=10
+temp1=60
+fan1=55
+temp2=65
+fan2=100
+
+[Setting]
+hysteresis=3
+```
+
+Restart the service to pick up the new configuration values:
+```
+sudo systemctl restart argononed.service
+```
+
+Now, feel free to adjust the values as needed, following the steps above.
