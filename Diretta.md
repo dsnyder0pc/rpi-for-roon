@@ -747,7 +747,7 @@ systemctl status argononed.service
 #### Step 8: Review Fan Mode and Settings:
 To see the current configuration values, run the following command:
 ```
-$ sudo argonone-cli --decode
+sudo argonone-cli --decode
 ```
 
 To adjust those values, you must create a config file. Use these values to start:
