@@ -209,6 +209,16 @@ In this section, we will create the network configuration files that will activa
     DNSSEC=no
     ```
 
+    **Important:** Remove the old en.network file if present:
+    ```
+    sudo rm -fv /etc/systemd/network/en.network
+    ```
+
+    Add an /etc/hosts entry for the Diretta Target:
+    ```
+    printf "172.20.0.2\tdiretta-target target\n" | sudo tee -a /etc/hosts
+    ```
+
 3.  **Configure Network Address Translation (NAT):**
     ```bash
     # Add the firewall rule. The -o enp+ will match your USB adapter.
@@ -232,6 +242,11 @@ Name=end0
 Address=172.20.0.2/24
 Gateway=172.20.0.1
 DNS=172.16.8.1
+```
+
+**Important:** Remove the old en.network file if present:
+```
+sudo rm -fv /etc/systemd/network/en.network
 ```
 
 #### 5.3. The Physical Connection Change
