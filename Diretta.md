@@ -108,11 +108,11 @@ The `machine-id` is a unique identifier for the OS installation. It **must** be 
 
 ```bash
 # On each device, run the following commands:
+echo "Old Machine ID:" $(cat /etc/machine-id)
 sudo rm /etc/machine-id
 sudo systemd-machine-id-setup
+echo "New Machine ID:" $(cat /etc/machine-id)
 ```
-
-After running these commands, you can verify the new, unique ID with `cat /etc/machine-id`.
 
 #### 3.2. Set Unique Hostnames
 
