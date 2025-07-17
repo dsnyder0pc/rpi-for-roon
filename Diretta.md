@@ -828,7 +828,7 @@ sudo systemctl status roon-ir-remote.service
 #### **Step 7: Install `set-roon-zone` script**
 Good to have a script that you can use to update the Roon zone name later if needed. Here's how to install it:
 ```bash
-curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/set-roon-zone
+curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone
 sudo mv set-roon-zone /usr/local/bin
 sudo chmod +x /usr/local/bin/set-roon-zone
 ```
