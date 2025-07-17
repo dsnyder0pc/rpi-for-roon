@@ -636,12 +636,12 @@ index 64a8317..db5ead8 100644
 
 -logging.basicConfig(level=logging.DEBUG,
 +logging.basicConfig(level=logging.WARNING,
-                       format='%(asctime)s %(levelname)s %(module)s: %(message)s')
+                     format='%(asctime)s %(levelname)s %(module)s: %(message)s')
  logger = logging.getLogger('roon_remote')
 
 @@ -56,31 +56,33 @@ def monitor_remote(zone: RoonOutput, dev: InputDevice, mapping: RemoteKeycodeMap
-               # ignore everything that is not KEY_DOWN
-               continue
+             # ignore everything that is not KEY_DOWN
+             continue
 
 -        # logging.debug(str(categorize(event)))
 +        event_name = ecodes.KEY[event.code]
