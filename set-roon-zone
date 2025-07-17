@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Path to the configuration file
+CONFIG_FILE="$HOME/roon-ir-remote/app_info.json"
+
+# --- Sanity Checks ---
+# Ensure jq is installed
+if ! command -v jq &> /dev/null; then
+    echo "Error: 'jq' is not installed. Please install it to continue." >&2
+    exit 1
+fi
+
+# Ensure the config file exists
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Error: Config file not found at '$CONFIG_FILE'" >&2
+    exit 1
+fi
+
+# --- Main Script ---
+# Prompt user for the new Roon Zone name
+read -p "Enter the exact Roon Zone name: " ROON_ZONE
+
+# Exit if the input is empty
+if [ -z "$ROON_ZONE" ]; then
+    echo "No zone name entered. Aborting."
+    exit 1
+fi
+
+echo "Updating zone to '$ROON_ZONE'..."
+
+# Use jq to update the JSON file safely and in-place
+# A temporary file is used to prevent data loss if jq fails
+tmp=$(mktemp)
+if jq --arg zone "$ROON_ZONE" '.roon.zone.name = $zone' "$CONFIG_FILE" > "$tmp"; then
+    mv "$tmp" "$CONFIG_FILE"
+    echo "Configuration file updated successfully."
+else
+    echo "Error: Failed to update '$CONFIG_FILE'." >&2
+    rm -f "$tmp"
+    exit 1
+fi
+
+# Restart the service with sudo
+echo "Restarting the roon-ir-remote service..."
+if sudo systemctl restart roon-ir-remote.service; then
+    echo "Service restarted successfully."
+else
+    echo "Error: Failed to restart the service." >&2
+    echo "Run 'systemctl status roon-ir-remote.service' for details."
+    exit 1
+fi
+
+echo "Setup complete. The IR remote now controls the '$ROON_ZONE' zone."

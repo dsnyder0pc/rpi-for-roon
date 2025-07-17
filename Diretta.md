@@ -591,7 +591,7 @@ Install `pyenv` and the latest stable version of Python.
 ```bash
 # Install build dependencies
 sudo pacman -Syu --noconfirm
-sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi openssl ncurses readline util-linux db gdbm sqlite
+sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi openssl ncurses readline util-linux db gdbm sqlite vim jq
 
 # Install pyenv
 curl -fsSL https://pyenv.run | bash
@@ -825,7 +825,15 @@ sudo systemctl status roon-ir-remote.service
 
 -----
 
-#### **Step 7: Profit! 📈**
+#### **Step 7: Install `set-roon-zone` script**
+Good to have a script that you can use to update the Roon zone name later if needed. Here's how to install it:
+```bash
+curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/set-roon-zone
+sudo mv set-roon-zone /usr/local/bin
+sudo chmod +x /usr/local/bin/set-roon-zone
+```
+
+#### **Step 8: Profit! 📈**
 
 Your IR remote should now control Roon. Enjoy!
 
