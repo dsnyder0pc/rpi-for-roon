@@ -698,7 +698,9 @@ Configure the script with your Roon details. **Note:** The `event_mapping` codes
 # Set your email and Roon Zone name (must match Roon UI exactly)
 MY_EMAIL_ADDRESS="Put your email address here"
 MY_ROON_ZONE="Enter Roon zone name here"
+```
 
+```bash
 # Create the configuration file
 cat <<EOT> roon-ir-remote/app_info.json
 {
