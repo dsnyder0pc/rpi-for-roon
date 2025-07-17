@@ -1,10 +1,10 @@
-# Building a Dedicated Diretta Link with AudioLinux on Raspberry Pi
+# Building a Dedicated Diretta Link with Audiolinux on Raspberry Pi
 
 This guide provides comprehensive, step-by-step instructions for configuring two Raspberry Pi devices as a dedicated Diretta Host and Diretta Target. This setup uses a direct, point-to-point Ethernet connection between the two devices for the ultimate in network isolation and audio performance.
 
 If you are located in the US, expect to pay around $365 in total (plus tax and shipping) to complete this build:
 - Hardware ($178)
-- One year AudioLinux subscription ($69)
+- One year Audiolinux subscription ($69)
 - Diretta Target license ($118)
 
 The **Diretta Host** will connect to your main network (for Roon Core, etc.) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC or DDC.
@@ -62,7 +62,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 #### Software & Licensing Costs
 
-* **AudioLinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$139**. However, it's fine to get started with a one year subscription, currently **$69**. Both options allow for installation on multiple devices within the same location.
+* **Audiolinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$139**. However, it's fine to get started with a one year subscription, currently **$69**. Both options allow for installation on multiple devices within the same location.
 * **Diretta Target:** A license is required for the Diretta Target device and currently costs **100 Euros**.
     * **CRITICAL:** This license is locked to the specific hardware of the Raspberry Pi it is purchased for. It is essential that you perform the final licensing step on the exact hardware you intend to use permanently.
     * Diretta may offer a one-time replacement license for hardware failure within the first two years (please verify terms at time of purchase). If you change the hardware for any other reason, a new license must be purchased.
@@ -71,10 +71,10 @@ A complete bill of materials is provided below. While other parts can be substit
 
 ### 2. Initial Image Preparation
 
-1.  **Purchase and Download:** Obtain the AudioLinux image from the [official website](https://www.audio-linux.com/). You will receive a link to download the `.img.gz` file.
+1.  **Purchase and Download:** Obtain the Audiolinux image from the [official website](https://www.audio-linux.com/). You will receive a link to download the `.img.gz` file.
 2.  **Flash the Image:** Use your preferred imaging tool (e.g., [balenaEtcher](https://etcher.balena.io/) or
-[Raspberry Pi Imager](https://www.raspberrypi.com/software/)) to write the downloaded AudioLinux image to **both** microSD cards.
-    > **Note:** The AudioLinux image is a direct disk dump, not a compressed installer. As a result, the image file is quite large, and the flashing process can be unusually long. Expect it to take up to 15 minutes per card, depending on the speed of your microSD card and reader.
+[Raspberry Pi Imager](https://www.raspberrypi.com/software/)) to write the downloaded Audiolinux image to **both** microSD cards.
+    > **Note:** The Audiolinux image is a direct disk dump, not a compressed installer. As a result, the image file is quite large, and the flashing process can be unusually long. Expect it to take up to 15 minutes per card, depending on the speed of your microSD card and reader.
 
 ---
 
@@ -156,12 +156,12 @@ sudo pacman -Syu linux-firmware
 
 #### 4.2. Run System and Menu Updates
 
-Use the AudioLinux menu system to perform all updates.
+Use the Audiolinux menu system to perform all updates.
 
 1.  Run `menu` in the terminal.
 2.  Select **INSTALL/UPDATE menu**.
 3.  On the next screen, select **UPDATE system** and let the process complete.
-4.  After the system update finishes, select **Update menu** from the same screen to get the latest version of the AudioLinux scripts.
+4.  After the system update finishes, select **Update menu** from the same screen to get the latest version of the Audiolinux scripts.
 5.  Exit the menu system to get back to the terminal.
 
 ---
@@ -840,7 +840,7 @@ Your IR remote should now control Roon. Enjoy!
 -----
 
 ### 10. Appendix 2: ARGON One Fan Control
-If you decoded to use an ARGON One case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However AudioLinux is based on Arch Linux, so you'll have to follow these steps instead.
+If you decoded to use an ARGON One case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
 
 #### Step 1: Skip the `argon1.sh` script in the manual
 The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work, so skip this step and follow the steps below instead.
