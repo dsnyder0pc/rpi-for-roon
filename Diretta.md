@@ -614,10 +614,10 @@ Clone the script repository and apply a patch to correctly handle keycodes by na
 git clone https://github.com/smangels/roon-ir-remote.git
 cat <<'EOT' > roon-ir-remote/roon-ir-remote.patch
 diff --git a/roon_remote.py b/roon_remote.py
-index 64a8317..db5ead8 100644
+index 64a8317..56a591f 100644
 --- a/roon_remote.py
 +++ b/roon_remote.py
-@@ -3,18 +3,18 @@ Implement a Roon Remote extension that reads keyboard events
+@@ -3,18 +3,18 @@ Implement a Roon Remote extension that reads keybaord events
  from a FLIRC device and converts those events into transport
  commands towards a certain _Zone_ in Roon.
  """
@@ -627,22 +627,22 @@ index 64a8317..db5ead8 100644
  import signal
  import sys
  from pathlib import Path
-
+ 
  import evdev
 -from evdev import InputDevice
 +from evdev import InputDevice, ecodes, categorize
-
+ 
  from app import RoonController, RoonOutput, RemoteConfig, RemoteConfigE, RemoteKeycodeMapping, RoonControllerE
-
+ 
 -logging.basicConfig(level=logging.DEBUG,
 +logging.basicConfig(level=logging.WARNING,
                      format='%(asctime)s %(levelname)s %(module)s: %(message)s')
  logger = logging.getLogger('roon_remote')
-
+ 
 @@ -56,31 +56,33 @@ def monitor_remote(zone: RoonOutput, dev: InputDevice, mapping: RemoteKeycodeMap
              # ignore everything that is not KEY_DOWN
              continue
-
+ 
 -        # logging.debug(str(categorize(event)))
 +        event_name = ecodes.KEY[event.code]
 +        logging.debug(str(categorize(event)))
@@ -683,8 +683,35 @@ index 64a8317..db5ead8 100644
 -            elif event.code in mapping.to_key_code('play_radio'):
 +            elif event_name == mapping.to_key_code('play_radio'):
                  zone.play_radio_station(station_name="Radio Paradise (320k aac)")
-
+ 
              logger.debug("Received Code: %s", repr(event.code))
+@@ -106,10 +108,23 @@ def main():
+     mapping = config.key_mapping
+     logging.info(mapping.edge)
+ 
+-    input_dev_name = "flirc Keyboard"
+-    event_dev = get_event_device_for_string(input_dev_name)
++    # List of device names to try, in order of preference
++    device_names_to_try = ["flirc Keyboard", "gpio_ir_recv"]
++    event_dev = None
++    input_dev_name = None
++
++    # Loop through the names until a device is found
++    for name in device_names_to_try:
++        device = get_event_device_for_string(name)
++        if device:
++            event_dev = device
++            input_dev_name = name  # Preserves the name of the found device
++            logging.info('Found InputDevice: "%s"', input_dev_name)
++            break  # Exit the loop on first success
++
++    # If the loop completes without finding a device, exit
+     if not event_dev:
+-        logging.error('Could not find any InputDevice with name: "%s"', input_dev_name)
++        logging.error('Could not find a valid InputDevice. Tried: %s', device_names_to_try)
+         sys.exit(1)
+ 
+     logging.debug('found input device: %s', event_dev)
 EOT
 ```
 
