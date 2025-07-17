@@ -754,15 +754,19 @@ Next, install the necessary tools and capture the unique codes for each button o
     ```bash
     sudo pacman -S --noconfirm v4l-utils
     ```
-2.  Run the `ir-keytable` test tool to see the scancodes for your remote.
+2.  Enable all kernel IR protocols. This is a crucial step that tells the kernel to try every decoder it has.
+    ```bash
+    sudo ir-keytable -p all
+    ```
+3.  Run the `ir-keytable` test tool to see the scancodes for your remote.
     ```bash
     sudo ir-keytable -t
     ```
-3.  Press each button on your remote (Up, Down, Left, Right, OK/Enter, Back, Volume Up, Volume Down). For each press, you will see output that contains the scancode. Write down the scancode for each button. For example:
+4.  Press each button on your remote (Up, Down, Left, Right, OK/Enter, Back, Volume Up, Volume Down). For each press, you will see output that contains the scancode. Write down the scancode for each button. For example:
     ```
     Event: time 1752715725.730574, type 4 (EV_MSC), code 4 (MSC_SCAN), value ca
     ```
-    In this example, the scancode is `0xca`. Press `Ctrl+C` when you are finished.
+    In this example, the scancode is `0xca`. Press `Ctrl+C` when you are finished verifying that buttons work.
 
 -----
 
