@@ -574,7 +574,17 @@ This guide provides instructions for installing and configuring an IR remote to 
 
 *After setting up your hardware in Part 1, follow these steps to install and configure the Python control script.*
 
-##### **Step 1: Install Python via pyenv**
+##### **Step 1: Add `audiolinux` to the `input` group**
+This is needed so that the `audiolinux` account has access to events from the remote control receiver.
+```bash
+sudo usermod --append --groups input audiolinux
+```
+Logout and log back in for this change to take effect. You can verify with this command:
+```bash
+groups
+```
+
+##### **Step 2: Install Python via pyenv**
 
 Install `pyenv` and the latest stable version of Python.
 
@@ -607,7 +617,7 @@ pyenv global $PYVER
 
 -----
 
-#### **Step 2: Prepare and Patch `roon-ir-remote` Software**
+#### **Step 3: Prepare and Patch `roon-ir-remote` Software**
 
 Clone the script repository and apply a patch to correctly handle keycodes by name instead of by number.
 
@@ -718,7 +728,7 @@ EOT
 
 -----
 
-#### **Step 3: Create the Roon Environment Config File**
+#### **Step 4: Create the Roon Environment Config File**
 
 Configure the script with your Roon details. **Note:** The `event_mapping` codes must match the key names you defined in your hardware setup (`KEY_ENTER`, `KEY_VOLUMEUP`, etc.).
 
@@ -761,7 +771,7 @@ EOT
 
 -----
 
-#### **Step 4: Prepare and Test `roon-ir-remote`**
+#### **Step 5: Prepare and Test `roon-ir-remote`**
 
 Install the script's dependencies into a virtual environment and run it for the first time.
 
@@ -780,7 +790,7 @@ The first time you run the script, you must **authorize the extension in Roon** 
 
 -----
 
-#### **Step 5: Create a `systemd` Service**
+#### **Step 6: Create a `systemd` Service**
 
 Create a service to run the script automatically in the background.
 
@@ -813,7 +823,7 @@ sudo systemctl status roon-ir-remote.service
 
 -----
 
-#### **Step 6: Profit! 📈**
+#### **Step 7: Profit! 📈**
 
 Your IR remote should now control Roon. Enjoy!
 
