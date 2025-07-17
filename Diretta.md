@@ -21,8 +21,7 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 7.  [Diretta Software Installation & Configuration](#7-diretta-software-installation--configuration)
 8.  [Final Steps & Roon Integration](#8-final-steps--roon-integration)
 9.  [Appendix 1: Optional IR Remote Control Setup](#9-appendix-1-optional-ir-remote-control-setup)
-10.  [Appendix 2: Optional Argon One IR Remote Setup](#10-appendix-2-optional-argon-one-ir-remote-setup)
-11. [Appendix 3: ARGON One Fan Control](#11-appendix-3-argon-one-fan-control)
+10. [Appendix 2: ARGON One Fan Control](#10-appendix-2-argon-one-fan-control)
 
 ---
 
@@ -75,11 +74,15 @@ However, it _may_ be possible, and even slightly advantageous, to use a RPi5 for
     * **CRITICAL:** This license is locked to the specific hardware of the Raspberry Pi it is purchased for. It is essential that you perform the final licensing step on the exact hardware you intend to use permanently.
     * Diretta may offer a one-time replacement license for hardware failure within the first two years (please verify terms at time of purchase). If you change the hardware for any other reason, a new license must be purchased.
 
+---
+
 ### 2. Initial Image Preparation
 
 1.  **Purchase and Download:** Obtain the AudioLinux image from the official website. You will receive a link to download the `.img.gz` file.
 2.  **Flash the Image:** Use your preferred imaging tool (e.g., [balenaEtcher](https://etcher.balena.io/)) to write the downloaded AudioLinux image to **both** microSD cards.
     > **Note:** The AudioLinux image is a direct disk dump, not a compressed installer. As a result, the image file is quite large, and the flashing process can be unusually long. Expect it to take up to 15 minutes per card, depending on the speed of your microSD card and reader.
+
+---
 
 ### 3. Core System Configuration (Perform on Both Devices)
 
@@ -154,6 +157,8 @@ printf 'dsnyder\t\tALL = (ALL) NOPASSWD: ALL\n' | sudo tee /etc/sudoers.d/dsnyde
 
 Repeat the above steps for the second Raspberry Pi once you're able to login to the first one.
 
+---
+
 ### 4. System Updates (Perform on Both Devices)
 
 #### 4.1. Workaround for Pacman Update Issue
@@ -173,6 +178,8 @@ Use the AudioLinux menu system to perform all updates.
 2.  Select **INSTALL/UPDATE menu**.
 3.  On the next screen, select **UPDATE system** and let the process complete.
 4.  After the system update finishes, select **Update menu** from the same screen to get the latest version of the AudioLinux scripts.
+
+---
 
 ### 5. Point-to-Point Network Configuration
 
@@ -271,6 +278,8 @@ sudo rm -fv /etc/systemd/network/en.network
 
 Upon booting, they will automatically use the new network configurations. You should now be able to ping the Target from the Host (`ping 172.20.0.2`) and ping public websites from the Target (`ping google.com`) to verify the connection is working.
 
+---
+
 ### 6. Convenient & Secure SSH Access
 
 #### 6.1. The `ProxyJump` Requirement
@@ -337,6 +346,8 @@ While you can use passwords over the proxied connection, the most secure and con
 
 You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) without a password, securely authenticated by your SSH key.
 
+---
+
 ### 7. Diretta Software Installation & Configuration
 
 #### 7.1. On the Diretta Target
@@ -402,6 +413,8 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
         ```
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient.
 
+---
+
 ### 8. Final Steps & Roon Integration
 
 1.  **Install Roon Bridge (on Host):** If you use Roon, perform the following steps on the **Diretta Host**:
@@ -423,495 +436,177 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
 
 Your dedicated Diretta link is now fully configured for pristine, isolated audio playback.
 
+---
+
 ### 9. Appendix 1: Optional IR Remote Control Setup
 
-This appendix provides instructions for installing and configuring the optional Flirc USB IR receiver on the **Diretta Host**. This will allow you to control Roon playback (Play/Pause, Next/Previous Track) using a standard infrared remote via a Python script that directly reads the device events.
+This guide provides instructions for installing and configuring an IR remote to control Roon. The setup is divided into two parts.
 
-To get started, you'll need to purchase the Flirc USB IR Receiver. Here's a link to purchase that also includes the required downloads for configuration:
-
-[https://flirc.tv/products/flirc-usb-receiver](https://flirc.tv/products/flirc-usb-receiver)
-
-This IR receiver allows the Raspberry Pi to receive events from an IR remote control with a 5-way controller plus the "Back" button. This adds support for the following commands:
-
-  - KEY\_UP
-  - KEY\_DOWN
-  - KEY\_LEFT
-  - KEY\_RIGHT
-  - KEY\_ENTER
-  - KEY\_ESC
-
-This works by first programming the Flirc USB with these six IR codes from your remote. You'll use software from the "Downloads" page on the flirc website above.
-
-#### Step 1: Program the Flirc Device
-
-The Flirc device needs to be programmed to translate IR signals from your remote into specific keyboard presses. This must be done on a desktop computer (Windows/macOS/Linux) using the Flirc GUI software, available from the [Flirc website](https://flirc.tv/downloads).
-
-1.  Plug the Flirc USB receiver into your desktop computer.
-2.  Open the Flirc GUI software.
-3.  Go to `Controllers` and select `Full Keyboard`.
-4.  Program the following keys, which the control script will listen for:
-    * Click the `Play/Pause` key in the GUI, then press the corresponding button on your physical remote.
-    * Click the `Stop` key in the GUI, then press the corresponding button on your remote.
-    * Click the `Next Track` key in the GUI, then press the corresponding button on your remote.
-    * Click the `Previous Track` key in the GUI, then press the corresponding button on your remote.
-5.  Once programmed, close the software and plug the Flirc USB receiver into the **Diretta Host**.
-
-#### Step 2: Test the Flirc USB on your Raspberry Pi
-
-After programming the Flirc USB (typically using a Windows or macOS PC), you'll move it to the Raspberry Pi. To verify that all is working as expected, SSH into your Raspberry Pi and run these commands:
-
-```bash
-sudo pacman -S --noconfirm evtest
-evtest
-```
-
-The `evtest` command will present you with a menu of devices from which it can monitor events. You should see a "Flirc" device listed. Select that one by entering the corresponding number. Next, test the 5-way controller and back buttons on your remote. You should see separate "press" and "release" events for each button printed on the screen.
+  * **Part 1** covers the hardware-specific setup. You will choose **one** of the two appendices depending on whether you are using the Flirc USB receiver or the Argon One case's built-in receiver.
+  * **Part 2** covers the software setup for the `roon-ir-remote` control script, which is identical for both hardware options.
 
 -----
 
-#### Step 3: Install the latest Python via pyenv
+#### **Part 1: IR Receiver Hardware Setup**
 
-This solution requires a modern Python installation. First, install the necessary build dependencies for `pyenv` and Python. The `base-devel` group in Arch Linux provides most of the essential tools like `gcc` and `make`.
+*Follow the appendix for the hardware you are using.*
 
-```bash
-sudo pacman -Syu --noconfirm
-sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi openssl ncurses readline util-linux db gdbm sqlite
-curl -fsSL https://pyenv.run | bash
-```
+##### **Option 1: Flirc USB IR Receiver Setup**
 
-Next, add `pyenv` to your shell's configuration file. The original instructions use `.bashrc`, which will work for the `bash` shell.
+1.  **Purchase and Program the Flirc Device:**
+    You'll need the Flirc USB IR Receiver, which can be purchased from their website: [https://flirc.tv/products/flirc-usb-receiver](https://flirc.tv/products/flirc-usb-receiver)
 
-```bash
-cat <<'EOT'>> ~/.bashrc
+    The Flirc device must be programmed on a desktop computer using the Flirc GUI software.
 
-# Load pyenv automatically by appending
-# the following to
-# ~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
-# and ~/.bashrc (for interactive shells) :
+      * Plug the Flirc into your desktop computer and open the Flirc GUI.
+      * Go to `Controllers` and select `Full Keyboard`.
+      * Program the keys needed for the script (e.g., KEY_UP, KEY_DOWN, KEY_ENTER, etc.) by clicking the key in the GUI and then pressing the corresponding button on your physical remote.
+      * Once programmed, plug the Flirc into the **Diretta Host**.
 
-export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init - bash)"
+2.  **Test the Flirc Device:**
+    Verify that the Raspberry Pi recognizes the Flirc as a keyboard.
 
-# Restart your shell for the changes to take effect.
-
-# Load pyenv-virtualenv automatically by adding
-# the following to ~/.bashrc:
-
-eval "$(pyenv virtualenv-init -)"
-EOT
-
-. ~/.bashrc
-```
-
-Now, install and set the latest stable version of Python.
-
-```bash
-PYVER=$(pyenv install --list | grep '  3[0-9.]*$' | tail -n 1)
-pyenv install $PYVER
-pyenv global $PYVER
-pyenv versions
-```
-
------
-
-#### Step 4: Install a few development tools in case we need them later
-
-Install `vim` and other useful development tools. Since **`shellcheck`** is in the AUR, we'll use **`yay`** to install it. If you don't have `yay` installed, you'll need to install it first.
-
-```bash
-# Install tools from the official repositories
-sudo pacman -S --noconfirm vim tmux mosh codespell
-
-# Install shellcheck from the AUR using yay
-yay -S --noconfirm shellcheck
-
-# Set up the ALE plugin for vim
-mkdir -p ~/.vim/pack/git-plugins/start
-git clone --depth 1 https://github.com/dense-analysis/ale.git ~/.vim/pack/git-plugins/start/ale
-```
-
------
-
-#### Step 5: Prepare and patch Sebastian Mangels' roon-ir-remote software
-
-This process of cloning the repository and creating the patch file is unchanged.
-
-```bash
-git clone https://github.com/smangels/roon-ir-remote.git
-cat <<'EOT' > roon-ir-remote/roon-ir-remote.patch
-diff --git a/roon_remote.py b/roon_remote.py
-index 64a8317..db5ead8 100644
---- a/roon_remote.py
-+++ b/roon_remote.py
-@@ -3,18 +3,18 @@ Implement a Roon Remote extension that reads keyboard events
- from a FLIRC device and converts those events into transport
- commands towards a certain _Zone_ in Roon.
- """
--# !/usr/bin/python
-+# !/usr/bin/env python
- import logging
- import signal
- import sys
- from pathlib import Path
- 
- import evdev
--from evdev import InputDevice
-+from evdev import InputDevice, ecodes, categorize
- 
- from app import RoonController, RoonOutput, RemoteConfig, RemoteConfigE, RemoteKeycodeMapping, RoonControllerE
- 
--logging.basicConfig(level=logging.DEBUG,
-+logging.basicConfig(level=logging.WARNING,
-                     format='%(asctime)s %(levelname)s %(module)s: %(message)s')
- logger = logging.getLogger('roon_remote')
- 
-@@ -56,31 +56,33 @@ def monitor_remote(zone: RoonOutput, dev: InputDevice, mapping: RemoteKeycodeMap
-             # ignore everything that is not KEY_DOWN
-             continue
- 
--        # logging.debug(str(categorize(event)))
-+        event_name = ecodes.KEY[event.code]
-+        logging.debug(str(categorize(event)))
-         try:
--            # logging.debug("Status: {}".format('uninitialized'))
--            # logging.debug("KeyCode: {}".format(event.code))
--            if event.code in mapping.to_key_code('prev'):
-+            logging.debug("Status: {}".format('uninitialized'))
-+            logging.debug("KeyCode Number: {}".format(event.code))
-+            logging.debug("KeyCode Name: {}".format(event_name))
-+            if event_name == mapping.to_key_code('prev'):
-                 zone.previous()
--            elif event.code in mapping.to_key_code('skip'):
-+            elif event_name == mapping.to_key_code('skip'):
-                 zone.skip()
--            elif event.code in mapping.to_key_code('stop'):
-+            elif event_name == mapping.to_key_code('stop'):
-                 zone.stop()
--            elif event.code in mapping.to_key_code('play_pause'):
-+            elif event_name == mapping.to_key_code('play_pause'):
-                 if zone.state == "playing":
-                     zone.pause()
-                 else:
-                     zone.repeat(False)
-                     zone.play()
--            elif event.code in mapping.to_key_code('vol_up'):
-+            elif event_name == mapping.to_key_code('vol_up'):
-                 zone.volume_up(2)
--            elif event.code in mapping.to_key_code('vol_down'):
-+            elif event_name == mapping.to_key_code('vol_down'):
-                 zone.volume_down(2)
--            elif event.code in mapping.to_key_code('mute'):
-+            elif event_name == mapping.to_key_code('mute'):
-                 zone.mute(not zone.is_muted())
--            elif event.code in mapping.to_key_code('fall_asleep'):
-+            elif event_name == mapping.to_key_code('fall_asleep'):
-                 zone.play_playlist('wellenrauschen')
--            elif event.code in mapping.to_key_code('play_radio'):
-+            elif event_name == mapping.to_key_code('play_radio'):
-                 zone.play_radio_station(station_name="Radio Paradise (320k aac)")
- 
-             logger.debug("Received Code: %s", repr(event.code))
-EOT
-```
-
------
-
-#### Step 6: Create a config file for your Roon environment
-
-This step is also identical. Be sure to replace the placeholder values for your email and Roon zone. It's especially critical to make sure that the zone name EXACTLY matches what you see in the Roon UI for your Zone.
-
-```bash
-MY_EMAIL_ADDRESS="Put your email address here"
-MY_ROON_ZONE="Enter Roon zone name here EXACTLY as it is spelled in the Roon UI"
-cat <<EOT> roon-ir-remote/app_info.json
-{
-  "roon": {
-    "app_info": {
-      "extension_id": "com.smangels.roon-ir-remote",
-      "display_name": "Roon IR Remote",
-      "display_version": "1.0.0",
-      "publisher": "smangels",
-      "email": "${MY_EMAIL_ADDRESS}",
-      "website": "https://github.com/smangels/roon-ir-remote"
-    },
-    "zone": {
-      "name": "${MY_ROON_ZONE}"
-    },
-    "event_mapping": {
-      "codes": {
-        "play_pause": "KEY_ENTER",
-        "stop": "KEY_ESC",
-        "skip": "KEY_RIGHT",
-        "prev": "KEY_LEFT",
-        "vol_up": "KEY_UP",
-        "vol_down": "KEY_DOWN"
-      }
-    }
-  }
-}
-EOT
-```
-
------
-
-#### Step 7: Prepare and test roon-ir-remote
-
-These steps, which use `patch`, `pyenv`, and `pip`, are not specific to the operating system and remain the same.
-
-```bash
-cd roon-ir-remote
-patch -p1 < roon-ir-remote.patch
-pyenv virtualenv roon-ir-remote
-pyenv activate roon-ir-remote
-pip3 install --upgrade pip pylint pytest
-pip3 install -r requirements.txt
-
-python roon_remote.py
-```
-
-The first time you run the program, you will need to authorize the extension in Roon's Settings, under the "Extensions" tab.
-
------
-
-#### Step 8: Create a systemd service for roon-ir-remote so that it runs in the background
-
-Creating a `systemd` service is standard on both Ubuntu and Arch Linux. These commands will work without any changes.
-
-```bash
-cat <<EOT | sudo tee /etc/systemd/system/roon-ir-remote.service
-[Unit]
-Description=Roon IR Remote Service
-# This ensures the network is up before starting the service
-After=network.target
-
-[Service]
-# Type simple means the script is the main process of the service
-Type=simple
-
-# Run the service as the '${LOGNAME}' user and group
-User=${LOGNAME}
-Group=${LOGNAME}
-
-# Set the working directory to where your script is located
-# This is the equivalent of your 'cd roon-ir-remote/' command
-WorkingDirectory=/home/${LOGNAME}/roon-ir-remote
-
-# This is the full command to execute.
-# We use the ABSOLUTE PATH to the python executable within your pyenv virtual environment.
-# This completely bypasses the need for 'pyenv activate'.
-ExecStart=/home/${LOGNAME}/.pyenv/versions/roon-ir-remote/bin/python /home/${LOGNAME}/roon-ir-remote/roon_remote.py
-
-# Automatically restart the service if it fails
-Restart=on-failure
-RestartSec=5
-
-[Install]
-# This tells systemd to start the service during the normal multi-user boot process
-WantedBy=multi-user.target
-EOT
-
-sudo systemctl daemon-reload
-sudo systemctl enable roon-ir-remote.service
-sudo systemctl start roon-ir-remote.service
-sudo systemctl status roon-ir-remote.service
-sudo journalctl -u roon-ir-remote.service -f
-```
-
-### 10. Appendix 2: Optional Argon One IR Remote Setup
-
-This appendix provides instructions for installing and configuring the Argon One V2/V3 case's built-in infrared receiver on the **Diretta Host**. This will allow you to control Roon playback using the Argon IR remote.
-
-Unlike the Flirc which is a smart device that emulates a keyboard, the Argon One's receiver is connected directly to the Raspberry Pi's GPIO pins. We will use the modern kernel-level tool **`ir-keytable`** to capture IR signals and translate them into standard keyboard events that the `roon-ir-remote` script can use.
-
------
-
-#### Step 1: Enable the IR Receiver Hardware
-
-First, you must enable the specific hardware interfaces for the Argon One case and its IR receiver.
-
-1.  Edit your boot configuration file with a text editor:
     ```bash
-    sudo nano /boot/config.txt
+    sudo pacman -S --noconfirm evtest
+    sudo evtest
     ```
-2.  Add the following lines to the end of the file. This enables the I2C interface for the case's fan control and activates the IR receiver on the correct GPIO pin.
-    ```
-    dtparam=i2c_arm=on
-    dtoverlay=gpio-ir,gpio_pin=23
-    ```
-3.  Save the file, exit the editor, and reboot for the change to take effect.
-    ```bash
-    sudo reboot
-    ```
+
+    Select the "Flirc" device from the menu. When you press buttons on your remote, you should see keyboard events printed to the screen.
 
 -----
 
-#### Step 2: Install IR Tools and Capture Scancodes
+##### **Option 2: Argon One IR Remote Setup**
 
-Next, install the necessary tools and capture the unique codes for each button on your remote.
+1.  **Enable the IR Receiver Hardware:**
+    You must enable the hardware overlay for the Argon One case's IR receiver.
 
-1.  Install the `v4l-utils` package, which provides `ir-keytable`:
+      * Edit your boot configuration file:
+        ```bash
+        sudo vi /boot/config.txt
+        ```
+      * Add the following line to enable the IR receiver on the correct pin:
+        ```
+        dtoverlay=gpio-ir,gpio_pin=23
+        ```
+      * Save the file and reboot.
+
+2.  **Install IR Tools and Enable Protocols:**
+    Install `ir-keytable` and enable all kernel protocols so it can decode signals from your remote.
+
     ```bash
     sudo pacman -S --noconfirm v4l-utils
-    ```
-2.  Enable all kernel IR protocols. This is a crucial step that tells the kernel to try every decoder it has.
-    ```bash
     sudo ir-keytable -p all
     ```
-3.  Run the `ir-keytable` test tool to see the scancodes for your remote.
+
+3.  **Capture Button Scancodes:**
+    Run the test tool to see the unique scancode for each remote button.
+
     ```bash
     sudo ir-keytable -t
     ```
-4.  Press each button on your remote (Up, Down, Left, Right, OK/Enter, Back, Volume Up, Volume Down). For each press, you will see output that contains the scancode. Write down the scancode for each button. For example:
-    ```
-    Event: time 1752715725.730574, type 4 (EV_MSC), code 4 (MSC_SCAN), value ca
-    ```
-    In this example, the scancode is `0xca`. Press `Ctrl+C` when you are finished verifying that buttons work.
 
------
+    Press each button you want to use and note its scancode from the `MSC_SCAN` event output (e.g., `value ca`). Press `Ctrl+C` when done.
 
-#### Step 3: Create the Keymap File
+4.  **Create the Keymap File:**
+    This file maps the scancodes to standard key names.
 
-This file maps the scancodes you captured to standard Linux key names. The example below uses the known scancodes for the Argon remote.
+      * Create a new keymap file:
+        ```bash
+        sudo vi /etc/rc_keymaps/argon.toml
+        ```
+      * Paste the following content, replacing the example scancodes with the ones you recorded.
+        ```toml
+        # /etc/rc_keymaps/argon.toml
+        [[protocols]]
+        name = "argon_remote"
+        protocol = "nec"
+        [protocols.scancodes]
+        0xca = "KEY_UP"
+        0xd2 = "KEY_DOWN"
+        0x99 = "KEY_LEFT"
+        0xc1 = "KEY_RIGHT"
+        0xce = "KEY_ENTER"
+        0x90 = "KEY_ESC"
+        0x80 = "KEY_VOLUMEUP"
+        0x81 = "KEY_VOLUMEDOWN"
+        ```
 
-1.  Create a new keymap file:
-    ```bash
-    sudo nano /etc/rc_keymaps/argon.toml
-    ```
-2.  Paste the following content into the file. This configuration ensures that the arrow keys and volume keys send distinct signals.
-    ```toml
-    # /etc/rc_keymaps/argon.toml
-    # Keymap for the Argon IR Remote
+5.  **Create a `systemd` Service to Load the Keymap:**
+    This service will load your keymap automatically on boot.
 
-    [[protocols]]
-    name = "argon_remote"
-    protocol = "nec"
-    [protocols.scancodes]
-    0xca = "KEY_UP"
-    0xd2 = "KEY_DOWN"
-    0x99 = "KEY_LEFT"
-    0xc1 = "KEY_RIGHT"
-    0xce = "KEY_ENTER"
-    0x90 = "KEY_ESC"
-    0x80 = "KEY_VOLUMEUP"
-    0x81 = "KEY_VOLUMEDOWN"
-    ```
-3.  Save the file and exit the editor.
+      * Create a new service file:
+        ```bash
+        sudo vi /etc/systemd/system/ir-keymap.service
+        ```
+      * Paste the following content:
+        ```ini
+        [Unit]
+        Description=Load custom IR keymap
+        After=multi-user.target
 
------
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/bin/ir-keytable -c -p nec -w /etc/rc_keymaps/argon.toml
 
-#### Step 4: Create a Systemd Service to Load the Keymap
+        [Install]
+        WantedBy=multi-user.target
+        ```
+      * Enable the service:
+        ```bash
+        sudo systemctl enable --now ir-keymap.service
+        ```
 
-To ensure your keymap is loaded automatically on every boot, create a simple `systemd` service.
+6.  **Test the Input Device:**
+    Verify the system is receiving keyboard events from the IR remote.
 
-1.  Create a new service file:
-    ```bash
-    sudo nano /etc/systemd/system/ir-keymap.service
-    ```
-2.  Paste the following content into the file. This defines a one-shot service that loads your keymap after the system boots.
-    ```ini
-    [Unit]
-    Description=Load custom IR keymap
-    After=multi-user.target
-
-    [Service]
-    Type=oneshot
-    RemainAfterExit=yes
-    ExecStart=/usr/bin/ir-keytable -c -p nec -w /etc/rc_keymaps/argon.toml
-
-    [Install]
-    WantedBy=multi-user.target
-    ```
-3.  Save the file, then enable and start your new service:
-    ```bash
-    sudo systemctl enable --now ir-keymap.service
-    ```
-
------
-
-#### Step 5: Test the Input Device
-
-Finally, verify that the system is correctly receiving the IR signals as keyboard presses.
-
-1.  Install the `evtest` tool:
     ```bash
     sudo pacman -S --noconfirm evtest
-    ```
-2.  Run `evtest`. It will show you a list of available input devices. Choose the one that corresponds to your IR receiver (e.g., `gpio_ir_recv`).
-    ```bash
     sudo evtest
     ```
-3.  Press buttons on your remote. You should see "press" and "release" events for each corresponding key (`KEY_UP`, `KEY_VOLUMEUP`, etc.), confirming your setup is working perfectly.
+
+    Select the `gpio_ir_recv` device. When you press buttons on the remote, you should see the corresponding key events.
 
 -----
 
-#### Step 6: Install the latest Python via pyenv
+#### **Part 2: Control Script Software Setup**
 
-This solution requires a modern Python installation. First, install the necessary build dependencies for `pyenv` and Python. The `base-devel` group in Arch Linux provides most of the essential tools like `gcc` and `make`.
+*After setting up your hardware in Part 1, follow these steps to install and configure the Python control script.*
+
+##### **Step 1: Install Python via pyenv**
+
+Install `pyenv` and the latest stable version of Python.
 
 ```bash
+# Install build dependencies
 sudo pacman -Syu --noconfirm
 sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi openssl ncurses readline util-linux db gdbm sqlite
+
+# Install pyenv
 curl -fsSL https://pyenv.run | bash
-```
 
-Next, add `pyenv` to your shell's configuration file. The original instructions use `.bashrc`, which will work for the `bash` shell.
-
-```bash
+# Configure shell for pyenv
 cat <<'EOT'>> ~/.bashrc
-
-# Load pyenv automatically by appending
-# the following to
-# ~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
-# and ~/.bashrc (for interactive shells) :
 
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init - bash)"
-
-# Restart your shell for the changes to take effect.
-
-# Load pyenv-virtualenv automatically by adding
-# the following to ~/.bashrc:
-
 eval "$(pyenv virtualenv-init -)"
 EOT
 
 . ~/.bashrc
-```
 
-Now, install and set the latest stable version of Python.
-
-```bash
+# Install and set latest Python version
 PYVER=$(pyenv install --list | grep '  3[0-9.]*$' | tail -n 1)
 pyenv install $PYVER
 pyenv global $PYVER
-pyenv versions
 ```
 
 -----
 
-#### Step 7: Install a few development tools in case we need them later
+#### **Step 2: Prepare and Patch `roon-ir-remote` Software**
 
-Install `vim` and other useful development tools. Since **`shellcheck`** is in the AUR, we'll use **`yay`** to install it. If you don't have `yay` installed, you'll need to install it first.
-
-```bash
-# Install tools from the official repositories
-sudo pacman -S --noconfirm vim tmux mosh codespell
-
-# Install shellcheck from the AUR using yay
-yay -S --noconfirm shellcheck
-
-# Set up the ALE plugin for vim
-mkdir -p ~/.vim/pack/git-plugins/start
-git clone --depth 1 https://github.com/dense-analysis/ale.git ~/.vim/pack/git-plugins/start/ale
-```
-
------
-
-#### Step 8: Prepare and patch Sebastian Mangels' roon-ir-remote software
-
-This process of cloning the repository and creating the patch file is unchanged.
+Clone the script repository and apply a patch to correctly handle keycodes by name instead of by number.
 
 ```bash
 git clone https://github.com/smangels/roon-ir-remote.git
@@ -993,114 +688,106 @@ EOT
 
 -----
 
-#### Step 9: Create a config file for your Roon environment
+#### **Step 3: Create the Roon Environment Config File**
 
-This step configures the Roon script. Note that we have updated the `event_mapping` codes to match the keymap file from Step 3, so that the dedicated volume buttons control volume.
+Configure the script with your Roon details. **Note:** The `event_mapping` codes must match the key names you defined in your hardware setup (`KEY_ENTER`, `KEY_VOLUMEUP`, etc.).
 
-1.  Set your email and Roon Zone name. The zone name must EXACTLY match the name in the Roon UI.
-    ```bash
-    MY_EMAIL_ADDRESS="Put your email address here"
-    MY_ROON_ZONE="Enter Roon zone name here EXACTLY as it is spelled in the Roon UI"
-    ```
-2.  Create the configuration file.
-    ```bash
-    cat <<EOT> roon-ir-remote/app_info.json
-    {
-      "roon": {
-        "app_info": {
-          "extension_id": "com.smangels.roon-ir-remote",
-          "display_name": "Roon IR Remote",
-          "display_version": "1.0.0",
-          "publisher": "smangels",
-          "email": "${MY_EMAIL_ADDRESS}",
-          "website": "https://github.com/smangels/roon-ir-remote"
-        },
-        "zone": {
-          "name": "${MY_ROON_ZONE}"
-        },
-        "event_mapping": {
-          "codes": {
-            "play_pause": "KEY_ENTER",
-            "stop": "KEY_ESC",
-            "skip": "KEY_RIGHT",
-            "prev": "KEY_LEFT",
-            "vol_up": "KEY_VOLUMEUP",
-            "vol_down": "KEY_VOLUMEDOWN"
-          }
-        }
+```bash
+# Set your email and Roon Zone name (must match Roon UI exactly)
+MY_EMAIL_ADDRESS="Put your email address here"
+MY_ROON_ZONE="Enter Roon zone name here"
+
+# Create the configuration file
+cat <<EOT> roon-ir-remote/app_info.json
+{
+  "roon": {
+    "app_info": {
+      "extension_id": "com.smangels.roon-ir-remote",
+      "display_name": "Roon IR Remote",
+      "display_version": "1.0.0",
+      "publisher": "smangels",
+      "email": "${MY_EMAIL_ADDRESS}",
+      "website": "https://github.com/smangels/roon-ir-remote"
+    },
+    "zone": {
+      "name": "${MY_ROON_ZONE}"
+    },
+    "event_mapping": {
+      "codes": {
+        "play_pause": "KEY_ENTER",
+        "stop": "KEY_ESC",
+        "skip": "KEY_RIGHT",
+        "prev": "KEY_LEFT",
+        "vol_up": "KEY_VOLUMEUP",
+        "vol_down": "KEY_VOLUMEDOWN"
       }
     }
-    EOT
-    ```
+  }
+}
+EOT
+```
 
 -----
 
-#### Step 10: Prepare and test roon-ir-remote
+#### **Step 4: Prepare and Test `roon-ir-remote`**
 
-These steps, which use `patch`, `pyenv`, and `pip`, are not specific to the operating system and remain the same.
+Install the script's dependencies into a virtual environment and run it for the first time.
 
 ```bash
 cd roon-ir-remote
 patch -p1 < roon-ir-remote.patch
 pyenv virtualenv roon-ir-remote
 pyenv activate roon-ir-remote
-pip3 install --upgrade pip pylint pytest
+pip3 install --upgrade pip
 pip3 install -r requirements.txt
 
 python roon_remote.py
 ```
 
-The first time you run the program, you will need to authorize the extension in Roon's Settings, under the "Extensions" tab.
+The first time you run the script, you must **authorize the extension in Roon** by going to `Settings` -> `Extensions`.
 
 -----
 
-#### Step 11: Create a systemd service for roon-ir-remote so that it runs in the background
+#### **Step 5: Create a `systemd` Service**
 
-Creating a `systemd` service is standard on both Ubuntu and Arch Linux. These commands will work without any changes.
+Create a service to run the script automatically in the background.
 
 ```bash
 cat <<EOT | sudo tee /etc/systemd/system/roon-ir-remote.service
 [Unit]
 Description=Roon IR Remote Service
-# This ensures the network is up before starting the service
 After=network.target
 
 [Service]
-# Type simple means the script is the main process of the service
 Type=simple
-
-# Run the service as the '${LOGNAME}' user and group
 User=${LOGNAME}
 Group=${LOGNAME}
-
-# Set the working directory to where your script is located
-# This is the equivalent of your 'cd roon-ir-remote/' command
 WorkingDirectory=/home/${LOGNAME}/roon-ir-remote
-
-# This is the full command to execute.
-# We use the ABSOLUTE PATH to the python executable within your pyenv virtual environment.
-# This completely bypasses the need for 'pyenv activate'.
 ExecStart=/home/${LOGNAME}/.pyenv/versions/roon-ir-remote/bin/python /home/${LOGNAME}/roon-ir-remote/roon_remote.py
-
-# Automatically restart the service if it fails
 Restart=on-failure
 RestartSec=5
 
 [Install]
-# This tells systemd to start the service during the normal multi-user boot process
 WantedBy=multi-user.target
 EOT
 
+# Enable and start the service
 sudo systemctl daemon-reload
-sudo systemctl enable roon-ir-remote.service
-sudo systemctl start roon-ir-remote.service
+sudo systemctl enable --now roon-ir-remote.service
+
+# Check the status
 sudo systemctl status roon-ir-remote.service
-sudo journalctl -u roon-ir-remote.service -f
 ```
 
 -----
 
-### 11. Appendix 3: ARGON One Fan Control
+#### **Step 6: Profit! 📈**
+
+Your IR remote should now control Roon. Enjoy!
+
+-----
+
+### 10. Appendix 2: ARGON One Fan Control
 If you decoded to use an ARGON One case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However AudioLinux is based on Arch Linux, so you'll have to follow these steps instead.
 
 #### Step 1: Skip the `argon1.sh` script in the manual
