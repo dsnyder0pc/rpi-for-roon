@@ -2,14 +2,12 @@
 
 This guide provides comprehensive, step-by-step instructions for configuring two Raspberry Pi devices as a dedicated Diretta Host and Diretta Target. This setup uses a direct, point-to-point Ethernet connection between the two devices for the ultimate in network isolation and audio performance.
 
-If you are located in the US, expect to pay around $432 in total (including tax and shipping) to complete this build:
-- Hardware ($245)
+If you are located in the US, expect to pay around $365 in total (including tax and shipping) to complete this build:
+- Hardware ($178)
 - One year AudioLinux subscription ($69)
 - Diretta Target license ($118)
 
-However, I highly recommend the remote control, which adds $63, bringing the total to **$495.**
-
-The **Diretta Host** will connect to your main network (for Roon Core, etc.) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC.
+The **Diretta Host** will connect to your main network (for Roon Core, etc.) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC or DDC.
 
 ## Table of Contents
 1.  [Prerequisites](#1-prerequisites)
@@ -31,11 +29,6 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 
 A complete bill of materials is provided below. While other parts can be substituted, using these specific components improves the chances of a successful build.
 
-#### About Diretta and the Raspberry Pi 5
-Although the Raspberry Pi 5 is often mentioned within the context of Diretta, Energy Efficient Ethernet (EEE), also known as IEEE 802.3az, can *not* be disabled on the RPi5. EEE can be a significant problem when using the Diretta Protocol because Diretta is highly sensitive to timing and packet loss. It relies on consistent and predictable data flow between the Host (sending side) and Target (receiving side) to optimize audio quality. Therefore, until there's a hardware change or firmware fix, the RPi5 generally is not suitable for this build.
-
-However, it _may_ be possible, and even slightly advantageous, to use a RPi5 for the Diretta Target as long as the Diretta Host is a RPi4. My observation is that EEE in AudioLinux is disabled by default on the RPi4. When the two are directly connected, the RPi5 will see that its link partner (the RPi4) is not offering EEE, and therefore the entire link will be established without EEE being enabled.
-
 **Core Components (from [pishop.us](https://www.pishop.us/) or similar supplier):**
 * 2 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/)
 * 2 x Aluminum Heatsink for Raspberry Pi 4B (3-Pack) (check the box to add heatsinks on the PRi 4 producet page)
@@ -45,7 +38,7 @@ However, it _may_ be possible, and even slightly advantageous, to use a RPi5 for
 
 **Required Networking Components:**
 * 1 x [Plugable USB3 to Ethernet Adapter](https://www.amazon.com/dp/B00AQM8586) (for the Diretta Host)
-* 1 x [Short CAT6 Ethernet Patch Cable](https://www.amazon.com/Cable-Matters-Ethernet-Patch-White/dp/B0CP9WYXKS/) (for the point-to-point link)
+* 1 x [Short CAT6 Ethernet Patch Cable](https://www.amazon.com/Cable-Matters-Snagless-Ethernet-Internet/dp/B0B57S1G2Y/?th=1) (for the point-to-point link)
 
 **Optional, but helpful for troubleshooting:**
 * 1 x [Micro-HDMI to Standard HDMI (A/M), 2m Cable, White](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
@@ -78,8 +71,9 @@ However, it _may_ be possible, and even slightly advantageous, to use a RPi5 for
 
 ### 2. Initial Image Preparation
 
-1.  **Purchase and Download:** Obtain the AudioLinux image from the official website. You will receive a link to download the `.img.gz` file.
-2.  **Flash the Image:** Use your preferred imaging tool (e.g., [balenaEtcher](https://etcher.balena.io/)) to write the downloaded AudioLinux image to **both** microSD cards.
+1.  **Purchase and Download:** Obtain the AudioLinux image from the [official website](https://www.audio-linux.com/). You will receive a link to download the `.img.gz` file.
+2.  **Flash the Image:** Use your preferred imaging tool (e.g., [balenaEtcher](https://etcher.balena.io/) or
+[Raspberry Pi Imager](https://www.raspberrypi.com/software/)) to write the downloaded AudioLinux image to **both** microSD cards.
     > **Note:** The AudioLinux image is a direct disk dump, not a compressed installer. As a result, the image file is quite large, and the flashing process can be unusually long. Expect it to take up to 15 minutes per card, depending on the speed of your microSD card and reader.
 
 ---
@@ -119,7 +113,9 @@ Set a clear hostname for each device to easily identify them.
 ```bash
 # On the Diretta Host
 sudo hostnamectl set-hostname diretta-host
+```
 
+```bash
 # On the Diretta Target
 sudo hostnamectl set-hostname diretta-target
 ```
@@ -131,35 +127,15 @@ sudo hostnamectl set-hostname diretta-target
 sudo timedatectl set-timezone America/Phoenix
 ```
 
-#### 3.4. Create a New Administrative User
-
-Optional, but if you wish, you may create a new administrative user for yourself. For example, I'm using `dsnyder`
-
-```bash
-# Create the new user (e.g., 'dsnyder')
-sudo useradd -m -G input,realtime,video,audio -s /bin/bash dsnyder
-
-# Set a strong password for the new user
-sudo passwd dsnyder
-```
-
-> **Note:** We add the user to the `wheel` group for `sudo` access, and other groups like `realtime` and `audio` for necessary system permissions.
-
-#### 3.5. Configure Passwordless Sudo
-
-For convenience, you can allow your new user to run `sudo` commands without a password.
-
-```
-printf 'dsnyder\t\tALL = (ALL) NOPASSWD: ALL\n' | sudo tee /etc/sudoers.d/dsnyder
-```
-
-**At this point, reboot the device (`sudo reboot`). Log back in with your new user account before proceeding.**
-
-Repeat the above steps for the second Raspberry Pi once you're able to login to the first one.
+**At this point, shutdown the device (`sudo poweroff`). Repeat the above steps for the second Raspberry Pi.**
 
 ---
 
 ### 4. System Updates (Perform on Both Devices)
+
+Each RPi has its own machine ID, so you may power them up now. If you have two network cables, it's more
+convenient to connect both of them to your home network at the same time for the next few steps, but you can
+proceed one-at-at-time otherwise. **Note**: your router will likely assign them different IP addresses from the one you used to login initially.
 
 #### 4.1. Workaround for Pacman Update Issue
 
@@ -187,16 +163,7 @@ In this section, we will create the network configuration files that will activa
 
 #### 5.1. Pre-configure the Diretta Host
 
-1.  **Enable IP Forwarding:**
-    ```bash
-    # Enable it for the current session
-    sudo sysctl -w net.ipv4.ip_forward=1
-    
-    # Make it permanent across reboots
-    echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-ip-forwarding.conf
-    ```
-
-2.  **Create Network Files:**
+1.  **Create Network Files:**
     Create the following two files on the **Diretta Host**. The `end0.network` file sets the static IP for the future point-to-point link. The `enp.network` file ensures the USB Ethernet adapter continues to get an IP from your main LAN.
 
     *File: `sudo nano /etc/systemd/network/end0.network`*
@@ -228,6 +195,15 @@ In this section, we will create the network configuration files that will activa
     printf "172.20.0.2\tdiretta-target target\n" | sudo tee -a /etc/hosts
     ```
 
+2.  **Enable IP Forwarding:**
+    ```bash
+    # Enable it for the current session
+    sudo sysctl -w net.ipv4.ip_forward=1
+    
+    # Make it permanent across reboots
+    echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-ip-forwarding.conf
+    ```
+
 3.  **Configure Network Address Translation (NAT):**
     ```bash
     # Add the firewall rule. The -o enp+ will match your USB adapter.
@@ -253,14 +229,14 @@ Gateway=172.20.0.1
 DNS=172.16.8.1
 ```
 
-Add an /etc/hosts entry for the Diretta Host:
-```
-printf "172.20.0.1\tdiretta-host host\n" | sudo tee -a /etc/hosts
+**Important:** Remove the old en.network file if present:
+```bash
+sudo rm -fv /etc/systemd/network/en.network
 ```
 
-**Important:** Remove the old en.network file if present:
-```
-sudo rm -fv /etc/systemd/network/en.network
+Add an /etc/hosts entry for the Diretta Host:
+```bash
+printf "172.20.0.1\tdiretta-host host\n" | sudo tee -a /etc/hosts
 ```
 
 #### 5.3. The Physical Connection Change
@@ -294,14 +270,14 @@ The `ProxyJump` directive in your local SSH configuration is the standard and re
     ```
     Host diretta-host host
         HostName <diretta-host-lan-ip>
-        User dsnyder
+        User audiolinux
 
     Host diretta-target target
         HostName 172.20.0.2
-        User dsnyder
+        User audiolinux
         ProxyJump diretta-host
     ```
-    *(Replace `<diretta-host-lan-ip>` with the actual IP of the Host on your LAN, and `dsnyder` with your username.)*
+    *(Replace `<diretta-host-lan-ip>` with the actual IP of the Host on your LAN.)*
 
 With this configuration in place, SSH handles the connection routing automatically when you try to connect to `diretta-target`.
 
@@ -314,7 +290,7 @@ While you can use passwords over the proxied connection, the most secure and con
 1.  **Create an SSH Key (if you don't have one):**
     It's best practice to use a modern algorithm like `ed25519`. When prompted, enter a strong, memorable passphrase.
     ```bash
-    ssh-keygen -t ed25519 -C "your_email@example.com"
+    ssh-keygen -t ed25519 -C "audiolinux"
     ```
 
 2.  **Set up `keychain` (for Linux users):**
@@ -384,6 +360,13 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
         ```
     * Choose **4) License**. The system will run for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license. This requires the internet access we configured in step 5.
 
+
+7.  **Minimize disk I/O on the Diretta Target:** (optional but recommended for optimal performance)
+    * Chang `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
+    ```bash
+    sudo nano /etc/systemd/journald.conf
+    ```
+
 #### 7.2. On the Diretta Host
 
 1.  SSH to the Host: `ssh diretta-host`.
@@ -413,6 +396,12 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
         ```
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient.
 
+6.  **Minimize disk I/O on the Diretta Target:** (optional but recommended for optimal performance)
+    * Chang `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
+    ```bash
+    sudo nano /etc/systemd/journald.conf
+    ```
+
 ---
 
 ### 8. Final Steps & Roon Integration
@@ -423,18 +412,16 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
     * Select **INSTALL/UPDATE Roonbridge**.
     * The installation will proceed, and the Roon Bridge service will be enabled and started automatically upon completion.
 
-2.  **Minimize disk I/O on the Diretta Host and Target:** (optional but recommended for optimal performance)
-    * Chang `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
+2.  **Reboot Both Devices:** For a clean start, `sudo reboot` both the Host and Target.
 
-3.  **Reboot Both Devices:** For a clean start, `sudo reboot` both the Host and Target.
-
-4.  **Configure Roon:**
+3.  **Configure Roon:**
     * Open Roon on your control device.
     * Go to `Settings` -> `Audio`.
     * Under the "Diretta" section, you should see your device. The name will be based on your DAC.
     * Click `Enable`, give it a name, and you are ready to play music!
 
 Your dedicated Diretta link is now fully configured for pristine, isolated audio playback.
+**Note:** The "Limited" zone for Diretta Target testing will disappear from Roon after six minutes of playback.  This is normal. At that point, you'll need to purchase a license for the Diretta Target. Cost is currently 100 Euros and it can take up to 48 hours for activation to complete. Once you receive the activation email from the Diretta team, just reboot your Target computer to pick up the activation.
 
 ---
 
@@ -617,7 +604,7 @@ diff --git a/roon_remote.py b/roon_remote.py
 index 64a8317..56a591f 100644
 --- a/roon_remote.py
 +++ b/roon_remote.py
-@@ -3,18 +3,18 @@ Implement a Roon Remote extension that reads keybaord events
+@@ -3,18 +3,18 @@ Implement a Roon Remote extension that reads keyboard events
  from a FLIRC device and converts those events into transport
  commands towards a certain _Zone_ in Roon.
  """
