@@ -788,6 +788,8 @@ python roon_remote.py
 
 The first time you run the script, you must **authorize the extension in Roon** by going to `Settings` -> `Extensions`.
 
+Once you are finished testing, type CTRL-C to exit.
+
 -----
 
 #### **Step 6: Create a `systemd` Service**
