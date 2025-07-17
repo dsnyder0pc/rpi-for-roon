@@ -162,6 +162,7 @@ Use the AudioLinux menu system to perform all updates.
 2.  Select **INSTALL/UPDATE menu**.
 3.  On the next screen, select **UPDATE system** and let the process complete.
 4.  After the system update finishes, select **Update menu** from the same screen to get the latest version of the AudioLinux scripts.
+5.  Exit the menu system to get back to the terminal.
 
 ---
 
@@ -420,9 +421,14 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
     * Select **INSTALL/UPDATE Roonbridge**.
     * The installation will proceed, and the Roon Bridge service will be enabled and started automatically upon completion.
 
-2.  **Reboot Both Devices:** For a clean start, `sudo reboot` both the Host and Target.
+2.  **Enable Roon Bridge (on the Host):
+    * Select **Audio menu** from the Main menu
+    * Select **SHOW audio service**
+    * If you don't see **roonbridge** under enabled services, select **ROONBRIDGE enable/disable**
 
-3.  **Configure Roon:**
+3.  **Reboot Both Devices:** For a clean start, `sudo reboot` both the Host and Target.
+
+4.  **Configure Roon:**
     * Open Roon on your control device.
     * Go to `Settings` -> `Audio`.
     * Under the "Diretta" section, you should see your device. The name will be based on your DAC.
