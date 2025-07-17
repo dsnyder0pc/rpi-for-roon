@@ -45,7 +45,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [Raspberry Pi Official Keyboard - Red/White](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 
 **Optional Upgrades:**
-* 2 x [Argon ONE V2 Aluminum Case for Raspberry Pi 4](https://www.amazon.com/Argon-Raspberry-Aluminum-Heatsink-Supports/dp/B07WP8WC3V/)
+* 2 x [Argon ONE V2 Aluminum Case for Raspberry Pi 4](https://www.amazon.com/Argon-Raspberry-Aluminum-Heatsink-Supports/dp/B07WP8WC3V/) (skip the aluminum heatsinks and official cases above)
 * 1 x [Argon IR Remote](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (to add remote control capabilities to the Diretta Host)
 * 1 x [FLIRC USB Universal Remote Control Receiver](https://www.amazon.com/Universal-Remote-Control-Receiver-Raspberry/dp/B01NBRBWS6/) (needed to use the Argon IR Remote with a non-Argon ONE case)
 * 1 x [AudioQuest Forest Ethernet Cable 0.75 M](https://www.amazon.com/AudioQuest-RJ-Forest-Ethernet-0-75m/dp/B0073H82U8/)
