@@ -99,7 +99,7 @@ You'll use the SSH client on your local computer to login to the RPi computers t
 Once you have the IP address of one of your RPi computers, the login process will look something like this:
 ```bash
 # Enter the address of your RPi after the "@" symbol
-ssh audiolinux@<insert.IP.address.here>
+ssh audiolinux@insert.IP.address.here
 ```
 
 #### 3.1. Regenerate the Machine ID
