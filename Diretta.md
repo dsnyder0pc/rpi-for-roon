@@ -2,7 +2,7 @@
 
 This guide provides comprehensive, step-by-step instructions for configuring two Raspberry Pi devices as a dedicated Diretta Host and Diretta Target. This setup uses a direct, point-to-point Ethernet connection between the two devices for the ultimate in network isolation and audio performance.
 
-If you are located in the US, expect to pay around $365 in total (including tax and shipping) to complete this build:
+If you are located in the US, expect to pay around $365 in total (plus tax and shipping) to complete this build:
 - Hardware ($178)
 - One year AudioLinux subscription ($69)
 - Diretta Target license ($118)
