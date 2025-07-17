@@ -482,7 +482,7 @@ This guide provides instructions for installing and configuring an IR remote to 
 
       * Edit your boot configuration file:
         ```bash
-        sudo vi /boot/config.txt
+        sudo nano /boot/config.txt
         ```
       * Add the following line to enable the IR receiver on the correct pin:
         ```
@@ -512,7 +512,7 @@ This guide provides instructions for installing and configuring an IR remote to 
 
       * Create a new keymap file:
         ```bash
-        sudo vi /etc/rc_keymaps/argon.toml
+        sudo nano /etc/rc_keymaps/argon.toml
         ```
       * Paste the following content, replacing the example scancodes with the ones you recorded.
         ```toml
@@ -536,7 +536,7 @@ This guide provides instructions for installing and configuring an IR remote to 
 
       * Create a new service file:
         ```bash
-        sudo vi /etc/systemd/system/ir-keymap.service
+        sudo nano /etc/systemd/system/ir-keymap.service
         ```
       * Paste the following content:
         ```ini
@@ -601,6 +601,8 @@ PYVER=$(pyenv install --list | grep '  3[0-9.]*$' | tail -n 1)
 pyenv install $PYVER
 pyenv global $PYVER
 ```
+
+**Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes. Dont give up!
 
 -----
 
