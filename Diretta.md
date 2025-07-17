@@ -94,6 +94,14 @@ After flashing, you must configure each Raspberry Pi individually to avoid netwo
 The default SSH user is `audiolinux` with password `audiolinux`.
 The default sudo/root password is `audiolinux0`.
 
+You'll use the SSH client on your local computer to login to the RPi computers throughout this process. This client requires you to have a way to find the IP address of the RPi computers, which may change from one reobot to the next. The easiest way to get this information is from your home network router's web UI or app, but you can optionally install the [fing](https://www.fing.com/app/) app on your smartphone or tablet.
+
+Once you have the IP address of one of your RPi computers, the login process will look something like this:
+```bash
+# Enter the address of your RPi after the "@" symbol
+ssh audiolinux@<insert.IP.address.here>
+```
+
 #### 3.1. Regenerate the Machine ID
 
 The `machine-id` is a unique identifier for the OS installation. It **must** be different for each device.
