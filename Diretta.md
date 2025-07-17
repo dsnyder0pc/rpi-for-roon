@@ -21,7 +21,8 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 7.  [Diretta Software Installation & Configuration](#7-diretta-software-installation--configuration)
 8.  [Final Steps & Roon Integration](#8-final-steps--roon-integration)
 9.  [Appendix 1: Optional IR Remote Control Setup](#9-appendix-1-optional-ir-remote-control-setup)
-10. [Appendix 2: ARGON One Fan Control](#10-appendix-2-argon-one-fan-control)
+10.  [Appendix 2: Optional Argon One IR Remote Setup](#10-appendix-2-optional-argon-one-ir-remote-setup)
+11. [Appendix 3: ARGON One Fan Control](#11-appendix-3-argon-one-fan-control)
 
 ---
 
@@ -716,10 +717,385 @@ sudo systemctl status roon-ir-remote.service
 sudo journalctl -u roon-ir-remote.service -f
 ```
 
-#### Step 9: Profit\! 📈
-Congrats if you got all of this working. If not, go through it again and let me know where the process failed.
+### 10. Appendix 2: Optional Argon One IR Remote Setup
 
-### 10. Appendix 2: ARGON One Fan Control
+This appendix provides instructions for installing and configuring the Argon One V2/V3 case's built-in infrared receiver on the **Diretta Host**. This will allow you to control Roon playback using the Argon IR remote.
+
+Unlike the Flirc which is a smart device that emulates a keyboard, the Argon One's receiver is connected directly to the Raspberry Pi's GPIO pins. We will use the modern kernel-level tool **`ir-keytable`** to capture IR signals and translate them into standard keyboard events that the `roon-ir-remote` script can use.
+
+-----
+
+#### Step 1: Enable the IR Receiver Hardware
+
+First, you must enable the specific hardware interfaces for the Argon One case and its IR receiver.
+
+1.  Edit your boot configuration file with a text editor:
+    ```bash
+    sudo nano /boot/config.txt
+    ```
+2.  Add the following lines to the end of the file. This enables the I2C interface for the case's fan control and activates the IR receiver on the correct GPIO pin.
+    ```
+    dtparam=i2c_arm=on
+    dtoverlay=gpio-ir,gpio_pin=23
+    ```
+3.  Save the file, exit the editor, and reboot for the change to take effect.
+    ```bash
+    sudo reboot
+    ```
+
+-----
+
+#### Step 2: Install IR Tools and Capture Scancodes
+
+Next, install the necessary tools and capture the unique codes for each button on your remote.
+
+1.  Install the `v4l-utils` package, which provides `ir-keytable`:
+    ```bash
+    sudo pacman -S --noconfirm v4l-utils
+    ```
+2.  Run the `ir-keytable` test tool to see the scancodes for your remote.
+    ```bash
+    sudo ir-keytable -t
+    ```
+3.  Press each button on your remote (Up, Down, Left, Right, OK/Enter, Back, Volume Up, Volume Down). For each press, you will see output that contains the scancode. Write down the scancode for each button. For example:
+    ```
+    Event: time 1752715725.730574, type 4 (EV_MSC), code 4 (MSC_SCAN), value ca
+    ```
+    In this example, the scancode is `0xca`. Press `Ctrl+C` when you are finished.
+
+-----
+
+#### Step 3: Create the Keymap File
+
+This file maps the scancodes you captured to standard Linux key names. The example below uses the known scancodes for the Argon remote.
+
+1.  Create a new keymap file:
+    ```bash
+    sudo nano /etc/rc_keymaps/argon.toml
+    ```
+2.  Paste the following content into the file. This configuration ensures that the arrow keys and volume keys send distinct signals.
+    ```toml
+    # /etc/rc_keymaps/argon.toml
+    # Keymap for the Argon IR Remote
+
+    [[protocols]]
+    name = "argon_remote"
+    protocol = "nec"
+    [protocols.scancodes]
+    0xca = "KEY_UP"
+    0xd2 = "KEY_DOWN"
+    0x99 = "KEY_LEFT"
+    0xc1 = "KEY_RIGHT"
+    0xce = "KEY_ENTER"
+    0x90 = "KEY_ESC"
+    0x80 = "KEY_VOLUMEUP"
+    0x81 = "KEY_VOLUMEDOWN"
+    ```
+3.  Save the file and exit the editor.
+
+-----
+
+#### Step 4: Create a Systemd Service to Load the Keymap
+
+To ensure your keymap is loaded automatically on every boot, create a simple `systemd` service.
+
+1.  Create a new service file:
+    ```bash
+    sudo nano /etc/systemd/system/ir-keymap.service
+    ```
+2.  Paste the following content into the file. This defines a one-shot service that loads your keymap after the system boots.
+    ```ini
+    [Unit]
+    Description=Load custom IR keymap
+    After=multi-user.target
+
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    ExecStart=/usr/bin/ir-keytable -c -p nec -w /etc/rc_keymaps/argon.toml
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+3.  Save the file, then enable and start your new service:
+    ```bash
+    sudo systemctl enable --now ir-keymap.service
+    ```
+
+-----
+
+#### Step 5: Test the Input Device
+
+Finally, verify that the system is correctly receiving the IR signals as keyboard presses.
+
+1.  Install the `evtest` tool:
+    ```bash
+    sudo pacman -S --noconfirm evtest
+    ```
+2.  Run `evtest`. It will show you a list of available input devices. Choose the one that corresponds to your IR receiver (e.g., `gpio_ir_recv`).
+    ```bash
+    sudo evtest
+    ```
+3.  Press buttons on your remote. You should see "press" and "release" events for each corresponding key (`KEY_UP`, `KEY_VOLUMEUP`, etc.), confirming your setup is working perfectly.
+
+-----
+
+#### Step 6: Install the latest Python via pyenv
+
+This solution requires a modern Python installation. First, install the necessary build dependencies for `pyenv` and Python. The `base-devel` group in Arch Linux provides most of the essential tools like `gcc` and `make`.
+
+```bash
+sudo pacman -Syu --noconfirm
+sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi openssl ncurses readline util-linux db gdbm sqlite
+curl -fsSL https://pyenv.run | bash
+```
+
+Next, add `pyenv` to your shell's configuration file. The original instructions use `.bashrc`, which will work for the `bash` shell.
+
+```bash
+cat <<'EOT'>> ~/.bashrc
+
+# Load pyenv automatically by appending
+# the following to
+# ~/.bash_profile if it exists, otherwise ~/.profile (for login shells)
+# and ~/.bashrc (for interactive shells) :
+
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init - bash)"
+
+# Restart your shell for the changes to take effect.
+
+# Load pyenv-virtualenv automatically by adding
+# the following to ~/.bashrc:
+
+eval "$(pyenv virtualenv-init -)"
+EOT
+
+. ~/.bashrc
+```
+
+Now, install and set the latest stable version of Python.
+
+```bash
+PYVER=$(pyenv install --list | grep '  3[0-9.]*$' | tail -n 1)
+pyenv install $PYVER
+pyenv global $PYVER
+pyenv versions
+```
+
+-----
+
+#### Step 7: Install a few development tools in case we need them later
+
+Install `vim` and other useful development tools. Since **`shellcheck`** is in the AUR, we'll use **`yay`** to install it. If you don't have `yay` installed, you'll need to install it first.
+
+```bash
+# Install tools from the official repositories
+sudo pacman -S --noconfirm vim tmux mosh codespell
+
+# Install shellcheck from the AUR using yay
+yay -S --noconfirm shellcheck
+
+# Set up the ALE plugin for vim
+mkdir -p ~/.vim/pack/git-plugins/start
+git clone --depth 1 https://github.com/dense-analysis/ale.git ~/.vim/pack/git-plugins/start/ale
+```
+
+-----
+
+#### Step 8: Prepare and patch Sebastian Mangels' roon-ir-remote software
+
+This process of cloning the repository and creating the patch file is unchanged.
+
+```bash
+git clone https://github.com/smangels/roon-ir-remote.git
+cat <<'EOT' > roon-ir-remote/roon-ir-remote.patch
+diff --git a/roon_remote.py b/roon_remote.py
+index 64a8317..db5ead8 100644
+--- a/roon_remote.py
++++ b/roon_remote.py
+@@ -3,18 +3,18 @@ Implement a Roon Remote extension that reads keyboard events
+ from a FLIRC device and converts those events into transport
+ commands towards a certain _Zone_ in Roon.
+ """
+-# !/usr/bin/python
++# !/usr/bin/env python
+ import logging
+ import signal
+ import sys
+ from pathlib import Path
+
+ import evdev
+-from evdev import InputDevice
++from evdev import InputDevice, ecodes, categorize
+
+ from app import RoonController, RoonOutput, RemoteConfig, RemoteConfigE, RemoteKeycodeMapping, RoonControllerE
+
+-logging.basicConfig(level=logging.DEBUG,
++logging.basicConfig(level=logging.WARNING,
+                       format='%(asctime)s %(levelname)s %(module)s: %(message)s')
+ logger = logging.getLogger('roon_remote')
+
+@@ -56,31 +56,33 @@ def monitor_remote(zone: RoonOutput, dev: InputDevice, mapping: RemoteKeycodeMap
+               # ignore everything that is not KEY_DOWN
+               continue
+
+-        # logging.debug(str(categorize(event)))
++        event_name = ecodes.KEY[event.code]
++        logging.debug(str(categorize(event)))
+         try:
+-            # logging.debug("Status: {}".format('uninitialized'))
+-            # logging.debug("KeyCode: {}".format(event.code))
+-            if event.code in mapping.to_key_code('prev'):
++            logging.debug("Status: {}".format('uninitialized'))
++            logging.debug("KeyCode Number: {}".format(event.code))
++            logging.debug("KeyCode Name: {}".format(event_name))
++            if event_name == mapping.to_key_code('prev'):
+                 zone.previous()
+-            elif event.code in mapping.to_key_code('skip'):
++            elif event_name == mapping.to_key_code('skip'):
+                 zone.skip()
+-            elif event.code in mapping.to_key_code('stop'):
++            elif event_name == mapping.to_key_code('stop'):
+                 zone.stop()
+-            elif event.code in mapping.to_key_code('play_pause'):
++            elif event_name == mapping.to_key_code('play_pause'):
+                 if zone.state == "playing":
+                     zone.pause()
+                 else:
+                     zone.repeat(False)
+                     zone.play()
+-            elif event.code in mapping.to_key_code('vol_up'):
++            elif event_name == mapping.to_key_code('vol_up'):
+                 zone.volume_up(2)
+-            elif event.code in mapping.to_key_code('vol_down'):
++            elif event_name == mapping.to_key_code('vol_down'):
+                 zone.volume_down(2)
+-            elif event.code in mapping.to_key_code('mute'):
++            elif event_name == mapping.to_key_code('mute'):
+                 zone.mute(not zone.is_muted())
+-            elif event.code in mapping.to_key_code('fall_asleep'):
++            elif event_name == mapping.to_key_code('fall_asleep'):
+                 zone.play_playlist('wellenrauschen')
+-            elif event.code in mapping.to_key_code('play_radio'):
++            elif event_name == mapping.to_key_code('play_radio'):
+                 zone.play_radio_station(station_name="Radio Paradise (320k aac)")
+
+             logger.debug("Received Code: %s", repr(event.code))
+EOT
+```
+
+-----
+
+#### Step 9: Create a config file for your Roon environment
+
+This step configures the Roon script. Note that we have updated the `event_mapping` codes to match the keymap file from Step 3, so that the dedicated volume buttons control volume.
+
+1.  Set your email and Roon Zone name. The zone name must EXACTLY match the name in the Roon UI.
+    ```bash
+    MY_EMAIL_ADDRESS="Put your email address here"
+    MY_ROON_ZONE="Enter Roon zone name here EXACTLY as it is spelled in the Roon UI"
+    ```
+2.  Create the configuration file.
+    ```bash
+    cat <<EOT> roon-ir-remote/app_info.json
+    {
+      "roon": {
+        "app_info": {
+          "extension_id": "com.smangels.roon-ir-remote",
+          "display_name": "Roon IR Remote",
+          "display_version": "1.0.0",
+          "publisher": "smangels",
+          "email": "${MY_EMAIL_ADDRESS}",
+          "website": "https://github.com/smangels/roon-ir-remote"
+        },
+        "zone": {
+          "name": "${MY_ROON_ZONE}"
+        },
+        "event_mapping": {
+          "codes": {
+            "play_pause": "KEY_ENTER",
+            "stop": "KEY_ESC",
+            "skip": "KEY_RIGHT",
+            "prev": "KEY_LEFT",
+            "vol_up": "KEY_VOLUMEUP",
+            "vol_down": "KEY_VOLUMEDOWN"
+          }
+        }
+      }
+    }
+    EOT
+    ```
+
+-----
+
+#### Step 10: Prepare and test roon-ir-remote
+
+These steps, which use `patch`, `pyenv`, and `pip`, are not specific to the operating system and remain the same.
+
+```bash
+cd roon-ir-remote
+patch -p1 < roon-ir-remote.patch
+pyenv virtualenv roon-ir-remote
+pyenv activate roon-ir-remote
+pip3 install --upgrade pip pylint pytest
+pip3 install -r requirements.txt
+
+python roon_remote.py
+```
+
+The first time you run the program, you will need to authorize the extension in Roon's Settings, under the "Extensions" tab.
+
+-----
+
+#### Step 11: Create a systemd service for roon-ir-remote so that it runs in the background
+
+Creating a `systemd` service is standard on both Ubuntu and Arch Linux. These commands will work without any changes.
+
+```bash
+cat <<EOT | sudo tee /etc/systemd/system/roon-ir-remote.service
+[Unit]
+Description=Roon IR Remote Service
+# This ensures the network is up before starting the service
+After=network.target
+
+[Service]
+# Type simple means the script is the main process of the service
+Type=simple
+
+# Run the service as the '${LOGNAME}' user and group
+User=${LOGNAME}
+Group=${LOGNAME}
+
+# Set the working directory to where your script is located
+# This is the equivalent of your 'cd roon-ir-remote/' command
+WorkingDirectory=/home/${LOGNAME}/roon-ir-remote
+
+# This is the full command to execute.
+# We use the ABSOLUTE PATH to the python executable within your pyenv virtual environment.
+# This completely bypasses the need for 'pyenv activate'.
+ExecStart=/home/${LOGNAME}/.pyenv/versions/roon-ir-remote/bin/python /home/${LOGNAME}/roon-ir-remote/roon_remote.py
+
+# Automatically restart the service if it fails
+Restart=on-failure
+RestartSec=5
+
+[Install]
+# This tells systemd to start the service during the normal multi-user boot process
+WantedBy=multi-user.target
+EOT
+
+sudo systemctl daemon-reload
+sudo systemctl enable roon-ir-remote.service
+sudo systemctl start roon-ir-remote.service
+sudo systemctl status roon-ir-remote.service
+sudo journalctl -u roon-ir-remote.service -f
+```
+
+-----
+
+### 11. Appendix 3: ARGON One Fan Control
 If you decoded to use an ARGON One case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However AudioLinux is based on Arch Linux, so you'll have to follow these steps instead.
 
 #### Step 1: Skip the `argon1.sh` script in the manual
