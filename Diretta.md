@@ -252,7 +252,7 @@ if [ -n "$DEFAULT_IFACE" ]; then
     fi
 fi
 EOT
-```
+    ```
 
 #### 5.2. Pre-configure the Diretta Target
 
