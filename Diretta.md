@@ -229,8 +229,9 @@ In this section, we will create the network configuration files that will activa
     cat <<'EOT' | sudo tee /opt/scripts/update/update_motd.sh
     #!/bin/bash
     #
-    # This script updates the MOTD with the IP address (IPv4 preferred)
-    # of the interface used for the default gateway.
+    # This script updates the MOTD with the primary IP address (IPv4 preferred) 
+    # by checking which source IP the kernel uses for the default route.
+    # This correctly handles interfaces with multiple IP aliases.
     #
 
     MOTD_FILE="/etc/motd"
@@ -239,19 +240,15 @@ In this section, we will create the network configuration files that will activa
     # First, remove any old IP address lines from the motd
     sed -i '/^Your IP address is/d' "$MOTD_FILE"
 
-    # --- Try to find the IPv4 address first ---
-    DEFAULT_IFACE_V4=$(ip -4 route list 0/0 | awk '{print $5}')
-    if [ -n "$DEFAULT_IFACE_V4" ]; then
-        IP_ADDR=$(ip -4 addr show "$DEFAULT_IFACE_V4" | grep -oP 'inet \K[\d.]+')
-    fi
+    # --- Try to find the primary IPv4 address ---
+    # We ask the kernel for the route to a public IP (8.8.8.8).
+    # The 'src' field in the output is the primary IP it would use.
+    IP_ADDR=$(ip -4 route get 8.8.8.8 2>/dev/null | grep -oP 'src \K[\d.]+')
 
-    # --- If no IPv4 address was found, try for a global IPv6 address ---
+    # --- If no IPv4 address was found, try for a primary IPv6 address ---
     if [ -z "$IP_ADDR" ]; then
-        DEFAULT_IFACE_V6=$(ip -6 route list default | awk '{print $5}')
-        if [ -n "$DEFAULT_IFACE_V6" ]; then
-            # Find the global IPv6 address, ignoring local/temporary ones
-            IP_ADDR=$(ip -6 addr show "$DEFAULT_IFACE_V6" | grep 'scope global' | grep -oP 'inet6 \K[0-9a-fA-F:]+')
-        fi
+        # We do the same for IPv6 using Google's public DNS.
+        IP_ADDR=$(ip -6 route get 2001:4860:4860::8888 2>/dev/null | grep -oP 'src \K[0-9a-fA-F:]+')
     fi
 
     # --- If an IP (v4 or v6) was found, update the MOTD ---
