@@ -235,7 +235,7 @@ Name=end0
 [Network]
 Address=172.20.0.2/24
 Gateway=172.20.0.1
-DNS=172.16.8.1
+DNS=8.8.8.8
 ```
 
 **Important:** Remove the old en.network file if present:
