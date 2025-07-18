@@ -903,13 +903,20 @@ yay -S argonone-c-git
 
 #### Step 5: Switch Argon ONE case from hardware to software control
 ```bash
-sudo pacman -S i2c-tools
-sudo cp /usr/lib/systemd/system/argononed.service /etc/systemd/system/argononed.service
-sudo sed -i 's#\[Service\]#&\nExecStartPre=/usr/bin/i2cset -y 1 0x1a 0#' /etc/systemd/system/argononed.service
+sudo pacman -S --needed i2c-tools
+# Create a systemd override file to switch the case to software mode on boot
+printf '%s\n' \
+  '[Service]' \
+  'ExecStartPre=/usr/bin/i2cset -y 1 0x1a 0' \
+  | sudo tee /etc/systemd/system/argononed.service.d/software-mode.conf > /dev/null
 ```
 
 #### Step 5: Enable the Service
 ```bash
+# Reload the systemd manager to read the new configuration
+sudo systemctl daemon-reload
+
+# Enable the service to start on boot
 sudo systemctl enable argononed.service
 ```
 
