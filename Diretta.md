@@ -227,31 +227,31 @@ In this section, we will create the network configuration files that will activa
     The script that updates the loign banner (`/etc/motd`) does not handle the case of two network interfaces correctly. If we don't update that script, the login banner will be poluted with lots of bogus entries; one for each reboot. The new script below addresses this issue.
     ```bash
     cat <<'EOT' | sudo tee /opt/scripts/update/update_motd.sh
-#!/bin/bash
-#
-# This script updates the MOTD with the IP address of the interface
-# that is on the same subnet as the default gateway.
-#
+    #!/bin/bash
+    #
+    # This script updates the MOTD with the IP address of the interface
+    # that is on the same subnet as the default gateway.
+    #
 
-MOTD_FILE="/etc/motd"
+    MOTD_FILE="/etc/motd"
 
-# First, remove any old IP address lines from the motd
-sed -i '/^Your IP address is/d' "$MOTD_FILE"
+    # First, remove any old IP address lines from the motd
+    sed -i '/^Your IP address is/d' "$MOTD_FILE"
 
-# Find the primary network interface (the one used for the default route)
-DEFAULT_IFACE=$(ip route | grep '^default' | awk '{print $5}')
+    # Find the primary network interface (the one used for the default route)
+    DEFAULT_IFACE=$(ip route | grep '^default' | awk '{print $5}')
 
-# If a default interface is found, get its IP and update the motd
-if [ -n "$DEFAULT_IFACE" ]; then
-    # Get the IPv4 address for the default interface, removing the CIDR suffix (e.g., /24)
-    IP_ADDR=$(ip addr show "$DEFAULT_IFACE" | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+    # If a default interface is found, get its IP and update the motd
+    if [ -n "$DEFAULT_IFACE" ]; then
+        # Get the IPv4 address for the default interface, removing the CIDR suffix (e.g., /24)
+        IP_ADDR=$(ip addr show "$DEFAULT_IFACE" | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
 
-    # If an IP address was successfully found, append it to the motd
-    if [ -n "$IP_ADDR" ]; then
-        echo "Your IP address is $IP_ADDR" >> "$MOTD_FILE"
+        # If an IP address was successfully found, append it to the motd
+        if [ -n "$IP_ADDR" ]; then
+            echo "Your IP address is $IP_ADDR" >> "$MOTD_FILE"
+        fi
     fi
-fi
-EOT
+    EOT
     ```
 
 #### 5.2. Pre-configure the Diretta Target
