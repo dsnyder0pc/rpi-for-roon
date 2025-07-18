@@ -224,7 +224,7 @@ In this section, we will create the network configuration files that will activa
     ```
 
 4.  **Fix the `update_motd.sh` script**
-    The script that updates the loign banner (`/etc/motd`) does not handle the case of two network interfaces correctly. If we don't update that script, the login banner will be poluted with lots of bogus entries; one for each reboot. The new script below addresses this issue.
+    The script that updates the login banner (`/etc/motd`) does not handle the case of two network interfaces correctly. If we don't update that script, the login banner will be polluted with lots of bogus entries; one for each reboot. The new script below addresses this issue.
     ```bash
     cat <<'EOT' | sudo tee /opt/scripts/update/update_motd.sh
     #!/bin/bash
@@ -882,56 +882,63 @@ The manual says to download the argon1.sh script from download.argon40.com and p
 
 #### Step 2: Configure your system:
 You need to enable the I2C interface, which the case uses to communicate with the Raspberry Pi. Edit `/boot/config.txt` and uncommont following line near the top:
-```
+```ini
 dtparam=i2c_arm=on
 ```
 
 Also, add the following where you see the other `dtoverlay` statements:
-```
+```ini
 dtoverlay=argonone
 ```
 
 #### Step 3: Configure `udev` permissions
-```
+```bash
 echo 'KERNEL=="i2c-[0-9]*", MODE="0666"' | sudo tee /etc/udev/rules.d/99-i2c.rules
 ```
 
 #### Step 4: Install the Argon One Package
-```
+```bash
 yay -S argonone-c-git
 ```
 
-#### Step 5: Enable the Service
+#### Step 5: Switch Argon ONE case from hardware to software control
+```bash
+sudo pacman -S i2c-tools
+sudo cp /usr/lib/systemd/system/argononed.service /etc/systemd/system/argononed.service
+sudo sed -i 's#\[Service\]#&\nExecStartPre=/usr/bin/i2cset -y 1 0x1a 0#' /etc/systemd/system/argononed.service
 ```
+
+#### Step 5: Enable the Service
+```bash
 sudo systemctl enable argononed.service
 ```
 
 #### Step 6: Reboot
 Finally, reboot your Raspberry Pi for all changes to take effect:
-```
+```bash
 sudo sync; sudo reboot
 ```
 
 Now, the fan will be controlled by the daemon, and the power button will have full functionality.
 
 #### Step 7: Verify the service
-```
+```bash
 systemctl status argononed.service
 journalctl -u argononed.service -b
 ```
 
 #### Step 8: Review Fan Mode and Settings:
 To see the current configuration values, run the following command:
-```
+```bash
 sudo argonone-cli --decode
 ```
 
 To adjust those values, you must create a config file. Use these values to start:
-```
+```bash
 sudo nano /etc/argononed.conf
 ```
 Add these lines:
-```
+```ini
 [Schedule]
 temp0=55
 fan0=10
@@ -945,7 +952,7 @@ hysteresis=3
 ```
 
 Restart the service to pick up the new configuration values:
-```
+```bash
 sudo systemctl restart argononed.service
 ```
 
