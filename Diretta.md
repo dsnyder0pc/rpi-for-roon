@@ -16,10 +16,11 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 4.  [System Updates (Perform on Both Devices)](#4-system-updates-perform-on-both-devices)
 5.  [Point-to-Point Network Configuration](#5-point-to-point-network-configuration)
 6.  [Convenient & Secure SSH Access](#6-convenient--secure-ssh-access)
-7.  [Diretta Software Installation & Configuration](#7-diretta-software-installation--configuration)
-8.  [Final Steps & Roon Integration](#8-final-steps--roon-integration)
-9.  [Appendix 1: Optional IR Remote Control Setup](#9-appendix-1-optional-ir-remote-control-setup)
-10. [Appendix 2: ARGON One Fan Control](#10-appendix-2-argon-one-fan-control)
+7.  [Clean the Boot Filesystem](#7-clean-the-boot-filesystem)
+8.  [Diretta Software Installation & Configuration](#8-diretta-software-installation--configuration)
+9.  [Final Steps & Roon Integration](#9-final-steps--roon-integration)
+10. [Appendix 1: Optional IR Remote Control Setup](#10-appendix-1-optional-ir-remote-control-setup)
+11. [Appendix 2: ARGON One Fan Control](#11-appendix-2-argon-one-fan-control)
 
 ---
 
@@ -368,9 +369,120 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
 
 ---
 
-### 7. Diretta Software Installation & Configuration
+### 7. Clean the Boot Filesystem
+The default behavior for Arch Linux is to leave the /boot filesystem in an unclean state if the computer is not shutdown cleanly. This is usually safe, but I've found that it can create a race condition when bringing up our private network. That, and users are likely to unplug these devices without shutting them down first. To protect against these issues, we'll add a workaround script that keeps the /boot filesystem (which is only changed during software updates) clean.
 
-#### 7.1. On the Diretta Target
+Please perform these steps on _both_ the Diretta Host and Target computers..
+
+#### 7.1. Create the Repair Script
+```bash
+sudo vi /usr/local/sbin/check-and-repair-boot.sh
+```
+Paste the entire block of code below into the file. This script is safe to run both automatically at boot and manually on a live system.
+```bash
+#!/bin/bash
+
+# Proactively checks and cleans the /boot filesystem if needed.
+# This script is safe to run at boot (on an unmounted partition)
+# or manually on a live system.
+
+LOG_TAG="boot_repair"
+BOOT_MOUNT_POINT="/boot"
+
+# Find the device for /boot from /etc/fstab
+BOOT_DEVICE=$(grep -E "^\S+\s+$BOOT_MOUNT_POINT\s+" /etc/fstab | awk '{print $1}')
+
+if [ -z "$BOOT_DEVICE" ]; then
+    logger -t "$LOG_TAG" "ERROR: Could not find boot device in /etc/fstab."
+    exit 1
+fi
+
+# --- Manual-Run Safety Check ---
+# If run on a live system, /boot must be unmounted first.
+was_mounted=0
+if mountpoint -q "$BOOT_MOUNT_POINT"; then
+    was_mounted=1
+    logger -t "$LOG_TAG" "/boot is mounted. Unmounting for check."
+    if ! umount "$BOOT_MOUNT_POINT"; then
+        logger -t "$LOG_TAG" "ERROR: Failed to unmount $BOOT_MOUNT_POINT. Aborting."
+        exit 1
+    fi
+fi
+
+# --- Conditional Filesystem Check ---
+# Check non-destructively first. This is reliable since the partition is unmounted.
+if fsck -n "$BOOT_DEVICE" >/dev/null 2>&1; then
+    logger -t "$LOG_TAG" "/boot is clean. No action needed."
+else
+    logger -t "$LOG_TAG" "/boot is not clean. Running repair."
+    # A real issue was found, so run the correcting fsck.
+    fsck -y "$BOOT_DEVICE"
+fi
+
+# --- Remount if it was unmounted by this script ---
+if [ "$was_mounted" -eq 1 ]; then
+    logger -t "$LOG_TAG" "Remounting /boot."
+    mount "$BOOT_MOUNT_POINT"
+fi
+
+logger -t "$LOG_TAG" "Check/repair process complete."
+exit 0
+```
+
+#### 7.2. Make the Script Executable
+```bash
+sudo chmod +x /usr/local/sbin/check-and-repair-boot.sh
+```
+
+#### 7.3. Create the `systemd` Service File
+```bash
+sudo vi /etc/systemd/system/boot-repair.service
+```
+Paste the following content into the service file:
+```bash
+[Unit]
+Description=Check and repair /boot filesystem before other services
+DefaultDependencies=no
+Conflicts=shutdown.target
+Before=local-fs.target network-pre.target shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/check-and-repair-boot.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=local-fs.target
+```
+
+#### 7.3. Enable the Service
+This final step enables the service to start automatically on every boot.
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable boot-repair.service
+```
+
+#### 7.4. Verification After a Clean Reboot
+Not critical, but to make sure this is working as expected, do a reboot test.
+```bash
+sudo reboot
+```
+After the system is back online, check the journal for the service's logs from that boot session.
+```bash
+journalctl -b -u boot-repair.service
+```
+The expected output should show that the check ran and found nothing to do:
+```text
+Jun 27 10:17:55 diretta-host boot_repair[287]: /boot is clean. No action needed.
+Jun 27 10:17:55 diretta-host boot_repair[290]: Check/repair process complete.
+Jun 27 10:17:55 diretta-host systemd[1]: Finished Check and repair /boot filesystem before other services.
+```
+
+---
+
+### 8. Diretta Software Installation & Configuration
+
+#### 8.1. On the Diretta Target
 
 1.  Connect your USB DAC to one of the USB ports on the **Diretta Target** and ensure the DAC is powered on.
 2.  SSH to the Target: `ssh diretta-target`.
@@ -411,7 +523,7 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
     sudo nano /etc/systemd/journald.conf
     ```
 
-#### 7.2. On the Diretta Host
+#### 8.2. On the Diretta Host
 
 1.  SSH to the Host: `ssh diretta-host`.
 2.  Run `menu`.
@@ -448,7 +560,7 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
 
 ---
 
-### 8. Final Steps & Roon Integration
+### 9. Final Steps & Roon Integration
 
 1.  **Install Roon Bridge (on Host):** If you use Roon, perform the following steps on the **Diretta Host**:
     * Run `menu`.
@@ -474,7 +586,7 @@ Your dedicated Diretta link is now fully configured for pristine, isolated audio
 
 ---
 
-### 9. Appendix 1: Optional IR Remote Control Setup
+### 10. Appendix 1: Optional IR Remote Control Setup
 
 This guide provides instructions for installing and configuring an IR remote to control Roon. The setup is divided into two parts.
 
@@ -874,7 +986,7 @@ Your IR remote should now control Roon. Enjoy!
 
 -----
 
-### 10. Appendix 2: ARGON One Fan Control
+### 11. Appendix 2: ARGON One Fan Control
 If you decoded to use an ARGON One case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
 
 #### Step 1: Skip the `argon1.sh` script in the manual
