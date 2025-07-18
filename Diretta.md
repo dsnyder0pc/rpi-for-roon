@@ -229,27 +229,34 @@ In this section, we will create the network configuration files that will activa
     cat <<'EOT' | sudo tee /opt/scripts/update/update_motd.sh
     #!/bin/bash
     #
-    # This script updates the MOTD with the IP address of the interface
-    # that is on the same subnet as the default gateway.
+    # This script updates the MOTD with the IP address (IPv4 preferred)
+    # of the interface used for the default gateway.
     #
 
     MOTD_FILE="/etc/motd"
+    IP_ADDR=""
 
     # First, remove any old IP address lines from the motd
     sed -i '/^Your IP address is/d' "$MOTD_FILE"
 
-    # Find the primary network interface (the one used for the default route)
-    DEFAULT_IFACE=$(ip route | grep '^default' | awk '{print $5}')
+    # --- Try to find the IPv4 address first ---
+    DEFAULT_IFACE_V4=$(ip -4 route list 0/0 | awk '{print $5}')
+    if [ -n "$DEFAULT_IFACE_V4" ]; then
+        IP_ADDR=$(ip -4 addr show "$DEFAULT_IFACE_V4" | grep -oP 'inet \K[\d.]+')
+    fi
 
-    # If a default interface is found, get its IP and update the motd
-    if [ -n "$DEFAULT_IFACE" ]; then
-        # Get the IPv4 address for the default interface, removing the CIDR suffix (e.g., /24)
-        IP_ADDR=$(ip addr show "$DEFAULT_IFACE" | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
-
-        # If an IP address was successfully found, append it to the motd
-        if [ -n "$IP_ADDR" ]; then
-            echo "Your IP address is $IP_ADDR" >> "$MOTD_FILE"
+    # --- If no IPv4 address was found, try for a global IPv6 address ---
+    if [ -z "$IP_ADDR" ]; then
+        DEFAULT_IFACE_V6=$(ip -6 route list default | awk '{print $5}')
+        if [ -n "$DEFAULT_IFACE_V6" ]; then
+            # Find the global IPv6 address, ignoring local/temporary ones
+            IP_ADDR=$(ip -6 addr show "$DEFAULT_IFACE_V6" | grep 'scope global' | grep -oP 'inet6 \K[0-9a-fA-F:]+')
         fi
+    fi
+
+    # --- If an IP (v4 or v6) was found, update the MOTD ---
+    if [ -n "$IP_ADDR" ]; then
+        echo "Your IP address is $IP_ADDR" >> "$MOTD_FILE"
     fi
     EOT
     ```
