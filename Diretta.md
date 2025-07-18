@@ -455,14 +455,14 @@ RemainAfterExit=yes
 WantedBy=local-fs.target
 ```
 
-#### 7.3. Enable the Service
+#### 7.4. Enable the Service
 This final step enables the service to start automatically on every boot.
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable boot-repair.service
 ```
 
-#### 7.4. Verification After a Clean Reboot
+#### 7.5. Verification After a Clean Reboot
 Not critical, but to make sure this is working as expected, do a reboot test.
 ```bash
 sudo reboot
