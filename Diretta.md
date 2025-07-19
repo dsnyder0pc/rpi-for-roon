@@ -721,6 +721,7 @@ This guide provides instructions for installing and configuring an IR remote to 
     ```
 
     Select the `gpio_ir_recv` device. When you press buttons on the remote, you should see the corresponding key events.
+    Type `CTRL-C` when you are finished testing.
 
 -----
 
