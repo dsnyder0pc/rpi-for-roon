@@ -738,6 +738,10 @@ Logout and log back in for this change to take effect. You can verify with this 
 ```bash
 groups
 ```
+You should see:
+```text
+audiolinux realtime video input audio wheel
+```
 
 ##### **Step 2: Install Python via pyenv**
 
