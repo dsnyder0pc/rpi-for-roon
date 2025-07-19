@@ -260,6 +260,11 @@ In this section, we will create the network configuration files that will activa
     EOT
     ```
 
+    Finally, power-off the Host:
+    ```bash
+    sudo poweroff
+    ```
+
 #### 5.2. Pre-configure the Diretta Target
 
 On the **Diretta Target**, create the `end0.network` file. This configures its static IP and tells it to use the Diretta Host as its gateway for all internet traffic.
