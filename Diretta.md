@@ -1065,9 +1065,9 @@ Add these lines:
 ```ini
 [Schedule]
 temp0=55
-fan0=10
+fan0=0
 temp1=60
-fan1=55
+fan1=50
 temp2=65
 fan2=100
 
