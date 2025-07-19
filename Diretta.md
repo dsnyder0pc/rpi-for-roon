@@ -382,7 +382,7 @@ Please perform these steps on _both_ the Diretta Host and Target computers..
 
 #### 7.1. Create the Repair Script
 ```bash
-sudo vi /usr/local/sbin/check-and-repair-boot.sh
+sudo nano /usr/local/sbin/check-and-repair-boot.sh
 ```
 Paste the entire block of code below into the file. This script is safe to run both automatically at boot and manually on a live system.
 ```bash
@@ -442,7 +442,7 @@ sudo chmod +x /usr/local/sbin/check-and-repair-boot.sh
 
 #### 7.3. Create the `systemd` Service File
 ```bash
-sudo vi /etc/systemd/system/boot-repair.service
+sudo nano /etc/systemd/system/boot-repair.service
 ```
 Paste the following content into the service file:
 ```bash
