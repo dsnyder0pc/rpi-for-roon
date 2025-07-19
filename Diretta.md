@@ -226,6 +226,7 @@ In this section, we will create the network configuration files that will activa
     ```
 
 4.  **Driver selection for the Plugable USB to Ethernet Adapter**
+    
     The default USB driver does not support all of the features of the Plugable Ethernet adapter. To get reliable performance, we need to tell the kernel's device manager how to handle the device when it's plugged in:
     ```bash
     cat <<'EOT' | sudo tee /etc/udev/rules.d/99-ax88179a.rules
@@ -235,12 +236,13 @@ In this section, we will create the network configuration files that will activa
     ```
 
 5.  **Fix the `update_motd.sh` script**
+    
     The script that updates the login banner (`/etc/motd`) does not handle the case of two network interfaces correctly. If we don't update that script, the login banner will be polluted with lots of bogus entries; one for each reboot. The new script below addresses this issue.
     ```bash
     cat <<'EOT' | sudo tee /opt/scripts/update/update_motd.sh
     #!/bin/bash
     #
-    # This script updates the MOTD with the primary IP address (IPv4 preferred) 
+    # This script updates the MOTD with the primary IP address (IPv4 preferred)
     # by checking which source IP the kernel uses for the default route.
     # This correctly handles interfaces with multiple IP aliases.
     #
