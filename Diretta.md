@@ -105,12 +105,13 @@ ssh audiolinux@insert.IP.address.here
 
 #### 3.1. Regenerate the Machine ID
 
-The `machine-id` is a unique identifier for the OS installation. It **must** be different for each device.
+The `machine-id` is a unique identifier for the OS installation. It **must** be different for each device. When asked for the root password below, enter `audiolinux0`
 
 ```bash
 # On each device, run the following commands:
 echo "Old Machine ID:" $(cat /etc/machine-id)
 sudo rm /etc/machine-id
+[sudo] password for root:
 sudo systemd-machine-id-setup
 echo "New Machine ID:" $(cat /etc/machine-id)
 ```
