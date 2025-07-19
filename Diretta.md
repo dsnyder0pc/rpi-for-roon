@@ -677,6 +677,7 @@ This guide provides instructions for installing and configuring an IR remote to 
         0x90 = "KEY_ESC"
         0x80 = "KEY_VOLUMEUP"
         0x81 = "KEY_VOLUMEDOWN"
+        0xcb = "KEY_MUTE"
         ```
 
 5.  **Create a `systemd` Service to Load the Keymap:**
@@ -833,7 +834,7 @@ index 64a8317..56a591f 100644
 +            elif event_name == mapping.to_key_code('vol_down'):
                  zone.volume_down(2)
 -            elif event.code in mapping.to_key_code('mute'):
-+            elif event_name == mapping.to_key_code('mute'):
++            elif mapping.to_key_code('mute') in event_name:
                  zone.mute(not zone.is_muted())
 -            elif event.code in mapping.to_key_code('fall_asleep'):
 +            elif event_name == mapping.to_key_code('fall_asleep'):
@@ -908,7 +909,8 @@ cat <<EOT> roon-ir-remote/app_info.json
         "skip": "KEY_RIGHT",
         "prev": "KEY_LEFT",
         "vol_up": "KEY_VOLUMEUP",
-        "vol_down": "KEY_VOLUMEDOWN"
+        "vol_down": "KEY_VOLUMEDOWN",
+        "mute": "KEY_MUTE"
       }
     }
   }
