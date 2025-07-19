@@ -773,10 +773,13 @@ Clone the script repository and apply a patch to correctly handle keycodes by na
 git clone https://github.com/smangels/roon-ir-remote.git
 cat <<'EOT' > roon-ir-remote/roon-ir-remote.patch
 diff --git a/roon_remote.py b/roon_remote.py
-index 64a8317..56a591f 100644
+index 64a8317..104a463 100644
 --- a/roon_remote.py
 +++ b/roon_remote.py
-@@ -3,18 +3,18 @@ Implement a Roon Remote extension that reads keyboard events
+@@ -1,20 +1,20 @@
+ """
+-Implement a Roon Remote extension that reads keybaord events
++Implement a Roon Remote extension that reads keyboard events
  from a FLIRC device and converts those events into transport
  commands towards a certain _Zone_ in Roon.
  """
