@@ -1022,6 +1022,7 @@ yay -S argonone-c-git
 ```bash
 sudo pacman -S --needed i2c-tools
 # Create a systemd override file to switch the case to software mode on boot
+sudo mkdir -pv /etc/systemd/system/argononed.service.d
 printf '%s\n' \
   '[Service]' \
   'ExecStartPre=/usr/bin/i2cset -y 1 0x1a 0' \
