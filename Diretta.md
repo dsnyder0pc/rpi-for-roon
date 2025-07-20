@@ -185,23 +185,27 @@ In this section, we will create the network configuration files that will activa
 1.  **Create Network Files:**
     Create the following two files on the **Diretta Host**. The `end0.network` file sets the static IP for the future point-to-point link. The `enp.network` file ensures the USB Ethernet adapter continues to get an IP from your main LAN.
 
-    *File: `sudo nano /etc/systemd/network/end0.network`*
-    ```ini
+    *File: `/etc/systemd/network/end0.network`*
+    ```bash
+    cat <<'EOT' | sudo tee /etc/systemd/network/end0.network
     [Match]
     Name=end0
-
+    
     [Network]
     Address=172.20.0.1/24
+    EOT
     ```
 
-    *File: `sudo nano /etc/systemd/network/enp.network`*
-    ```ini
+    *File: `/etc/systemd/network/enp.network`*
+    ```bash
+    cat <<'EOT' | sudo tee /etc/systemd/network/enp.network
     [Match]
     Name=enp*
-
+    
     [Network]
     DHCP=yes
     DNSSEC=no
+    EOT
     ```
 
     **Important:** Remove the old en.network file if present:
@@ -234,7 +238,7 @@ In this section, we will create the network configuration files that will activa
     ```
 
 4.  **Driver selection for the Plugable USB to Ethernet Adapter**
-    
+
     The default USB driver does not support all of the features of the Plugable Ethernet adapter. To get reliable performance, we need to tell the kernel's device manager how to handle the device when it's plugged in:
     ```bash
     cat <<'EOT' | sudo tee /etc/udev/rules.d/99-ax88179a.rules
@@ -288,8 +292,9 @@ In this section, we will create the network configuration files that will activa
 
 On the **Diretta Target**, create the `end0.network` file. This configures its static IP and tells it to use the Diretta Host as its gateway for all internet traffic.
 
-*File: `sudo nano /etc/systemd/network/end0.network`*
-```ini
+*File: `/etc/systemd/network/end0.network`*
+```bash
+cat <<'EOT' | sudo tee /etc/systemd/network/end0.network
 [Match]
 Name=end0
 
@@ -297,6 +302,7 @@ Name=end0
 Address=172.20.0.2/24
 Gateway=172.20.0.1
 DNS=8.8.8.8
+EOT
 ```
 
 **Important:** Remove the old en.network file if present:
@@ -400,71 +406,17 @@ The default behavior for Arch Linux is to leave the /boot filesystem in an uncle
 Please perform these steps on _both_ the Diretta Host and Target computers..
 
 #### 7.1. Create the Repair Script
+
+This script is safe to run both automatically at boot and manually on a live system.
 ```bash
-sudo nano /usr/local/sbin/check-and-repair-boot.sh
-```
-Paste the entire block of code below into the file. This script is safe to run both automatically at boot and manually on a live system.
-```bash
-#!/bin/bash
-
-# Proactively checks and cleans the /boot filesystem if needed.
-# This script is safe to run at boot (on an unmounted partition)
-# or manually on a live system.
-
-LOG_TAG="boot_repair"
-BOOT_MOUNT_POINT="/boot"
-
-# Find the device for /boot from /etc/fstab
-BOOT_DEVICE=$(grep -E "^\S+\s+$BOOT_MOUNT_POINT\s+" /etc/fstab | awk '{print $1}')
-
-if [ -z "$BOOT_DEVICE" ]; then
-    logger -t "$LOG_TAG" "ERROR: Could not find boot device in /etc/fstab."
-    exit 1
-fi
-
-# --- Manual-Run Safety Check ---
-# If run on a live system, /boot must be unmounted first.
-was_mounted=0
-if mountpoint -q "$BOOT_MOUNT_POINT"; then
-    was_mounted=1
-    logger -t "$LOG_TAG" "/boot is mounted. Unmounting for check."
-    if ! umount "$BOOT_MOUNT_POINT"; then
-        logger -t "$LOG_TAG" "ERROR: Failed to unmount $BOOT_MOUNT_POINT. Aborting."
-        exit 1
-    fi
-fi
-
-# --- Conditional Filesystem Check ---
-# Check non-destructively first. This is reliable since the partition is unmounted.
-if fsck -n "$BOOT_DEVICE" >/dev/null 2>&1; then
-    logger -t "$LOG_TAG" "/boot is clean. No action needed."
-else
-    logger -t "$LOG_TAG" "/boot is not clean. Running repair."
-    # A real issue was found, so run the correcting fsck.
-    fsck -y "$BOOT_DEVICE"
-fi
-
-# --- Remount if it was unmounted by this script ---
-if [ "$was_mounted" -eq 1 ]; then
-    logger -t "$LOG_TAG" "Remounting /boot."
-    mount "$BOOT_MOUNT_POINT"
-fi
-
-logger -t "$LOG_TAG" "Check/repair process complete."
-exit 0
+curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh
+sudo mv -v check-and-repair-boot.sh /usr/local/bin/
+sudo chmod +x /usr/local/bin/check-and-repair-boot.sh
 ```
 
-#### 7.2. Make the Script Executable
+#### 7.2. Create the `systemd` Service File and enable the service
 ```bash
-sudo chmod +x /usr/local/sbin/check-and-repair-boot.sh
-```
-
-#### 7.3. Create the `systemd` Service File
-```bash
-sudo nano /etc/systemd/system/boot-repair.service
-```
-Paste the following content into the service file:
-```bash
+cat <<'EOT' | sudo tee /etc/systemd/system/boot-repair.service
 [Unit]
 Description=Check and repair /boot filesystem before other services
 DefaultDependencies=no
@@ -478,16 +430,12 @@ RemainAfterExit=yes
 
 [Install]
 WantedBy=local-fs.target
-```
-
-#### 7.4. Enable the Service
-This final step enables the service to start automatically on every boot.
-```bash
+EOT
 sudo systemctl daemon-reload
 sudo systemctl enable boot-repair.service
 ```
 
-#### 7.5. Verification After a Clean Reboot
+#### 7.3. Verification After a Clean Reboot
 Not critical, but to make sure this is working as expected, do a reboot test.
 ```bash
 sudo reboot
@@ -545,7 +493,7 @@ Jun 27 10:17:55 diretta-host systemd[1]: Finished Check and repair /boot filesys
 7.  **Minimize disk I/O on the Diretta Target:** (optional but recommended for optimal performance)
     * Chang `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
     ```bash
-    sudo nano /etc/systemd/journald.conf
+    sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ```
 
 #### 8.2. On the Diretta Host
@@ -580,7 +528,7 @@ Jun 27 10:17:55 diretta-host systemd[1]: Finished Check and repair /boot filesys
 6.  **Minimize disk I/O on the Diretta Target:** (optional but recommended for optimal performance)
     * Chang `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
     ```bash
-    sudo nano /etc/systemd/journald.conf
+    sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ```
 
 ---
@@ -685,10 +633,7 @@ This guide provides instructions for installing and configuring an IR remote to 
 
       * Create a new keymap file:
         ```bash
-        sudo nano /etc/rc_keymaps/argon.toml
-        ```
-      * Paste the following content, replacing the example scancodes with the ones you recorded.
-        ```toml
+        cat <<'EOT' | sudo tee /etc/rc_keymaps/argon.toml
         # /etc/rc_keymaps/argon.toml
         [[protocols]]
         name = "argon_remote"
@@ -703,33 +648,30 @@ This guide provides instructions for installing and configuring an IR remote to 
         0x80 = "KEY_VOLUMEUP"
         0x81 = "KEY_VOLUMEDOWN"
         0xcb = "KEY_MUTE"
+        EOT
         ```
+      * If the scan codes in the example file above don't match the ones you recorded, edit the file (`sudo nano /etc/rc_keymaps/argon.toml`) and change them to match.
 
 5.  **Create a `systemd` Service to Load the Keymap:**
     This service will load your keymap automatically on boot.
 
-      * Create a new service file:
-        ```bash
-        sudo nano /etc/systemd/system/ir-keymap.service
-        ```
-      * Paste the following content:
-        ```ini
-        [Unit]
-        Description=Load custom IR keymap
-        After=multi-user.target
+    Create a new service file and enable the service:
+    ```bash
+    cat <<'EOT' | sudo tee /etc/systemd/system/ir-keymap.service
+    [Unit]
+    Description=Load custom IR keymap
+    After=multi-user.target
 
-        [Service]
-        Type=oneshot
-        RemainAfterExit=yes
-        ExecStart=/usr/bin/ir-keytable -c -p nec -w /etc/rc_keymaps/argon.toml
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    ExecStart=/usr/bin/ir-keytable -c -p nec -w /etc/rc_keymaps/argon.toml
 
-        [Install]
-        WantedBy=multi-user.target
-        ```
-      * Enable the service:
-        ```bash
-        sudo systemctl enable --now ir-keymap.service
-        ```
+    [Install]
+    WantedBy=multi-user.target
+    EOT
+    sudo systemctl enable --now ir-keymap.service
+    ```
 
 6.  **Test the Input Device:**
     Verify the system is receiving keyboard events from the IR remote.
@@ -797,113 +739,12 @@ pyenv global $PYVER
 
 #### **Step 3: Prepare and Patch `roon-ir-remote` Software**
 
-Clone the script repository and apply a patch to correctly handle keycodes by name instead of by number.
+Clone the script repository and fetch a patch to correctly handle keycodes by name instead of by number.
 
 ```bash
 git clone https://github.com/smangels/roon-ir-remote.git
-cat <<'EOT' > roon-ir-remote/roon-ir-remote.patch
-diff --git a/roon_remote.py b/roon_remote.py
-index 64a8317..104a463 100644
---- a/roon_remote.py
-+++ b/roon_remote.py
-@@ -1,20 +1,20 @@
- """
--Implement a Roon Remote extension that reads keybaord events
-+Implement a Roon Remote extension that reads keyboard events
- from a FLIRC device and converts those events into transport
- commands towards a certain _Zone_ in Roon.
- """
--# !/usr/bin/python
-+# !/usr/bin/env python
- import logging
- import signal
- import sys
- from pathlib import Path
- 
- import evdev
--from evdev import InputDevice
-+from evdev import InputDevice, ecodes, categorize
- 
- from app import RoonController, RoonOutput, RemoteConfig, RemoteConfigE, RemoteKeycodeMapping, RoonControllerE
- 
--logging.basicConfig(level=logging.DEBUG,
-+logging.basicConfig(level=logging.WARNING,
-                     format='%(asctime)s %(levelname)s %(module)s: %(message)s')
- logger = logging.getLogger('roon_remote')
- 
-@@ -56,31 +56,33 @@ def monitor_remote(zone: RoonOutput, dev: InputDevice, mapping: RemoteKeycodeMap
-             # ignore everything that is not KEY_DOWN
-             continue
- 
--        # logging.debug(str(categorize(event)))
-+        event_name = ecodes.KEY[event.code]
-+        logging.debug(str(categorize(event)))
-         try:
--            # logging.debug("Status: {}".format('uninitialized'))
--            # logging.debug("KeyCode: {}".format(event.code))
--            if event.code in mapping.to_key_code('prev'):
-+            logging.debug("Status: {}".format('uninitialized'))
-+            logging.debug("KeyCode Number: {}".format(event.code))
-+            logging.debug("KeyCode Name: {}".format(event_name))
-+            if event_name == mapping.to_key_code('prev'):
-                 zone.previous()
--            elif event.code in mapping.to_key_code('skip'):
-+            elif event_name == mapping.to_key_code('skip'):
-                 zone.skip()
--            elif event.code in mapping.to_key_code('stop'):
-+            elif event_name == mapping.to_key_code('stop'):
-                 zone.stop()
--            elif event.code in mapping.to_key_code('play_pause'):
-+            elif event_name == mapping.to_key_code('play_pause'):
-                 if zone.state == "playing":
-                     zone.pause()
-                 else:
-                     zone.repeat(False)
-                     zone.play()
--            elif event.code in mapping.to_key_code('vol_up'):
-+            elif event_name == mapping.to_key_code('vol_up'):
-                 zone.volume_up(2)
--            elif event.code in mapping.to_key_code('vol_down'):
-+            elif event_name == mapping.to_key_code('vol_down'):
-                 zone.volume_down(2)
--            elif event.code in mapping.to_key_code('mute'):
-+            elif mapping.to_key_code('mute') in event_name:
-                 zone.mute(not zone.is_muted())
--            elif event.code in mapping.to_key_code('fall_asleep'):
-+            elif event_name == mapping.to_key_code('fall_asleep'):
-                 zone.play_playlist('wellenrauschen')
--            elif event.code in mapping.to_key_code('play_radio'):
-+            elif event_name == mapping.to_key_code('play_radio'):
-                 zone.play_radio_station(station_name="Radio Paradise (320k aac)")
- 
-             logger.debug("Received Code: %s", repr(event.code))
-@@ -106,10 +108,23 @@ def main():
-     mapping = config.key_mapping
-     logging.info(mapping.edge)
- 
--    input_dev_name = "flirc Keyboard"
--    event_dev = get_event_device_for_string(input_dev_name)
-+    # List of device names to try, in order of preference
-+    device_names_to_try = ["flirc Keyboard", "gpio_ir_recv"]
-+    event_dev = None
-+    input_dev_name = None
-+
-+    # Loop through the names until a device is found
-+    for name in device_names_to_try:
-+        device = get_event_device_for_string(name)
-+        if device:
-+            event_dev = device
-+            input_dev_name = name  # Preserves the name of the found device
-+            logging.info('Found InputDevice: "%s"', input_dev_name)
-+            break  # Exit the loop on first success
-+
-+    # If the loop completes without finding a device, exit
-     if not event_dev:
--        logging.error('Could not find any InputDevice with name: "%s"', input_dev_name)
-+        logging.error('Could not find a valid InputDevice. Tried: %s', device_names_to_try)
-         sys.exit(1)
- 
-     logging.debug('found input device: %s', event_dev)
+curl -L -o roon-ir-remote/roon-ir-remote.patch \
+https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/roon-ir-remote.patch
 EOT
 ```
 
@@ -914,12 +755,13 @@ EOT
 Configure the script with your Roon details. **Note:** The `event_mapping` codes must match the key names you defined in your hardware setup (`KEY_ENTER`, `KEY_VOLUMEUP`, etc.).
 
 ```bash
-# Set your email and Roon Zone name (must match Roon UI exactly)
-MY_EMAIL_ADDRESS="Put your email address here"
-MY_ROON_ZONE="Enter Roon zone name here"
-```
+echo "Please enter the following configuration details:"
+read -p "Enter your email address: " MY_EMAIL_ADDRESS
+echo ""
+echo "Enter the name of your Roon zone."
+echo "IMPORTANT: This must match the zone name in the Roon app exactly (case-sensitive)."
+read -p "Enter your Roon Zone name: " MY_ROON_ZONE
 
-```bash
 # Create the configuration file
 cat <<EOT> roon-ir-remote/app_info.json
 {
@@ -1090,10 +932,7 @@ sudo argonone-cli --decode
 
 To adjust those values, you must create a config file. Use these values to start:
 ```bash
-sudo nano /etc/argononed.conf
-```
-Add these lines:
-```ini
+cat <<'EOT' | sudo tee /etc/argononed.conf
 [Schedule]
 temp0=55
 fan0=0
@@ -1104,6 +943,7 @@ fan2=100
 
 [Setting]
 hysteresis=3
+EOT
 ```
 
 Restart the service to pick up the new configuration values:
