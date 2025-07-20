@@ -327,7 +327,7 @@ In this section, we will create the network configuration files that will activa
     The script that updates the login banner (`/etc/motd`) does not handle the case of two network interfaces correctly. If we don't update that script, the login banner will be polluted with lots of bogus entries; one for each reboot. The new script below addresses this issue.
     ```bash
     curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh
-    sudo install -m 0755 update_motd.sh /usr/local/sbin/
+    sudo install -m 0755 update_motd.sh /opt/scripts/update/
     rm update_motd.sh
     ```
 
