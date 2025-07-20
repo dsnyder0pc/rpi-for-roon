@@ -216,6 +216,8 @@ The system clock has to be accureate before we can install updates. The Raspberr
 echo '// Reminder: the root password is audiolinux0'
 sudo id
 curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_chrony.sh | sudo bash
+sleep 5
+chronyc sources
 ```
 
 #### 4.2. Workaround for Pacman Update Issue
