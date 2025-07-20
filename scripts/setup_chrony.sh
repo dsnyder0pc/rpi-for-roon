@@ -73,4 +73,5 @@ echo "  systemctl status chronyd"
 echo ""
 echo "Done!"
 
+sleep 5
 chronyc sources
