@@ -313,36 +313,9 @@ In this section, we will create the network configuration files that will activa
     
     The script that updates the login banner (`/etc/motd`) does not handle the case of two network interfaces correctly. If we don't update that script, the login banner will be polluted with lots of bogus entries; one for each reboot. The new script below addresses this issue.
     ```bash
-    cat <<'EOT' | sudo tee /opt/scripts/update/update_motd.sh
-    #!/bin/bash
-    #
-    # This script updates the MOTD with the primary IP address (IPv4 preferred)
-    # by checking which source IP the kernel uses for the default route.
-    # This correctly handles interfaces with multiple IP aliases.
-    #
-
-    MOTD_FILE="/etc/motd"
-    IP_ADDR=""
-
-    # First, remove any old IP address lines from the motd
-    sed -i '/^Your IP address is/d' "$MOTD_FILE"
-
-    # --- Try to find the primary IPv4 address ---
-    # We ask the kernel for the route to a public IP (8.8.8.8).
-    # The 'src' field in the output is the primary IP it would use.
-    IP_ADDR=$(ip -4 route get 8.8.8.8 2>/dev/null | grep -oP 'src \K[\d.]+')
-
-    # --- If no IPv4 address was found, try for a primary IPv6 address ---
-    if [ -z "$IP_ADDR" ]; then
-        # We do the same for IPv6 using Google's public DNS.
-        IP_ADDR=$(ip -6 route get 2001:4860:4860::8888 2>/dev/null | grep -oP 'src \K[0-9a-fA-F:]+')
-    fi
-
-    # --- If an IP (v4 or v6) was found, update the MOTD ---
-    if [ -n "$IP_ADDR" ]; then
-        echo "Your IP address is $IP_ADDR" >> "$MOTD_FILE"
-    fi
-    EOT
+    curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh
+    sudo install -m 0755 update_motd.sh /usr/local/sbin/
+    rm update_motd.sh
     ```
 
     Finally, power-off the Host:
