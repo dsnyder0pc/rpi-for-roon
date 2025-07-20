@@ -191,7 +191,7 @@ echo "Current system time and timezone:"
 timedatectl status
 ```
 
-**At this point, shutdown the device. Repeat the above steps for the second Raspberry Pi.**
+**At this point, shutdown the device. Repeat the [above steps](#3-core-system-configuration-perform-on-both-devices) for the second Raspberry Pi.**
 ```bash
 sudo poweroff
 ```
