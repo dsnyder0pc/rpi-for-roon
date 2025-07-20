@@ -431,7 +431,7 @@ else
   read -p "Enter the LAN IP address of your Diretta Host and press [Enter]: " Diretta_Host_IP
 
   # Append the new configuration using a heredoc for clarity
-  cat <<EOF >> "$SSH_CONFIG_FILE"
+  cat <<EOT >> "$SSH_CONFIG_FILE"
 
 # --- Diretta Configuration (added by script) ---
 Host diretta-host host
@@ -442,7 +442,7 @@ Host diretta-target target
     HostName 172.20.0.2
     User audiolinux
     ProxyJump diretta-host
-EOF
+EOT
 
   echo "✅ SSH configuration for 'diretta-host' and 'diretta-target' has been added."
 fi
