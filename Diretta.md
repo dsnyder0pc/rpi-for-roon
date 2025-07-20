@@ -866,9 +866,15 @@ cd roon-ir-remote
 # Download the patch
 curl -L -o roon-ir-remote.patch https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/roon-ir-remote.patch
 
-# Apply the patch only if it hasn't been applied yet
-if patch -p1 --dry-run --silent < roon-ir-remote.patch; then
-  patch -p1 < roon-ir-remote.patch
+PATCH_FILE="roon-ir-remote.patch"
+
+# Use `yes n` to automatically answer "no" to any interactive prompts.
+# We check the exit code of the patch command.
+if yes n | patch -p1 --dry-run --silent < "$PATCH_FILE" >/dev/null 2>&1; then
+  echo "✅ Patch has not been applied. Applying now..."
+  patch -p1 < "$PATCH_FILE"
+else
+  echo "⚠️ Patch has already been applied or conflicts exist. Skipping."
 fi
 
 cd
