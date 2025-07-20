@@ -225,8 +225,8 @@ chronyc sources
 A [known issue](https://archlinux.org/news/linux-firmware-2025061312fe085f-5-upgrade-requires-manual-intervention/) can prevent the system from updating due to conflicting NVIDIA firmware files (even though the RPi doesn't use them). To progress with the system upgrade, first remove `linux-firmware`, then reinstall it as part of the upgrade:
 
 ```bash
-sudo pacman -Rdd linux-firmware
-sudo pacman -Syu linux-firmware
+sudo pacman -Rdd --noconfirm linux-firmware
+sudo pacman -Syu --noconfirm linux-firmware
 ```
 
 #### 4.3. Run System and Menu Updates
@@ -1049,7 +1049,7 @@ yay -S argonone-c-git
 
 #### Step 5: Switch Argon ONE case from hardware to software control
 ```bash
-sudo pacman -S --needed i2c-tools
+sudo pacman -S --noconfirm --needed i2c-tools
 # Create a systemd override file to switch the case to software mode on boot
 sudo mkdir -pv /etc/systemd/system/argononed.service.d
 printf '%s\n' \
