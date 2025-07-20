@@ -389,6 +389,13 @@ fi
 
 Upon booting, they will automatically use the new network configurations. **Note:** the IP address of your Diretta Host will likely have changed because it is now connected to your home network via the USB3 to Ethernet adapter. You'll have to return to your router's web UI or the Fing app to find the new address, which should be stable at this point.
 
+```bash
+read -p "Enter the final of your Diretta Host and hit [enter]: " RPi_IP_Address
+echo '$' ssh "audiolinux@${RPi_IP_Address}"
+echo '// Reminder: the password is audiolinux'
+ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
+```
+
 You should now be able to ping the Target from the Host (`ping 172.20.0.2`) and ping public websites from the Target (`ping google.com`) to verify the connection is working.
 
 ---
