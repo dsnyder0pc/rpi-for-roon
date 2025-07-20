@@ -664,6 +664,8 @@ This guide provides instructions for installing and configuring an IR remote to 
   * **Part 1** covers the hardware-specific setup. You will choose **one** of the two appendices depending on whether you are using the Flirc USB receiver or the Argon One case's built-in receiver.
   * **Part 2** covers the software setup for the `roon-ir-remote` control script, which is identical for both hardware options.
 
+**Note:** You will _only_ perform these steps on the Diretta Host. The Target should not be used for for relaying IR remote control commands to Roon Server.
+
 -----
 
 #### **Part 1: IR Receiver Hardware Setup**
