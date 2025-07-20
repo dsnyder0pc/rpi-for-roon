@@ -806,8 +806,9 @@ sudo usermod --append --groups input audiolinux
 Logout and log back in for this change to take effect. You can verify with this command:
 ```bash
 echo "Checking your group memberships..."
-echo "You should see: audiolinux realtime video input audio wheel"
 groups
+echo "Above, you you should see:"
+echo "audiolinux realtime video input audio wheel"
 ```
 
 ##### **Step 2: Install Python via pyenv**
