@@ -943,7 +943,7 @@ python roon_remote.py
 
 The first time you run the script, you must **authorize the extension in Roon** by going to `Settings` -> `Extensions`.
 
-Once you are finished testing, type CTRL-C to exit.
+With music playing in your new Diretta Roon zone, point your IR remote control directly at the Diretta Host computer and press the Play/Pause button (may be the center button in the 5-way controller). Also try Next and Previous. If these are not working check your terminal window for any error messages.  Once you are finished testing, type CTRL-C to exit.
 
 -----
 
