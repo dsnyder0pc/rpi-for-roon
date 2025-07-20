@@ -988,6 +988,12 @@ sudo install -m 0755 set-roon-zone /usr/local/bin/
 rm set-roon-zone
 ```
 
+To use it, simply login to the Diretta Host computer and type:
+```bash
+set-roon-zone
+```
+Follow the prompts to enter the new name for your Roon Zone. You may have to enter the root password to make the changes take effect.
+
 #### **Step 8: Profit! 📈**
 
 Your IR remote should now control Roon. Enjoy!
