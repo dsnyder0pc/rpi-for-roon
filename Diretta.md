@@ -596,7 +596,7 @@ journalctl -b -u boot-repair.service
 
 #### 8.1. On the Diretta Target
 
-1.  Connect your USB DAC to one of the USB ports on the **Diretta Target** and ensure the DAC is powered on.
+1.  Connect your USB DAC to one of the black USB 2.0 ports on the **Diretta Target** and ensure the DAC is powered on.
 2.  SSH to the Target: `ssh diretta-target`.
 3.  Run `menu`.
 4.  Select **AUDIO extra menu**.
