@@ -841,7 +841,7 @@ pyenv install $PYVER
 pyenv global $PYVER
 ```
 
-**Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes. Dont give up!
+**Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes. Dont give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
 -----
 
