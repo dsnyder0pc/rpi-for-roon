@@ -406,7 +406,7 @@ echo "\$ ping -c 3 172.20.0.2"
 ping -c 3 172.20.0.2
 ```
 
-Also, you should be able to login to the Target from the host:
+Also, you should be able to login to the Target from the Host:
 ```
 echo ""
 echo "\$ ssh target"
