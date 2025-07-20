@@ -20,7 +20,7 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 8.  [Diretta Software Installation & Configuration](#8-diretta-software-installation--configuration)
 9.  [Final Steps & Roon Integration](#9-final-steps--roon-integration)
 10. [Appendix 1: Optional IR Remote Control Setup](#10-appendix-1-optional-ir-remote-control-setup)
-11. [Appendix 2: ARGON One Fan Control](#11-appendix-2-argon-one-fan-control)
+11. [Appendix 2: Argon ONE Fan Control](#11-appendix-2-argon-one-fan-control)
 
 ---
 
@@ -1000,8 +1000,10 @@ Your IR remote should now control Roon. Enjoy!
 
 -----
 
-### 11. Appendix 2: ARGON One Fan Control
-If you decoded to use an ARGON One case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
+### 11. Appendix 2: Argon ONE Fan Control
+If you decoded to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
+
+If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on both computers.
 
 #### Step 1: Skip the `argon1.sh` script in the manual
 The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work, so skip this step and follow the steps below instead.
