@@ -1066,7 +1066,7 @@ sudo systemctl enable argononed.service
 ```
 
 #### Step 6: Reboot
-Finally, reboot your Raspberry Pi for all changes to take effect:
+Finally, reboot your Raspberry Pi for all changes to take effect (Target first, then Host):
 ```bash
 sudo sync; sudo reboot
 ```
