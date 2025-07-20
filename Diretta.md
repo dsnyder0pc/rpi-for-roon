@@ -147,7 +147,15 @@ Each RPi has its own machine ID, so you may power them up now. If you have two n
 convenient to connect both of them to your home network at the same time for the next few steps, but you can
 proceed one-at-at-time otherwise. **Note**: your router will likely assign them different IP addresses from the one you used to login initially.
 
-#### 4.1. Workaround for Pacman Update Issue
+#### 4.1. Install "Chrony" to update the system clock
+
+The system clock has to be accureate before we can install updates. The Raspberry Pi has no NVRAM battery, so the clock must be set each time it boots. This is typically done by connecting to a network service. This script will make sure that the clock is set and stays correct during the operation of the computer.
+
+```bash
+curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_chrony.sh | sudo bash
+```
+
+#### 4.2. Workaround for Pacman Update Issue
 
 A [known issue](https://archlinux.org/news/linux-firmware-2025061312fe085f-5-upgrade-requires-manual-intervention/) can prevent the system from updating due to conflicting NVIDIA firmware files (even though the RPi doesn't use them). To progress with the system upgrade, first remove `linux-firmware`, then reinstall it as part of the upgrade:
 
@@ -156,7 +164,7 @@ sudo pacman -Rdd linux-firmware
 sudo pacman -Syu linux-firmware
 ```
 
-#### 4.2. Run System and Menu Updates
+#### 4.3. Run System and Menu Updates
 
 Use the Audiolinux menu system to perform all updates.
 
