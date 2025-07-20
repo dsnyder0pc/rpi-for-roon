@@ -86,7 +86,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 ### 2. Initial Image Preparation
 
-1.  **Purchase and Download:** Obtain the Audiolinux image from the [official website](https://www.audio-linux.com/). You will receive a link to download the `.img.gz` file.
+1.  **Purchase and Download:** Obtain the Audiolinux image from the [official website](https://www.audio-linux.com/). You will receive a link to download the `.img.gz` file via email, typically within 24 hours of purchase.
 2.  **Flash the Image:** Use your preferred imaging tool (e.g., [balenaEtcher](https://etcher.balena.io/) or
 [Raspberry Pi Imager](https://www.raspberrypi.com/software/)) to write the downloaded Audiolinux image to **both** microSD cards.
     > **Note:** The Audiolinux image is a direct disk dump, not a compressed installer. As a result, the image file is quite large, and the flashing process can be unusually long. Expect it to take up to 15 minutes per card, depending on the speed of your microSD card and reader.
