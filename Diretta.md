@@ -584,6 +584,12 @@ Jun 27 10:17:55 diretta-host boot_repair[290]: Check/repair process complete.
 Jun 27 10:17:55 diretta-host systemd[1]: Finished Check and repair /boot filesystem before other services.
 ```
 
+If you see `-- No entries --`, try this:
+```bash
+sudo systemctl restart boot-repair.service
+journalctl -b -u boot-repair.service
+```
+
 ---
 
 ### 8. Diretta Software Installation & Configuration
