@@ -24,6 +24,20 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 
 ---
 
+### **How to Use This Guide**
+
+This guide is designed to be as straightforward as possible, minimizing the need for manual file editing. The primary workflow will be to **copy and paste** command blocks from this document directly into a terminal window connected to your Raspberry Pi devices.
+
+Here's the process you'll follow for most of the steps:
+
+1.  **Connect via SSH**: You will use an SSH client on your main computer to log in to either the **Diretta Host** or the **Diretta Target** as instructed in each section.
+2.  **Copy the Command**: In your web browser, hover over the top-right corner of a command block in this guide. A **copy icon** will appear. Click it to copy the entire block to your clipboard.
+3.  **Paste and Execute**: Paste the copied commands into the correct SSH terminal window and press `Enter`.
+
+The scripts and commands have been carefully written to be safe and to prevent errors, even if run more than once. By following this copy-and-paste method, you can avoid common typos and configuration mistakes.
+
+---
+
 ### 1. Prerequisites
 
 #### Hardware
