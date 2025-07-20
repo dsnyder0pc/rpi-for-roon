@@ -1104,6 +1104,9 @@ EOT
 Restart the service to pick up the new configuration values:
 ```bash
 sudo systemctl restart argononed.service
+echo ""
+echo "Updated fan values:"
+sudo argonone-cli --decode
 ```
 
 Now, feel free to adjust the values as needed, following the steps above.
