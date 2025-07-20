@@ -146,51 +146,6 @@ sudo hostnamectl set-hostname diretta-host
 sudo hostnamectl set-hostname diretta-target
 ```
 
-#### 3.3. Set Your Timezone
-
-```bash
-clear
-echo "Welcome to the interactive timezone setup."
-echo "You will first select a region, then a specific timezone."
-
-# Allow the user to select a region
-PS3="
-Please select a number for your region: "
-select region in $(timedatectl list-timezones | cut -d/ -f1 | sort -u); do
-  if [[ -n "$region" ]]; then
-    echo "You have selected the region: $region"
-    break
-  else
-    echo "Invalid selection. Please try again."
-  fi
-done
-
-echo # for a newline
-
-# Allow the user to select a timezone within that region
-PS3="
-Please select a number for your timezone: "
-select timezone in $(timedatectl list-timezones | grep "^$region/"); do
-  if [[ -n "$timezone" ]]; then
-    echo "You have selected the timezone: $timezone"
-    break
-  else
-    echo "Invalid selection. Please try again."
-  fi
-done
-
-# Set the selected timezone
-echo
-echo "Setting timezone to ${timezone}..."
-sudo timedatectl set-timezone "$timezone"
-echo "✅ Timezone has been set."
-
-# Verify the change
-echo
-echo "Current system time and timezone:"
-timedatectl status
-```
-
 **At this point, shutdown the device. Repeat the [above steps](#3-core-system-configuration-perform-on-both-devices) for the second Raspberry Pi.**
 ```bash
 sudo poweroff
@@ -223,7 +178,59 @@ sleep 5
 chronyc sources
 ```
 
-#### 4.2. Workaround for Pacman Update Issue
+#### 4.2. Set your Timezone
+
+```bash
+clear
+echo "Welcome to the interactive timezone setup."
+echo "You will first select a region, then a specific timezone."
+
+# Allow the user to select a region
+PS3="
+Please select a number for your region: "
+select region in $(timedatectl list-timezones | cut -d/ -f1 | sort -u); do
+  if [[ -n "$region" ]]; then
+    echo "You have selected the region: $region"
+    break
+  else
+    echo "Invalid selection. Please try again."
+  fi
+done
+
+echo ""
+
+# To speed up future updates
+sudo pacman -Sy --noconfirm reflector
+sudo reflector --verbose -c "$region" -l 10 --age 12 -p https \
+     --sort rate --save /etc/pacman.d/mirrorlist
+
+echo ""
+
+# Allow the user to select a timezone within that region
+PS3="
+Please select a number for your timezone: "
+select timezone in $(timedatectl list-timezones | grep "^$region/"); do
+  if [[ -n "$timezone" ]]; then
+    echo "You have selected the timezone: $timezone"
+    break
+  else
+    echo "Invalid selection. Please try again."
+  fi
+done
+
+# Set the selected timezone
+echo
+echo "Setting timezone to ${timezone}..."
+sudo timedatectl set-timezone "$timezone"
+echo "✅ Timezone has been set."
+
+# Verify the change
+echo
+echo "Current system time and timezone:"
+timedatectl status
+```
+
+#### 4.3. Workaround for Pacman Update Issue
 
 A [known issue](https://archlinux.org/news/linux-firmware-2025061312fe085f-5-upgrade-requires-manual-intervention/) can prevent the system from updating due to conflicting NVIDIA firmware files (even though the RPi doesn't use them). To progress with the system upgrade, first remove `linux-firmware`, then reinstall it as part of the upgrade:
 
@@ -232,7 +239,7 @@ sudo pacman -Rdd --noconfirm linux-firmware
 sudo pacman -Syu --noconfirm linux-firmware
 ```
 
-#### 4.3. Run System and Menu Updates
+#### 4.4. Run System and Menu Updates
 
 Use the Audiolinux menu system to perform all updates.
 
