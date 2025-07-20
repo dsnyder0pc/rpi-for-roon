@@ -441,19 +441,19 @@ fi
 
 2.  **Verify the Connection:**
 
-		You should now be able to connect to both devices using the new aliases. Test the connection with the following commands:
+You should now be able to connect to both devices using the new aliases. Test the connection with the following commands:
 
-    **To login to the Diretta Host:**
-    ```bash
-		ssh diretta-host
-    ```
+**To login to the Diretta Host:**
+```bash
+ssh diretta-host
+```
 
-    **To login to the Diretta Target:**
-    ```bash
-		ssh diretta-target
-    ```
+**To login to the Diretta Target:**
+```bash
+ssh diretta-target
+```
 
-    **Note:** You can use `ssh host` and `ssh target` for short.
+**Note:** You can use `ssh host` and `ssh target` for short.
 
 #### 6.2. Recommended: Secure Authentication with SSH Keys
 
