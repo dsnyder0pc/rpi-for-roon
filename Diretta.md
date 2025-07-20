@@ -149,6 +149,7 @@ sudo hostnamectl set-hostname diretta-target
 #### 3.3. Set Your Timezone
 
 ```bash
+clear
 echo "Welcome to the interactive timezone setup."
 echo "You will first select a region, then a specific timezone."
 
