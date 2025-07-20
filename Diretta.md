@@ -569,7 +569,7 @@ sudo systemctl enable boot-repair.service
 ```
 
 #### 7.3. Verification After a Clean Reboot
-Not critical, but to make sure this is working as expected, do a reboot test. **Note:** Reboot the Host first, then the Target.
+Not critical, but to make sure this is working as expected, do a reboot test. **Note:** Reboot the Target  first, then the Host.
 ```bash
 sudo reboot
 ```
