@@ -213,6 +213,8 @@ ssh "audiolinux@${RPi_IP_Address}"
 The system clock has to be accureate before we can install updates. The Raspberry Pi has no NVRAM battery, so the clock must be set each time it boots. This is typically done by connecting to a network service. This script will make sure that the clock is set and stays correct during the operation of the computer.
 
 ```bash
+echo '// Reminder: the root password is audiolinux0'
+sudo id
 curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_chrony.sh | sudo bash
 ```
 
