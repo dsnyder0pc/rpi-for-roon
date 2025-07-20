@@ -410,8 +410,8 @@ Please perform these steps on _both_ the Diretta Host and Target computers..
 This script is safe to run both automatically at boot and manually on a live system.
 ```bash
 curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh
-sudo mv -v check-and-repair-boot.sh /usr/local/bin/
-sudo chmod +x /usr/local/bin/check-and-repair-boot.sh
+sudo mv -v check-and-repair-boot.sh /usr/local/sbin/
+sudo chmod +x /usr/local/sbin/check-and-repair-boot.sh
 ```
 
 #### 7.2. Create the `systemd` Service File and enable the service
@@ -742,10 +742,13 @@ pyenv global $PYVER
 Clone the script repository and fetch a patch to correctly handle keycodes by name instead of by number.
 
 ```bash
-git clone https://github.com/smangels/roon-ir-remote.git
-curl -L -o roon-ir-remote/roon-ir-remote.patch \
-https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/roon-ir-remote.patch
-EOT
+cd && \
+git clone https://github.com/smangels/roon-ir-remote.git && \
+cd roon-ir-remote && \
+curl -L -o roon-ir-remote.patch \
+https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/roon-ir-remote.patch && \
+patch -p1 < roon-ir-remote.patch && \
+cd
 ```
 
 -----
@@ -800,8 +803,7 @@ EOT
 Install the script's dependencies into a virtual environment and run it for the first time.
 
 ```bash
-cd roon-ir-remote
-patch -p1 < roon-ir-remote.patch
+cd ~/roon-ir-remote
 pyenv virtualenv roon-ir-remote
 pyenv activate roon-ir-remote
 pip3 install --upgrade pip
