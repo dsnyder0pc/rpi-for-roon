@@ -481,7 +481,9 @@ You should now be able to connect to both devices using the new aliases. Test th
 ssh -o StrictHostKeyChecking=accept-new diretta-host
 ```
 
-**To login to the Diretta Target:**
+Type `exit` to logout.
+
+**To login to the Diretta Target:** _(you'll be prompted for the password twice)_
 ```bash
 ssh -o StrictHostKeyChecking=accept-new diretta-target
 ```
