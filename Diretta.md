@@ -442,11 +442,14 @@ fi
 2.  **Verify the Connection:**
 
 		You should now be able to connect to both devices using the new aliases. Test the connection with the following commands:
+
     **To login to the Diretta Host:**
     ```bash
 		ssh diretta-host
     ```
+
     **To login to the Diretta Target:**
+    ```bash
 		ssh diretta-target
     ```
 
