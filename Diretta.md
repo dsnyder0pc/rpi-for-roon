@@ -639,7 +639,7 @@ Jun 27 10:17:55 diretta-host systemd[1]: Finished Check and repair /boot filesys
     * Select **INSTALL/UPDATE Roonbridge**.
     * The installation will proceed. The installation may take a minute or two.
 
-2.  **Enable Roon Bridge (on the Host):
+2.  **Enable Roon Bridge (on the Host):**
     * Select **Audio menu** from the Main menu
     * Select **SHOW audio service**
     * If you don't see **roonbridge** under enabled services, select **ROONBRIDGE enable/disable**
