@@ -111,10 +111,11 @@ The default sudo/root password is `audiolinux0`.
 
 You'll use the SSH client on your local computer to login to the RPi computers throughout this process. This client requires you to have a way to find the IP address of the RPi computers, which may change from one reobot to the next. The easiest way to get this information is from your home network router's web UI or app, but you can optionally install the [fing](https://www.fing.com/app/) app on your smartphone or tablet.
 
-Once you have the IP address of one of your RPi computers, the login process will look something like this:
+Once you have the IP address of one of your RPi computers, use the SSH client on your local computer to login using this process. Make note of the example `ssh` command since you'll use commands similar to this throughout this guide.
 ```bash
-# Enter the address of your RPi after the "@" symbol
-ssh audiolinux@insert.IP.address.here
+read -p "Enter the address of your RPi and hit [enter]: " RPi_IP_Address
+echo '$' ssh "audiolinux@${RPi_IP_Address}"
+ssh "audiolinux@${RPi_IP_Address}"
 ```
 
 #### 3.1. Regenerate the Machine ID
@@ -123,11 +124,11 @@ The `machine-id` is a unique identifier for the OS installation. It **must** be 
 
 ```bash
 # On each device, run the following commands:
-echo "Old Machine ID:" $(cat /etc/machine-id)
+echo "Old Machine ID: $(cat /etc/machine-id)"
+echo "Enter the root password (audiolinux0) to regenerate the machine ID..."
 sudo rm /etc/machine-id
-[sudo] password for root:
 sudo systemd-machine-id-setup
-echo "New Machine ID:" $(cat /etc/machine-id)
+echo "New Machine ID: $(cat /etc/machine-id)"
 ```
 
 #### 3.2. Set Unique Hostnames
@@ -147,8 +148,45 @@ sudo hostnamectl set-hostname diretta-target
 #### 3.3. Set Your Timezone
 
 ```bash
-# Example for Phoenix, USA. Find your timezone with 'timedatectl list-timezones'
-sudo timedatectl set-timezone America/Phoenix
+echo "Welcome to the interactive timezone setup."
+echo "You will first select a region, then a specific timezone."
+
+# Allow the user to select a region
+PS3="
+Please select a number for your region: "
+select region in $(timedatectl list-timezones | cut -d/ -f1 | sort -u); do
+  if [[ -n "$region" ]]; then
+    echo "You have selected the region: $region"
+    break
+  else
+    echo "Invalid selection. Please try again."
+  fi
+done
+
+echo # for a newline
+
+# Allow the user to select a timezone within that region
+PS3="
+Please select a number for your timezone: "
+select timezone in $(timedatectl list-timezones | grep "^$region/"); do
+  if [[ -n "$timezone" ]]; then
+    echo "You have selected the timezone: $timezone"
+    break
+  else
+    echo "Invalid selection. Please try again."
+  fi
+done
+
+# Set the selected timezone
+echo
+echo "Setting timezone to ${timezone}..."
+sudo timedatectl set-timezone "$timezone"
+echo "✅ Timezone has been set."
+
+# Verify the change
+echo
+echo "Current system time and timezone:"
+timedatectl status
 ```
 
 **At this point, shutdown the device (`sudo poweroff`). Repeat the above steps for the second Raspberry Pi.**
@@ -371,22 +409,52 @@ Now that the network is configured, the **Diretta Target** is on an isolated net
 
 The `ProxyJump` directive in your local SSH configuration is the standard and required method to achieve this.
 
-1.  **Configure SSH Aliases:**
-    On your local computer (e.g., your laptop), edit the file `~/.ssh/config`. This configuration tells SSH how to reach the Target by first connecting to the Host.
+1.  Run this command on your local computer (not on the Raspberry Pi). It will prompt you for the Diretta Host's IP address and then print the exact configuration block you need.
+    ```bash
+		# --- Interactive SSH Alias Setup Script ---
 
+		SSH_CONFIG_FILE="$HOME/.ssh/config"
+
+		# Ensure the .ssh directory exists with the correct permissions
+		mkdir -p "$HOME/.ssh"
+		chmod 700 "$HOME/.ssh"
+
+		# Ensure the config file exists
+		touch "$SSH_CONFIG_FILE"
+		chmod 600 "$SSH_CONFIG_FILE"
+
+		# Check if the 'diretta-host' alias already exists
+		if grep -q "Host diretta-host" "$SSH_CONFIG_FILE"; then
+			echo "✅ SSH configuration for 'diretta-host' already exists. No changes made."
+		else
+			# Prompt for the IP address since the config is missing
+			read -p "Enter the LAN IP address of your Diretta Host and press [Enter]: " Diretta_Host_IP
+
+			# Append the new configuration using a heredoc for clarity
+			cat <<-EOF >> "$SSH_CONFIG_FILE"
+
+		# --- Diretta Configuration (added by script) ---
+		Host diretta-host host
+				HostName ${Diretta_Host_IP}
+				User audiolinux
+
+		Host diretta-target target
+				HostName 172.20.0.2
+				User audiolinux
+				ProxyJump diretta-host
+		EOF
+
+			echo "✅ SSH configuration for 'diretta-host' and 'diretta-target' has been added."
+		fi
     ```
-    Host diretta-host host
-        HostName <diretta-host-lan-ip>
-        User audiolinux
 
-    Host diretta-target target
-        HostName 172.20.0.2
-        User audiolinux
-        ProxyJump diretta-host
+2.  **Verify the Connection:**
+
+		You should now be able to connect to both devices using the new aliases. Test the connection with the following commands:
+    ```bash
+		ssh diretta-host
+		ssh diretta-target
     ```
-    *(Replace `<diretta-host-lan-ip>` with the actual IP of the Host on your LAN.)*
-
-With this configuration in place, SSH handles the connection routing automatically when you try to connect to `diretta-target`.
 
 #### 6.2. Recommended: Secure Authentication with SSH Keys
 
