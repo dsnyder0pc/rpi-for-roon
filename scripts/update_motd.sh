@@ -12,13 +12,13 @@ IP_ADDR=""
 sed -i '/^Your IP address is/d' "$MOTD_FILE"
 
 # --- Try to find the primary IPv4 address ---
-# We ask the kernel for the route to a public IP (8.8.8.8).
+# We ask the kernel for the route to a public IP (Cloudflare).
 # The 'src' field in the output is the primary IP it would use.
 IP_ADDR=$(ip -4 route get 1.1.1.1 2>/dev/null | grep -oP 'src \K[\d.]+')
 
 # --- If no IPv4 address was found, try for a primary IPv6 address ---
 if [ -z "$IP_ADDR" ]; then
-    # We do the same for IPv6 using Google's public DNS.
+    # We do the same for IPv6 using Cloudflare's IPv6 address
     IP_ADDR=$(ip -6 route get 2606:4700:4700::1111 2>/dev/null | grep -oP 'src \K[0-9a-fA-F:]+')
 fi
 
