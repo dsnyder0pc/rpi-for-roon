@@ -410,43 +410,43 @@ Now that the network is configured, the **Diretta Target** is on an isolated net
 The `ProxyJump` directive in your local SSH configuration is the standard and required method to achieve this.
 
 1.  Run this command on your local computer (not on the Raspberry Pi). It will prompt you for the Diretta Host's IP address and then print the exact configuration block you need.
-    ```bash
-		# --- Interactive SSH Alias Setup Script ---
+```bash
+# --- Interactive SSH Alias Setup Script ---
 
-		SSH_CONFIG_FILE="$HOME/.ssh/config"
+SSH_CONFIG_FILE="$HOME/.ssh/config"
 
-		# Ensure the .ssh directory exists with the correct permissions
-		mkdir -p "$HOME/.ssh"
-		chmod 700 "$HOME/.ssh"
+# Ensure the .ssh directory exists with the correct permissions
+mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
 
-		# Ensure the config file exists
-		touch "$SSH_CONFIG_FILE"
-		chmod 600 "$SSH_CONFIG_FILE"
+# Ensure the config file exists
+touch "$SSH_CONFIG_FILE"
+chmod 600 "$SSH_CONFIG_FILE"
 
-		# Check if the 'diretta-host' alias already exists
-		if grep -q "Host diretta-host" "$SSH_CONFIG_FILE"; then
-			echo "✅ SSH configuration for 'diretta-host' already exists. No changes made."
-		else
-			# Prompt for the IP address since the config is missing
-			read -p "Enter the LAN IP address of your Diretta Host and press [Enter]: " Diretta_Host_IP
+# Check if the 'diretta-host' alias already exists
+if grep -q "Host diretta-host" "$SSH_CONFIG_FILE"; then
+  echo "✅ SSH configuration for 'diretta-host' already exists. No changes made."
+else
+  # Prompt for the IP address since the config is missing
+  read -p "Enter the LAN IP address of your Diretta Host and press [Enter]: " Diretta_Host_IP
 
-			# Append the new configuration using a heredoc for clarity
-			cat <<-EOF >> "$SSH_CONFIG_FILE"
+  # Append the new configuration using a heredoc for clarity
+  cat <<EOF >> "$SSH_CONFIG_FILE"
 
-		# --- Diretta Configuration (added by script) ---
-		Host diretta-host host
-				HostName ${Diretta_Host_IP}
-				User audiolinux
+# --- Diretta Configuration (added by script) ---
+Host diretta-host host
+    HostName ${Diretta_Host_IP}
+    User audiolinux
 
-		Host diretta-target target
-				HostName 172.20.0.2
-				User audiolinux
-				ProxyJump diretta-host
-		EOF
+Host diretta-target target
+    HostName 172.20.0.2
+    User audiolinux
+    ProxyJump diretta-host
+EOF
 
-			echo "✅ SSH configuration for 'diretta-host' and 'diretta-target' has been added."
-		fi
-    ```
+  echo "✅ SSH configuration for 'diretta-host' and 'diretta-target' has been added."
+fi
+```
 
 2.  **Verify the Connection:**
 
