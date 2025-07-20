@@ -72,3 +72,5 @@ echo "  chronyc sources"
 echo "  systemctl status chronyd"
 echo ""
 echo "Done!"
+
+chronyc sources
