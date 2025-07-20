@@ -644,7 +644,7 @@ Jun 27 10:17:55 diretta-host systemd[1]: Finished Check and repair /boot filesys
     * Select **SHOW audio service**
     * If you don't see **roonbridge** under enabled services, select **ROONBRIDGE enable/disable**
 
-3.  **Reboot Both Devices:** For a clean start, `sudo reboot` both the Host and Target, in that order.
+3.  **Reboot Both Devices:** For a clean start, `sudo reboot` both the Target and Host, in that order.
 
 4.  **Configure Roon:**
     * Open Roon on your control device.
