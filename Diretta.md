@@ -455,10 +455,12 @@ else
 # --- Diretta Configuration (added by script) ---
 Host diretta-host host
     HostName ${Diretta_Host_IP}
+    StrictHostKeyChecking accept-new
     User audiolinux
 
 Host diretta-target target
     HostName 172.20.0.2
+    StrictHostKeyChecking accept-new
     User audiolinux
     ProxyJump diretta-host
 EOT
