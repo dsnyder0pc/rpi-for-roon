@@ -401,6 +401,7 @@ The `ProxyJump` directive in your local SSH configuration is the standard and re
 
 1.  Run this command on your local computer (not on the Raspberry Pi). It will prompt you for the Diretta Host's IP address and then print the exact configuration block you need.
 ```bash
+clear
 # --- Interactive SSH Alias Setup Script ---
 
 SSH_CONFIG_FILE="$HOME/.ssh/config"
