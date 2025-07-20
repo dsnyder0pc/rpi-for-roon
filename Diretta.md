@@ -601,15 +601,23 @@ This guide provides instructions for installing and configuring an IR remote to 
 1.  **Enable the IR Receiver Hardware:**
     You must enable the hardware overlay for the Argon One case's IR receiver.
 
-      * Edit your boot configuration file:
+      * This command will safely add the required hardware overlay to your `/boot/config.txt` file, first checking to ensure it isn't added more than once.
         ```bash
-        sudo nano /boot/config.txt
+        BOOT_CONFIG="/boot/config.txt"
+        IR_CONFIG="dtoverlay=gpio-ir,gpio_pin=23"
+
+        # Add the IR overlay if it's not already there
+        if ! grep -q -F "$IR_CONFIG" "$BOOT_CONFIG"; then
+          echo "Enabling Argon One IR Receiver..."
+          echo "$IR_CONFIG" | sudo tee -a "$BOOT_CONFIG" > /dev/null
+        else
+          echo "Argon One IR Receiver already enabled."
+        fi
         ```
-      * Add the following line to enable the IR receiver on the correct pin:
+      * A reboot is required for the hardware change to take effect.
+        ```bash
+        sudo reboot
         ```
-        dtoverlay=gpio-ir,gpio_pin=23
-        ```
-      * Save the file and reboot.
 
 2.  **Install IR Tools and Enable Protocols:**
     Install `ir-keytable` and enable all kernel protocols so it can decode signals from your remote.
@@ -872,19 +880,35 @@ If you decoded to use an ARGON One case for your Raspberry Pi, the default insta
 The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work, so skip this step and follow the steps below instead.
 
 #### Step 2: Configure your system:
-You need to enable the I2C interface, which the case uses to communicate with the Raspberry Pi. Edit `/boot/config.txt` and uncommont following line near the top:
-```ini
-dtparam=i2c_arm=on
-```
+These commands will enable the I2C interface and add the specific `dtoverlay`
+for the Argon ONE case. The script first attempts to uncomment the `i2c_arm`
+parameter if it's commented out and then adds the `argonone` overlay if it's
+missing, preventing errors and duplicate entries.
+```bash
+BOOT_CONFIG="/boot/config.txt"
+I2C_PARAM="dtparam=i2c_arm=on"
+ARGON_OVERLAY="dtoverlay=argonone"
 
-Also, add the following where you see the other `dtoverlay` statements:
-```ini
-dtoverlay=argonone
+# --- Enable I2C by uncommenting the line if it exists ---
+if grep -q -F "#$I2C_PARAM" "$BOOT_CONFIG"; then
+  echo "Enabling I2C parameter..."
+  sudo sed -i -e "s/^#\($I2C_PARAM\)/\1/" "$BOOT_CONFIG"
+fi
+
+# --- Add the Argon One overlay if it's not already there ---
+if ! grep -q -F "$ARGON_OVERLAY" "$BOOT_CONFIG"; then
+  echo "Adding Argon One overlay..."
+  echo "$ARGON_OVERLAY" | sudo tee -a "$BOOT_CONFIG" > /dev/null
+else
+  echo "Argon One overlay already present."
+fi
 ```
 
 #### Step 3: Configure `udev` permissions
 ```bash
-echo 'KERNEL=="i2c-[0-9]*", MODE="0666"' | sudo tee /etc/udev/rules.d/99-i2c.rules
+cat <<'EOT' | sudo tee /etc/udev/rules.d/99-i2c.rules
+KERNEL=="i2c-[0-9]*", MODE="0666"
+EOT
 ```
 
 #### Step 4: Install the Argon One Package
