@@ -353,7 +353,7 @@ Name=end0
 [Network]
 Address=172.20.0.2/24
 Gateway=172.20.0.1
-DNS=8.8.8.8
+DNS=1.1.1.1
 EOT
 ```
 
