@@ -115,6 +115,7 @@ Once you have the IP address of one of your RPi computers, use the SSH client on
 ```bash
 read -p "Enter the address of your RPi and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
+echo '// Reminder: the password is audiolinux'
 ssh "audiolinux@${RPi_IP_Address}"
 ```
 
