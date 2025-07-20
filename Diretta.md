@@ -199,7 +199,14 @@ timedatectl status
 
 Each RPi has its own machine ID, so you may power them up now. If you have two network cables, it's more
 convenient to connect both of them to your home network at the same time for the next few steps, but you can
-proceed one-at-at-time otherwise. **Note**: your router will likely assign them different IP addresses from the one you used to login initially.
+proceed one-at-at-time otherwise. **Note**: your router will likely assign them different IP addresses from the one you used to login initially. Be sure to use the new IP address with your SSH commands. Here's a reminder:
+
+```bash
+read -p "Enter the (new) address of your RPi and hit [enter]: " RPi_IP_Address
+echo '$' ssh "audiolinux@${RPi_IP_Address}"
+echo '// Reminder: the password is audiolinux'
+ssh "audiolinux@${RPi_IP_Address}"
+```
 
 #### 4.1. Install "Chrony" to update the system clock
 
