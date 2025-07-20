@@ -612,7 +612,7 @@ Jun 27 10:17:55 diretta-host systemd[1]: Finished Check and repair /boot filesys
     ?
     ```
 5.  You should perform these actions in sequence:
-    * Choose **1) Install/update** to install the software.
+    * Choose **1) Install/update** to install the software. *(Note: you may see `error: package 'lld' was not found`. Don't worry, that will be corrected automatically by the installation)*
     * Choose **2) Enable/Disable Diretta daemon** and enable it.
     * Choose **3) Set Ethernet interface**. It is critical to select `end0`, the interface for the point-to-point link.
         ```
