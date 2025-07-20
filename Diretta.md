@@ -867,7 +867,9 @@ cd roon-ir-remote
 curl -L -o roon-ir-remote.patch https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/roon-ir-remote.patch
 
 # Apply the patch only if it hasn't been applied yet
-if ! patch -p1 --dry-run --silent < roon-ir-remote.patch; then
+if patch -p1 --dry-run --silent < roon-ir-remote.patch; then
+  :
+else
   patch -p1 < roon-ir-remote.patch
 fi
 
