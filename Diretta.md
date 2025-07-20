@@ -338,6 +338,8 @@ In this section, we will create the network configuration files that will activa
 
 #### 5.2. Pre-configure the Diretta Target
 
+**Note:** If you have not done step 4. on the Diretta Target, do that now, then return here.
+
 On the **Diretta Target**, create the `end0.network` file. This configures its static IP and tells it to use the Diretta Host as its gateway for all internet traffic.
 
 *File: `/etc/systemd/network/end0.network`*
