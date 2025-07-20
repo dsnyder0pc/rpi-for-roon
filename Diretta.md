@@ -229,7 +229,14 @@ In this section, we will create the network configuration files that will activa
 
     Add an /etc/hosts entry for the Diretta Target:
     ```
-    printf "172.20.0.2\tdiretta-target target\n" | sudo tee -a /etc/hosts
+    HOSTS_FILE="/etc/hosts"
+    TARGET_IP="172.20.0.2"
+    TARGET_HOST="diretta-target"
+
+    # Add an entry for the Diretta Target if it doesn't exist
+    if ! grep -q "$TARGET_IP\s\+$TARGET_HOST" "$HOSTS_FILE"; then
+      printf "%s\t%s target\n" "$TARGET_IP" "$TARGET_HOST" | sudo tee -a "$HOSTS_FILE"
+    fi
     ```
 
 2.  **Enable IP Forwarding:**
@@ -243,9 +250,12 @@ In this section, we will create the network configuration files that will activa
 
 3.  **Configure Network Address Translation (NAT):**
     ```bash
-    # Add the firewall rule. The -o enp+ will match your USB adapter.
-    sudo iptables -t nat -A POSTROUTING -s 172.20.0.0/24 -o enp+ -j MASQUERADE
-    
+    # Check if the NAT rule already exists before adding it
+    if ! sudo iptables -t nat -C POSTROUTING -s 172.20.0.0/24 -o enp+ -j MASQUERADE 2>/dev/null; then
+      echo "Adding NAT rule for IP forwarding..."
+      sudo iptables -t nat -A POSTROUTING -s 172.20.0.0/24 -o enp+ -j MASQUERADE
+    fi
+
     # Save the rule to make it permanent
     sudo iptables-save | sudo tee /etc/iptables/iptables.rules
     sudo systemctl enable iptables.service
@@ -326,7 +336,14 @@ sudo rm -fv /etc/systemd/network/en.network
 
 Add an /etc/hosts entry for the Diretta Host:
 ```bash
-printf "172.20.0.1\tdiretta-host host\n" | sudo tee -a /etc/hosts
+HOSTS_FILE="/etc/hosts"
+HOST_IP="172.20.0.1"
+HOST_NAME="diretta-host"
+
+# Add an entry for the Diretta Host if it doesn't exist
+if ! grep -q "$HOST_IP\s\+$HOST_NAME" "$HOSTS_FILE"; then
+  printf "%s\t%s host\n" "$HOST_IP" "$HOST_NAME" | sudo tee -a "$HOSTS_FILE"
+fi
 ```
 
 #### 5.3. The Physical Connection Change
@@ -424,8 +441,8 @@ Please perform these steps on _both_ the Diretta Host and Target computers..
 This script is safe to run both automatically at boot and manually on a live system.
 ```bash
 curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh
-sudo mv -v check-and-repair-boot.sh /usr/local/sbin/
-sudo chmod +x /usr/local/sbin/check-and-repair-boot.sh
+sudo install -m 0755 check-and-repair-boot.sh /usr/local/sbin/
+rm check-and-repair-boot.sh
 ```
 
 #### 7.2. Create the `systemd` Service File and enable the service
@@ -764,12 +781,24 @@ pyenv global $PYVER
 Clone the script repository and fetch a patch to correctly handle keycodes by name instead of by number.
 
 ```bash
-cd && \
-git clone https://github.com/smangels/roon-ir-remote.git && \
-cd roon-ir-remote && \
-curl -L -o roon-ir-remote.patch \
-https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/roon-ir-remote.patch && \
-patch -p1 < roon-ir-remote.patch && \
+cd
+# Clone the repo if it doesn't exist, otherwise update it
+if [ ! -d "roon-ir-remote" ]; then
+  git clone https://github.com/smangels/roon-ir-remote.git
+else
+  (cd roon-ir-remote && git pull)
+fi
+
+cd roon-ir-remote
+
+# Download the patch
+curl -L -o roon-ir-remote.patch https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/roon-ir-remote.patch
+
+# Apply the patch only if it hasn't been applied yet
+if ! patch -p1 --dry-run --silent < roon-ir-remote.patch; then
+  patch -p1 < roon-ir-remote.patch
+fi
+
 cd
 ```
 
@@ -877,8 +906,8 @@ sudo systemctl status roon-ir-remote.service
 Good to have a script that you can use to update the Roon zone name later if needed. Here's how to install it:
 ```bash
 curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone
-sudo mv set-roon-zone /usr/local/bin
-sudo chmod +x /usr/local/bin/set-roon-zone
+sudo install -m 0755 set-roon-zone /usr/local/bin/
+rm set-roon-zone
 ```
 
 #### **Step 8: Profit! 📈**
