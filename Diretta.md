@@ -124,7 +124,7 @@ ssh "audiolinux@${RPi_IP_Address}"
 The `machine-id` is a unique identifier for the OS installation. It **must** be different for each device. When asked for the root password below, enter `audiolinux0`
 
 ```bash
-# On each device, run the following commands:
+echo ""
 echo "Old Machine ID: $(cat /etc/machine-id)"
 echo "Enter the root password (audiolinux0) to regenerate the machine ID..."
 sudo rm /etc/machine-id
