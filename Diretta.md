@@ -807,8 +807,10 @@ Logout and log back in for this change to take effect. You can verify with this 
 ```bash
 echo ""
 echo ""
-echo "Checking your group memberships..."
+echo "Checking your group memberships:"
+echo "\$ groups"
 groups
+echo ""
 echo "Above, you you should see:"
 echo "audiolinux realtime video input audio wheel"
 ```
