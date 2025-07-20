@@ -116,7 +116,7 @@ Once you have the IP address of one of your RPi computers, use the SSH client on
 read -p "Enter the address of your RPi and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 echo '// Reminder: the password is audiolinux'
-ssh "audiolinux@${RPi_IP_Address}"
+ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 ```
 
 #### 3.1. Regenerate the Machine ID
@@ -205,7 +205,7 @@ proceed one-at-at-time otherwise. **Note**: your router will likely assign them 
 read -p "Enter the (new) address of your RPi and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 echo '// Reminder: the password is audiolinux'
-ssh "audiolinux@${RPi_IP_Address}"
+ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 ```
 
 #### 4.1. Install "Chrony" to update the system clock
@@ -447,12 +447,12 @@ You should now be able to connect to both devices using the new aliases. Test th
 
 **To login to the Diretta Host:**
 ```bash
-ssh diretta-host
+ssh -o StrictHostKeyChecking=accept-new diretta-host
 ```
 
 **To login to the Diretta Target:**
 ```bash
-ssh diretta-target
+ssh -o StrictHostKeyChecking=accept-new diretta-target
 ```
 
 **Note:** You can use `ssh host` and `ssh target` for short.
