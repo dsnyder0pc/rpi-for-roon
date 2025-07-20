@@ -199,13 +199,6 @@ done
 
 echo ""
 
-# To speed up future updates
-sudo pacman -Sy --noconfirm reflector
-sudo reflector --verbose -c "$region" -l 10 --age 12 -p https \
-     --sort rate --save /etc/pacman.d/mirrorlist
-
-echo ""
-
 # Allow the user to select a timezone within that region
 PS3="
 Please select a number for your timezone: "
