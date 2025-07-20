@@ -338,7 +338,7 @@ In this section, we will create the network configuration files that will activa
 
 #### 5.2. Pre-configure the Diretta Target
 
-**Note:** If you have not performed step 4. on the Diretta Target, do that now, then return here.
+**Note:** If you have not performed [step 4](#4-system-updates-perform-on-both-devices) on the Diretta Target, do that [now](#4-system-updates-perform-on-both-devices), then return here.
 
 On the **Diretta Target**, create the `end0.network` file. This configures its static IP and tells it to use the Diretta Host as its gateway for all internet traffic.
 
