@@ -805,6 +805,8 @@ sudo usermod --append --groups input audiolinux
 ```
 Logout and log back in for this change to take effect. You can verify with this command:
 ```bash
+echo ""
+echo ""
 echo "Checking your group memberships..."
 groups
 echo "Above, you you should see:"
