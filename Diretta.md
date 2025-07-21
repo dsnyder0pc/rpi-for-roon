@@ -1162,6 +1162,12 @@ Now, feel free to adjust the values as needed, following the steps above.
 ### 12. Appendix 3: Purist Mode
 There is minimal network and background activity on the Diretta Target computer that are not related to music playback using the Diretta protocol. However, some users prefer to take extra steps to reduce the possibility of such activity. We are already on the extreme edge of audio performance, so why not?
 
+----
+> CRITICAL WARNING: For the Diretta Target ONLY
+> The purist-mode script and all instructions in this appendix are designed exclusively for the Diretta Target.
+> 
+> Do NOT run this script on the Diretta Host. Doing so will drop the Host's connection to your main network, making it unreachable and unable to communicate with your Roon Core or streaming services. This would render the entire system inoperable until you can gain console access (with a physical keyboard and monitor) to revert the changes.
+----
 
 #### Step 1: Install the `purist-mode` script
 ```bash
