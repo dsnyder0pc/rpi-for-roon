@@ -4,6 +4,8 @@
 #              for critical listening sessions. Run without arguments to activate,
 #              or with --revert to restore normal operation.
 #
+# This script will invoke 'sudo' internally for commands requiring elevation.
+#
 
 # --- Configuration ---
 NSSWITCH_CONF="/etc/nsswitch.conf"
@@ -14,26 +16,28 @@ BACKUP_FILE="${NSSWITCH_CONF}.purist-bak"
 # Function to activate Purist Mode
 activate_mode() {
     echo "🚀 Activating Purist Mode..."
+    echo "   This script requires sudo privileges. You may be prompted for a password."
+    echo "   (Note: The default sudo password for Audiolinux is 'audiolinux0')"
 
     # Stop services to reduce background processing
     echo "  -> Stopping time synchronization service (chronyd)..."
-    systemctl stop chronyd &>/dev/null
+    sudo systemctl stop chronyd &>/dev/null
     echo "  -> Stopping Argon One daemon (argononed.service)..."
-    systemctl stop argononed.service &>/dev/null
+    sudo systemctl stop argononed.service &>/dev/null
 
     # Disable DNS lookups to prevent traffic to nameservers
     echo "  -> Disabling DNS lookups..."
     if [ ! -f "$BACKUP_FILE" ]; then
-        cp "$NSSWITCH_CONF" "$BACKUP_FILE"
+        sudo cp "$NSSWITCH_CONF" "$BACKUP_FILE"
         echo "     Backup of ${NSSWITCH_CONF} created."
     fi
-    # On the line starting with 'hosts:', remove the word 'dns'
-    sed -i -E '/^hosts:/s/\s+\bdns\b//g' "$NSSWITCH_CONF"
-    echo "     DNS lookups disabled."
+    # Replace the entire 'hosts' line with a safe, local-only version.
+    sudo sed -i -E 's/^(hosts:).*/\1 files myhostname/' "$NSSWITCH_CONF"
+    echo "     DNS lookups disabled (set to local-only resolution)."
 
     # Drop the default gateway to sever outbound internet access
     echo "  -> Dropping default gateway..."
-    ip route del default
+    sudo ip route del default
     if [ $? -eq 0 ]; then
         echo "     Default gateway removed."
     else
@@ -42,53 +46,67 @@ activate_mode() {
 
     echo ""
     echo "✅ Purist Mode is ACTIVE."
-    echo "   To restore normal operation, run: sudo $0 --revert"
+    echo "   To restore normal operation, run: purist-mode --revert"
 }
 
 # Function to revert changes
 revert_mode() {
     echo "⏪ Reverting to Normal Mode..."
+    echo "   This script requires sudo privileges. You may be prompted for a password."
+    echo "   (Note: The default sudo password for Audiolinux is 'audiolinux0')"
+
+    # Restore network gateway by restarting the systemd-networkd service
+    echo "  -> Restoring default gateway..."
+    sudo systemctl restart systemd-networkd
+    if [ $? -eq 0 ]; then
+        echo "     Network service restarted. Default gateway should now be active."
+    else
+        echo "     Warning: Failed to restart network service. A reboot may be required to restore the gateway."
+    fi
 
     # Restore nsswitch.conf from backup
     echo "  -> Restoring DNS configuration..."
     if [ -f "$BACKUP_FILE" ]; then
-        mv "$BACKUP_FILE" "$NSSWITCH_CONF"
+        sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
         echo "     DNS settings restored from backup."
     else
         echo "     Warning: Backup file not found. DNS settings may need manual correction."
-        echo "     A typical entry in ${NSSWITCH_CONF} is: hosts: files dns"
     fi
 
     # Restart services
     echo "  -> Restarting time synchronization service (chronyd)..."
-    systemctl start chronyd &>/dev/null
+    sudo systemctl start chronyd &>/dev/null
     echo "  -> Restarting Argon One daemon (argononed.service)..."
-    systemctl start argononed.service &>/dev/null
-
-    echo "  -> Restoring network connectivity..."
-    echo "     Connectivity, including the default gateway, is best restored by restarting the device."
-    echo "     Please REBOOT the Diretta Target to ensure all changes are fully reverted."
+    sudo systemctl start argononed.service &>/dev/null
 
     echo ""
-    echo "✅ Normal Mode Restored. A reboot is recommended."
+    echo "✅ Normal Mode Restored. All settings have been reverted."
 }
 
 # --- Main Script Logic ---
 
-# 1. Check for root privileges
-if [[ $EUID -ne 0 ]]; then
-   echo "Error: This script must be run with root privileges. Try 'sudo $0'."
-   exit 1
+# 1. Check for `sudo` availability before running
+if ! command -v sudo &> /dev/null; then
+    echo "Error: 'sudo' command not found. This script requires sudo to run."
+    exit 1
 fi
 
-# 2. Parse arguments to decide whether to activate or revert
+# 2. Re-acquire sudo credentials at the start to avoid multiple prompts later.
+if [ "$EUID" -ne 0 ]; then
+    sudo -v || exit 1 # Exit if the password fails
+    # Keep the sudo ticket alive in the background while the script runs
+    while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+fi
+
+
+# 3. Parse arguments to decide whether to activate or revert
 if [[ "$1" == "--revert" || "$1" == "-r" ]]; then
     revert_mode
 else
     # Check if we are already in purist mode by looking for the backup file
     if [ -f "$BACKUP_FILE" ]; then
         echo " Purist Mode appears to be already active."
-        echo " To revert, run: sudo $0 --revert"
+        echo " To revert, run: purist-mode --revert"
         exit 0
     fi
     activate_mode
