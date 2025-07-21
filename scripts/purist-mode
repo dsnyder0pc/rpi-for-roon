@@ -99,3 +99,8 @@ else
     if [ -f "$BACKUP_FILE" ]; then
         echo " Purist Mode is already active."
         exit 0
+    fi
+    activate_mode
+fi
+
+exit 0
