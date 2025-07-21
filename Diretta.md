@@ -248,6 +248,8 @@ Use the Audiolinux menu system to perform all updates.
 
 In this section, we will create the network configuration files that will activate the dedicated private link. To avoid needing a physical keyboard and monitor (console access), we will perform these steps while both devices are still connected to your main LAN and accessible via SSH.
 
+If you just finished updating your Diretta Target, click [here](https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md#52-pre-configure-the-diretta-target) to jump to the point-to-point network configuration steps for the Target.
+
 #### 5.1. Pre-configure the Diretta Host
 
 1.  **Create Network Files:**
