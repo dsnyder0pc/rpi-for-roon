@@ -1198,6 +1198,10 @@ If you've decided that you prefer the sound with Purist Mode enabled, make it th
 
 ```bash
 echo ""
+echo "Disable Purist Mode"
+purist-mode --revert
+
+echo ""
 echo "Creating the Purist Mode Service File"
 cat <<'EOT' | tee /etc/systemd/system/purist-mode-auto.service
 [Unit]
