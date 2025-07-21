@@ -1327,7 +1327,7 @@ The boot-up process is designed to be safe and predictable, with an optional aut
 
 You have full interactive control over the system at any time.
 
-  * To **manually activate** Purist Mode for a listening session, run:
+  * To **manually activate** Purist Mode for a listening session, login to the Diretta Target computer and run:
 
     ```bash
     purist-mode
@@ -1339,7 +1339,7 @@ You have full interactive control over the system at any time.
     purist-mode --revert
     ```
 
-  * To control the **automatic boot behavior**, use the convenience aliases:
+  * To control the **automatic boot behavior**, use the convenience aliases on the Diretta Target:
 
     ```bash
     # This enables the 60-second auto-activation on the next boot
