@@ -1170,7 +1170,7 @@ There is minimal network and background activity on the Diretta Target computer 
 > Do NOT install or run this script on the Diretta Host. Doing so will drop the Host's connection to your main network, making it unreachable and unable to communicate with your Roon Core or streaming services. This would render the entire system inoperable until you can gain console access (with a physical keyboard and monitor) to revert the changes.
 ----
 
-#### Step 1: Install the `purist-mode` script
+#### Step 1: Install the `purist-mode` script **(only on the Diretta Target computer)**
 ```bash
 curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode
 sudo install -m 0755 purist-mode /usr/local/bin
