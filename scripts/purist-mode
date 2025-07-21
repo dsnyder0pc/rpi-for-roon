@@ -1,0 +1,97 @@
+#!/bin/bash
+#
+# purist-mode: A script to minimize background network activity on a Diretta Target
+#              for critical listening sessions. Run without arguments to activate,
+#              or with --revert to restore normal operation.
+#
+
+# --- Configuration ---
+NSSWITCH_CONF="/etc/nsswitch.conf"
+BACKUP_FILE="${NSSWITCH_CONF}.purist-bak"
+
+# --- Functions ---
+
+# Function to activate Purist Mode
+activate_mode() {
+    echo "🚀 Activating Purist Mode..."
+
+    # Stop services to reduce background processing
+    echo "  -> Stopping time synchronization service (chronyd)..."
+    systemctl stop chronyd &>/dev/null
+    echo "  -> Stopping Argon One daemon (argononed.service)..."
+    systemctl stop argononed.service &>/dev/null
+
+    # Disable DNS lookups to prevent traffic to nameservers
+    echo "  -> Disabling DNS lookups..."
+    if [ ! -f "$BACKUP_FILE" ]; then
+        cp "$NSSWITCH_CONF" "$BACKUP_FILE"
+        echo "     Backup of ${NSSWITCH_CONF} created."
+    fi
+    # On the line starting with 'hosts:', remove the word 'dns'
+    sed -i -E '/^hosts:/s/\s+\bdns\b//g' "$NSSWITCH_CONF"
+    echo "     DNS lookups disabled."
+
+    # Drop the default gateway to sever outbound internet access
+    echo "  -> Dropping default gateway..."
+    ip route del default
+    if [ $? -eq 0 ]; then
+        echo "     Default gateway removed."
+    else
+        echo "     Warning: Could not remove default gateway. It may not have been set."
+    fi
+
+    echo ""
+    echo "✅ Purist Mode is ACTIVE."
+    echo "   To restore normal operation, run: sudo $0 --revert"
+}
+
+# Function to revert changes
+revert_mode() {
+    echo "⏪ Reverting to Normal Mode..."
+
+    # Restore nsswitch.conf from backup
+    echo "  -> Restoring DNS configuration..."
+    if [ -f "$BACKUP_FILE" ]; then
+        mv "$BACKUP_FILE" "$NSSWITCH_CONF"
+        echo "     DNS settings restored from backup."
+    else
+        echo "     Warning: Backup file not found. DNS settings may need manual correction."
+        echo "     A typical entry in ${NSSWITCH_CONF} is: hosts: files dns"
+    fi
+
+    # Restart services
+    echo "  -> Restarting time synchronization service (chronyd)..."
+    systemctl start chronyd &>/dev/null
+    echo "  -> Restarting Argon One daemon (argononed.service)..."
+    systemctl start argononed.service &>/dev/null
+
+    echo "  -> Restoring network connectivity..."
+    echo "     Connectivity, including the default gateway, is best restored by restarting the device."
+    echo "     Please REBOOT the Diretta Target to ensure all changes are fully reverted."
+
+    echo ""
+    echo "✅ Normal Mode Restored. A reboot is recommended."
+}
+
+# --- Main Script Logic ---
+
+# 1. Check for root privileges
+if [[ $EUID -ne 0 ]]; then
+   echo "Error: This script must be run with root privileges. Try 'sudo $0'."
+   exit 1
+fi
+
+# 2. Parse arguments to decide whether to activate or revert
+if [[ "$1" == "--revert" || "$1" == "-r" ]]; then
+    revert_mode
+else
+    # Check if we are already in purist mode by looking for the backup file
+    if [ -f "$BACKUP_FILE" ]; then
+        echo " Purist Mode appears to be already active."
+        echo " To revert, run: sudo $0 --revert"
+        exit 0
+    fi
+    activate_mode
+fi
+
+exit 0
