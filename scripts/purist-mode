@@ -16,8 +16,6 @@ BACKUP_FILE="${NSSWITCH_CONF}.purist-bak"
 # Function to activate Purist Mode
 activate_mode() {
     echo "🚀 Activating Purist Mode..."
-    echo "   This script requires sudo privileges. You may be prompted for a password."
-    echo "   (Note: The default sudo password for Audiolinux is 'audiolinux0')"
 
     # Stop services to reduce background processing
     echo "  -> Stopping time synchronization service (chronyd)..."
@@ -52,8 +50,6 @@ activate_mode() {
 # Function to revert changes
 revert_mode() {
     echo "⏪ Reverting to Normal Mode..."
-    echo "   This script requires sudo privileges. You may be prompted for a password."
-    echo "   (Note: The default sudo password for Audiolinux is 'audiolinux0')"
 
     # Restore network gateway by restarting the systemd-networkd service
     echo "  -> Restoring default gateway..."
@@ -91,9 +87,11 @@ if ! command -v sudo &> /dev/null; then
     exit 1
 fi
 
-# 2. Re-acquire sudo credentials at the start to avoid multiple prompts later.
+# 2. Check if we need sudo and prompt for password if we do.
 if [ "$EUID" -ne 0 ]; then
-    sudo -v || exit 1 # Exit if the password fails
+    echo "This script requires sudo privileges. You may be prompted for a password."
+    echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
+    sudo -v || exit 1 # Prompt for password now.
     # Keep the sudo ticket alive in the background while the script runs
     while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 fi
