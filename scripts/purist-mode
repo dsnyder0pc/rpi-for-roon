@@ -72,8 +72,8 @@ revert_mode() {
     echo "  -> Updating login message..."
     # First, remove any existing Purist Mode status line.
     sudo sed -i '/Purist Mode is/d' "$MOTD_FILE"
-    # Now, append the new status line.
-    echo -e "\n\e[1;33m⚠️ CAUTION: Purist Mode is DISABLED.\e[0m Background activity may impact sound quality.\nFor critical listening, run: \e[1mpurist-mode\e[0m\n" | sudo tee -a "$MOTD_FILE" > /dev/null
+    # Now, append the new, more concise status line.
+    echo -e "\n\e[1;33m⚠️ CAUTION: Purist Mode is DISABLED.\e[0m Background activity may impact sound quality.\n" | sudo tee -a "$MOTD_FILE" > /dev/null
     echo "     Login message set to 'Standard Mode'."
 
     echo ""
