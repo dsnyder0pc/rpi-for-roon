@@ -1203,7 +1203,7 @@ purist-mode --revert
 
 echo ""
 echo "Creating the Purist Mode Service File"
-cat <<'EOT' | tee /etc/systemd/system/purist-mode-auto.service
+cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
 [Unit]
 Description=Activate Purist Mode automatically
 
@@ -1214,7 +1214,7 @@ EOT
 
 echo ""
 echo "Creating the Purist Mode Timer File"
-cat <<'EOT' | tee /etc/systemd/system/purist-mode-auto.timer
+cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.timer
 [Unit]
 Description=Run purist-mode 60 seconds after boot
 
