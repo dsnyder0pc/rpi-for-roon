@@ -1209,33 +1209,8 @@ If you've decided that you prefer the sound with Purist Mode enabled, make it th
 
 ```bash
 echo ""
-echo "- Disabling Purist Mode"
+echo "- Disabling Purist Mode to ensure a clean state"
 purist-mode --revert
-
-echo ""
-echo "- Creating the Purist Mode Service File"
-cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
-[Unit]
-Description=Activate Purist Mode automatically
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/purist-mode
-EOT
-
-echo ""
-echo "- Creating the Purist Mode Timer File"
-cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.timer
-[Unit]
-Description=Run purist-mode 60 seconds after boot
-
-[Timer]
-OnBootSec=60s
-Unit=purist-mode-auto.service
-
-[Install]
-WantedBy=timers.target
-EOT
 
 echo ""
 echo "- Creating the Service to Revert to Standard Mode on Every Boot"
@@ -1244,7 +1219,7 @@ cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-revert-on-boot.service
 Description=Revert Purist Mode on Boot to Ensure Standard Operation
 After=network-online.target
 Wants=network-online.target
-Before=chronyd.service systemd-timesyncd.service purist-mode-auto.timer
+Before=purist-mode-auto.service
 
 [Service]
 Type=oneshot
@@ -1255,17 +1230,31 @@ WantedBy=multi-user.target
 EOT
 
 echo ""
+echo "- Creating the Delayed Auto-Activation Service"
+cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
+[Unit]
+Description=Activate Purist Mode 60 seconds after boot
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "sleep 60 && /usr/local/bin/purist-mode"
+
+[Install]
+WantedBy=multi-user.target
+EOT
+
+echo ""
 echo "- Enabling the new services"
 sudo systemctl daemon-reload
 sudo systemctl enable purist-mode-revert-on-boot.service
-sudo systemctl enable --now purist-mode-auto.timer
+sudo systemctl enable purist-mode-auto.service
 ```
 
 #### Step 3: Install a wrapper around the `menu` command
 Many functions in the Audiolinux require Internet access. To keep things working as expected, add a wrapper around the `menu` command that disables Purist mode while you are using the menu, enabling it again when you exit to the terminal.
 
 ```bash
-if grep menu_wrapper ~/.bashrc; then
+if grep -q menu_wrapper ~/.bashrc; then
   :
 else
   echo ""
@@ -1292,7 +1281,7 @@ menu_wrapper() {
 
 # Alias the 'menu' command to our new wrapper function
 alias menu='menu_wrapper'
-# Aliases to manage the automatic Purist Mode timer
+# Aliases to manage the automatic Purist Mode service
 alias purist-mode-auto-enable='echo "Enabling Purist Mode on boot..."; purist-mode; sudo systemctl enable purist-mode-auto.service'
 alias purist-mode-auto-disable='echo "Disabling Purist Mode on boot..."; purist-mode --revert; sudo systemctl disable --now purist-mode-auto.service'
 EOT
