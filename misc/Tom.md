@@ -95,7 +95,7 @@ The aliases in your `~/.bashrc` file need to be updated to work with the new ser
 
 1.  Open the file for editing:
     ```bash
-    vi ~/.bashrc
+    nano ~/.bashrc
     ```
 2.  Find and **delete** the old alias block. It will look like this:
     ```bash
@@ -109,7 +109,7 @@ The aliases in your `~/.bashrc` file need to be updated to work with the new ser
     alias purist-mode-auto-enable='echo "Enabling Purist Mode on boot..."; purist-mode; sudo systemctl enable purist-mode-auto.service'
     alias purist-mode-auto-disable='echo "Disabling Purist Mode on boot..."; purist-mode --revert; sudo systemctl disable --now purist-mode-auto.service'
     ```
-4.  Save and exit the file (in `vi`, that's `Esc` then `:wq`).
+4.  Save and exit the file
 5.  Activate the new aliases in your current session:
     ```bash
     source ~/.bashrc
