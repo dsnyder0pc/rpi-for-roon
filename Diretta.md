@@ -1243,6 +1243,11 @@ else
 
 # Custom wrapper for the Audiolinux menu to manage Purist Mode
 menu_wrapper() {
+    # Validate sudo credentials first to ensure any password prompt is visible
+    echo "Checking credentials to manage Purist Mode..."
+    echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
+    sudo -v
+
     echo "Temporarily disabling Purist Mode to run menu..."
     purist-mode --revert > /dev/null 2>&1 # Revert quietly
 
