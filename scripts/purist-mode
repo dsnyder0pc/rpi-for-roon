@@ -86,3 +86,27 @@ revert_mode() {
 if ! command -v sudo &> /dev/null; then
     echo "Error: 'sudo' command not found. This script requires sudo to run."
     exit 1
+fi
+
+# Check if we need sudo and prompt for password if we do.
+if [ "$EUID" -ne 0 ]; then
+    echo "This script requires sudo privileges. You may be prompted for a password."
+    echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
+    sudo -v || exit 1 # Prompt for password now.
+    # Keep the sudo ticket alive
+    while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+fi
+
+# Parse arguments to decide whether to activate or revert
+if [[ "$1" == "--revert" || "$1" == "-r" ]]; then
+    revert_mode
+else
+    # Check if we are already in purist mode
+    if [ -f "$BACKUP_FILE" ]; then
+        echo " Purist Mode is already active."
+        exit 0
+    fi
+    activate_mode
+fi
+
+exit 0
