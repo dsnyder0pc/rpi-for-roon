@@ -1263,20 +1263,31 @@ else
 
 # Custom wrapper for the Audiolinux menu to manage Purist Mode
 menu_wrapper() {
-    # Validate sudo credentials first to ensure any password prompt is visible
-    echo "Checking credentials to manage Purist Mode..."
-    echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
-    sudo -v
+    local was_active=false
+    # Check the initial state of Purist Mode by looking for the backup file.
+    if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+        was_active=true
+    fi
 
-    echo "Temporarily disabling Purist Mode to run menu..."
-    purist-mode --revert > /dev/null 2>&1 # Revert quietly
+    # If Purist Mode was active, temporarily revert it for the menu.
+    if [ "$was_active" = true ]; then
+        echo "Checking credentials to manage Purist Mode..."
+        echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
+        sudo -v
+
+        echo "Temporarily disabling Purist Mode to run menu..."
+        purist-mode --revert > /dev/null 2>&1 # Revert quietly
+    fi
 
     # Call the original menu command
     /usr/bin/menu
 
-    echo "Re-activating Purist Mode..."
-    purist-mode > /dev/null 2>&1 # Activate quietly
-    echo "Purist Mode is active again."
+    # If Purist Mode was active before, re-enable it now.
+    if [ "$was_active" = true ]; then
+        echo "Re-activating Purist Mode..."
+        purist-mode > /dev/null 2>&1 # Activate quietly
+        echo "Purist Mode is active again."
+    fi
 }
 
 # Alias the 'menu' command to our new wrapper function
