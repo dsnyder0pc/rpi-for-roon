@@ -1164,9 +1164,10 @@ There is minimal network and background activity on the Diretta Target computer 
 
 ----
 > CRITICAL WARNING: For the Diretta Target ONLY
-> The purist-mode script and all instructions in this appendix are designed exclusively for the Diretta Target.
+>
+> The `purist-mode` script and all instructions in this appendix are designed exclusively for the Diretta Target.
 > 
-> Do NOT run this script on the Diretta Host. Doing so will drop the Host's connection to your main network, making it unreachable and unable to communicate with your Roon Core or streaming services. This would render the entire system inoperable until you can gain console access (with a physical keyboard and monitor) to revert the changes.
+> Do NOT install or run this script on the Diretta Host. Doing so will drop the Host's connection to your main network, making it unreachable and unable to communicate with your Roon Core or streaming services. This would render the entire system inoperable until you can gain console access (with a physical keyboard and monitor) to revert the changes.
 ----
 
 #### Step 1: Install the `purist-mode` script
