@@ -1300,3 +1300,51 @@ fi
 
 source ~/.bashrc
 ```
+
+-----
+
+#### Understanding the Purist Mode States
+
+The Purist Mode system is designed to be flexible, allowing you to control it manually or have it activate automatically after the system boots. It operates in two primary states:
+
+  * **Disabled (Standard Mode):**
+    This is the normal, fully functional state of the Diretta Target. The network gateway is active, all services (`chronyd`, `argononed`) are running, and the device operates without restrictions.
+
+  * **Active (Purist Mode):**
+    This is the optimized state for critical listening. The network gateway is dropped to prevent internet traffic, and non-essential background services (including the Argon ONE fan) are stopped to minimize all potential system interference.
+
+These states are managed in two ways: **automatically** on boot and **manually** via the command line.
+
+##### Automatic Control (On Boot)
+
+The boot-up process is designed to be safe and predictable, with an optional automated switch to Purist Mode.
+
+1.  **Mandatory Revert on Boot:** Regardless of the state it was in when shut down, the Diretta Target **always** boots into **Standard Mode** first. This is a critical feature that ensures essential services like network time synchronization can run correctly.
+
+2.  **Optional Auto-Activation:** If you have enabled the automatic feature, the system will wait 60 seconds after booting and then automatically switch to **Purist Mode**. This provides a "set it and forget it" experience for users who always prefer listening in the optimized state.
+
+##### Manual Control (Interactive Use)
+
+You have full interactive control over the system at any time.
+
+  * To **manually activate** Purist Mode for a listening session, run:
+
+    ```bash
+    purist-mode
+    ```
+
+  * To **manually disable** Purist Mode and return to standard operation, run:
+
+    ```bash
+    purist-mode --revert
+    ```
+
+  * To control the **automatic boot behavior**, use the convenience aliases:
+
+    ```bash
+    # This enables the 60-second auto-activation on the next boot
+    purist-mode-auto-enable
+
+    # This disables the auto-activation on the next boot
+    purist-mode-auto-disable
+    ```
