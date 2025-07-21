@@ -1272,6 +1272,9 @@ menu_wrapper() {
 
 # Alias the 'menu' command to our new wrapper function
 alias menu='menu_wrapper'
+# Aliases to manage the automatic Purist Mode timer
+alias purist-mode-auto-enable='echo "Enabling Purist Mode on boot..."; sudo systemctl enable --now purist-mode-auto.timer'
+alias purist-mode-auto-disable='echo "Disabling Purist Mode on boot..."; sudo systemctl disable --now purist-mode-auto.timer'
 EOT
 fi
 
