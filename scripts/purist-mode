@@ -109,4 +109,14 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Parse arguments
-if [[ "$1
+if [[ "$1" == "--revert" || "$1" == "-r" ]]; then
+    revert_mode
+else
+    if [ -f "$BACKUP_FILE" ]; then
+        echo "✅ Purist Mode is already active."
+        exit 0
+    fi
+    activate_mode
+fi
+
+exit 0
