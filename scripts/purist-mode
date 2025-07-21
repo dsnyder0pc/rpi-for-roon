@@ -38,7 +38,10 @@ activate_mode() {
     
     # Update the Message of the Day (MOTD) with an affirming message
     echo "  -> Updating login message..."
-    echo -e "\n\e[1;32m✅ Purist Mode is ACTIVE.\e[0m System optimized for the highest sound quality.\n" | sudo tee "$MOTD_FILE" > /dev/null
+    # First, remove any existing Purist Mode status line to prevent duplicates.
+    sudo sed -i '/Purist Mode is/d' "$MOTD_FILE"
+    # Now, append the new status line. The -a flag for tee appends instead of overwriting.
+    echo -e "\n\e[1;32m✅ Purist Mode is ACTIVE.\e[0m System optimized for the highest sound quality.\n" | sudo tee -a "$MOTD_FILE" > /dev/null
     echo "     Login message set to 'Purist Mode'."
 
     echo ""
@@ -67,7 +70,10 @@ revert_mode() {
 
     # Update the MOTD with a cautionary message
     echo "  -> Updating login message..."
-    echo -e "\n\e[1;33m⚠️ CAUTION: Purist Mode is DISABLED.\e[0m Background activity may impact sound quality.\nFor critical listening, run: \e[1mpurist-mode\e[0m\n" | sudo tee "$MOTD_FILE" > /dev/null
+    # First, remove any existing Purist Mode status line.
+    sudo sed -i '/Purist Mode is/d' "$MOTD_FILE"
+    # Now, append the new status line.
+    echo -e "\n\e[1;33m⚠️ CAUTION: Purist Mode is DISABLED.\e[0m Background activity may impact sound quality.\nFor critical listening, run: \e[1mpurist-mode\e[0m\n" | sudo tee -a "$MOTD_FILE" > /dev/null
     echo "     Login message set to 'Standard Mode'."
 
     echo ""
@@ -80,27 +86,3 @@ revert_mode() {
 if ! command -v sudo &> /dev/null; then
     echo "Error: 'sudo' command not found. This script requires sudo to run."
     exit 1
-fi
-
-# Check if we need sudo and prompt for password if we do.
-if [ "$EUID" -ne 0 ]; then
-    echo "This script requires sudo privileges. You may be prompted for a password."
-    echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
-    sudo -v || exit 1 # Prompt for password now.
-    # Keep the sudo ticket alive
-    while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
-fi
-
-# Parse arguments to decide whether to activate or revert
-if [[ "$1" == "--revert" || "$1" == "-r" ]]; then
-    revert_mode
-else
-    # Check if we are already in purist mode
-    if [ -f "$BACKUP_FILE" ]; then
-        echo " Purist Mode is already active."
-        exit 0
-    fi
-    activate_mode
-fi
-
-exit 0
