@@ -1198,11 +1198,11 @@ If you've decided that you prefer the sound with Purist Mode enabled, make it th
 
 ```bash
 echo ""
-echo "Disable Purist Mode"
+echo "- Disabling Purist Mode"
 purist-mode --revert
 
 echo ""
-echo "Creating the Purist Mode Service File"
+echo "- Creating the Purist Mode Service File"
 cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
 [Unit]
 Description=Activate Purist Mode automatically
@@ -1213,7 +1213,7 @@ ExecStart=/usr/local/bin/purist-mode
 EOT
 
 echo ""
-echo "Creating the Purist Mode Timer File"
+echo "- Creating the Purist Mode Timer File"
 cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.timer
 [Unit]
 Description=Run purist-mode 60 seconds after boot
@@ -1226,7 +1226,7 @@ WantedBy=timers.target
 EOT
 
 echo ""
-echo "Enable the Purist Mode Timer"
+echo "- Enable the Purist Mode Timer"
 sudo systemctl enable --now purist-mode-auto.timer
 ```
 
