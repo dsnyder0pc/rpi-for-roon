@@ -78,7 +78,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 #### Software & Licensing Costs
 
-* **Audiolinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$139**. However, it's fine to get started with a one year subscription, currently **$69**. Both options allow for installation on multiple devices within the same location.
+* **Audiolinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$139** (prices subject to change). However, it's fine to get started with a one year subscription, currently **$69**. Both options allow for installation on multiple devices within the same location.
 * **Diretta Target:** A license is required for the Diretta Target device and currently costs **100 Euros**.
     * **CRITICAL:** This license is locked to the specific hardware of the Raspberry Pi it is purchased for. It is essential that you perform the final licensing step on the exact hardware you intend to use permanently.
     * Diretta may offer a one-time replacement license for hardware failure within the first two years (please verify terms at time of purchase). If you change the hardware for any other reason, a new license must be purchased.
@@ -528,7 +528,11 @@ While you can use passwords over the proxied connection, the most secure and con
 4.  **Copy your Public Key to the Devices:**
     The `ssh-copy-id` command automatically appends your public key to the `~/.ssh/authorized_keys` file on the remote machine. Because `ProxyJump` is already configured, this will work seamlessly for the Target.
     ```bash
+    echo ""
+    echo "You will be prompted for the audiolinux password here."
     ssh-copy-id diretta-host
+    echo ""
+    echo "You will be prompted for the password twice here (for the proxy and the target)."
     ssh-copy-id diretta-target
     ```
 
@@ -667,7 +671,7 @@ journalctl -b -u boot-repair.service
         ```
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient.
 
-6.  **Minimize disk I/O on the Diretta Target:** (optional but recommended for optimal performance)
+6.  **Minimize disk I/O on the Diretta Host:** (optional but recommended for optimal performance)
     * Chang `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
     ```bash
     sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
@@ -888,7 +892,7 @@ pyenv install $PYVER
 pyenv global $PYVER
 ```
 
-**Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes. Dont give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
+**Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Dont give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
 -----
 
