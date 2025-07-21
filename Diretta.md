@@ -571,7 +571,7 @@ sudo systemctl enable boot-repair.service
 #### 7.3. Verification After a Clean Reboot
 Not critical, but to make sure this is working as expected, do a reboot test. **Note:** Reboot the Target  first, then the Host.
 ```bash
-sudo reboot
+sudo sync; sudo reboot
 ```
 After the system is back online, check the journal for the service's logs from that boot session.
 ```bash
@@ -685,7 +685,7 @@ journalctl -b -u boot-repair.service
     * Select **SHOW audio service**
     * If you don't see **roonbridge** under enabled services, select **ROONBRIDGE enable/disable**
 
-3.  **Reboot Both Devices:** For a clean start, `sudo reboot` both the Target and Host, in that order.
+3.  **Reboot Both Devices:** For a clean start, `sudo sync; sudo reboot` both the Target and Host, in that order.
 
 4.  **Configure Roon:**
     * Open Roon on your control device.
@@ -757,7 +757,7 @@ This guide provides instructions for installing and configuring an IR remote to 
         ```
       * A reboot is required for the hardware change to take effect.
         ```bash
-        sudo reboot
+        sudo sync; sudo reboot
         ```
 
 2.  **Install IR Tools and Enable Protocols:**
