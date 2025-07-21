@@ -1231,6 +1231,7 @@ Description=Run purist-mode 60 seconds after boot
 
 [Timer]
 OnBootSec=60s
+Unit=purist-mode-auto.service
 
 [Install]
 WantedBy=timers.target
