@@ -21,6 +21,7 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 9.  [Final Steps & Roon Integration](#9-final-steps--roon-integration)
 10. [Appendix 1: Optional IR Remote Control Setup](#10-appendix-1-optional-ir-remote-control-setup)
 11. [Appendix 2: Argon ONE Fan Control](#11-appendix-2-argon-one-fan-control)
+12. [Appendix 3: Purist Mode](#12-appendix-3-purist-mode)
 
 ---
 
@@ -1153,3 +1154,106 @@ sudo argonone-cli --decode
 ```
 
 Now, feel free to adjust the values as needed, following the steps above.
+
+### 12. Appendix 3: Purist Mode
+There is minimal network and background activity on the Diretta Target computer that are not related to music playback using the Diretta protocol. However, some users prefer to take extra steps to reduce the possibility of such activity. We are already on the extreme edge of audio performance, so why not?
+
+
+#### Step 1: Install the `purist-mode` script
+```bash
+curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode
+sudo install -m 0755 purist-mode /usr/local/bin
+rm purist-mode
+```
+
+To run it, simply login to the Diretta Target and type `purist-mode`:
+```bash
+purist-mode
+```
+
+For example:
+```text
+[audiolinux@diretta-target ~]$ purist-mode
+This script requires sudo privileges. You may be prompted for a password.
+(Note: The default sudo password for Audiolinux is 'audiolinux0')
+[sudo] password for root:
+🚀 Activating Purist Mode...
+  -> Stopping time synchronization service (chronyd)...
+  -> Stopping Argon One daemon (argononed.service)...
+  -> Disabling DNS lookups...
+     Backup of /etc/nsswitch.conf created.
+     DNS lookups disabled (set to local-only resolution).
+  -> Dropping default gateway...
+     Default gateway removed.
+
+✅ Purist Mode is ACTIVE.
+   To restore normal operation, run: purist-mode --revert
+```
+
+Listen for a while to see if you prefer the sound (or piece of mind).
+
+#### Step 2: Enable Purist Mode by Default
+
+If you've decided that you prefer the sound with Purist Mode enabled, make it the default after each reboot.
+
+```bash
+echo ""
+echo "Creating the Purist Mode Service File"
+cat <<'EOT' | tee /etc/systemd/system/purist-mode-auto.service
+[Unit]
+Description=Activate Purist Mode automatically
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/purist-mode
+EOT
+
+echo ""
+echo "Creating the Purist Mode Timer File"
+cat <<'EOT' | tee /etc/systemd/system/purist-mode-auto.timer
+[Unit]
+Description=Run purist-mode 60 seconds after boot
+
+[Timer]
+OnBootSec=60s
+
+[Install]
+WantedBy=timers.target
+EOT
+
+echo ""
+echo "Enable the Purist Mode Timer"
+sudo systemctl enable --now purist-mode-auto.timer
+```
+
+#### Step 3: Install a wrapper around the `menu` command
+Many functions in the Audiolinux require Internet access. To keep things working as expected, add a wrapper around the `menu` command that disables Purist mode while you are using the menu, enabling it again when you exit to the terminal.
+
+```bash
+if grep menu_wrapper ~/.bashrc; then
+  :
+else
+  echo ""
+  echo "Add a wrapper around the menu command"
+  cat <<'EOT' | tee -a ~/.bashrc
+
+# Custom wrapper for the Audiolinux menu to manage Purist Mode
+menu_wrapper() {
+    echo "Temporarily disabling Purist Mode to run menu..."
+    purist-mode --revert > /dev/null 2>&1 # Revert quietly
+
+    # Call the original menu command
+    /usr/bin/menu
+
+    echo "Re-activating Purist Mode..."
+    purist-mode > /dev/null 2>&1 # Activate quietly
+    echo "Purist Mode is active again."
+}
+
+# Alias the 'menu' command to our new wrapper function
+alias menu='menu_wrapper'
+EOT
+fi
+
+source ~/.bashrc
+```

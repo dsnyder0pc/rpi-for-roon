@@ -1,8 +1,7 @@
 #!/bin/bash
 #
-# purist-mode: A script to minimize background network activity on a Diretta Target
-#              for critical listening sessions. Run without arguments to activate,
-#              or with --revert to restore normal operation.
+# purist-mode: A script to optimize the system for critical listening by minimizing
+#              background processes. It also updates /etc/motd with the current status.
 #
 # This script will invoke 'sudo' internally for commands requiring elevation.
 #
@@ -10,6 +9,7 @@
 # --- Configuration ---
 NSSWITCH_CONF="/etc/nsswitch.conf"
 BACKUP_FILE="${NSSWITCH_CONF}.purist-bak"
+MOTD_FILE="/etc/motd"
 
 # --- Functions ---
 
@@ -23,24 +23,23 @@ activate_mode() {
     echo "  -> Stopping Argon One daemon (argononed.service)..."
     sudo systemctl stop argononed.service &>/dev/null
 
-    # Disable DNS lookups to prevent traffic to nameservers
+    # Disable DNS lookups
     echo "  -> Disabling DNS lookups..."
     if [ ! -f "$BACKUP_FILE" ]; then
         sudo cp "$NSSWITCH_CONF" "$BACKUP_FILE"
         echo "     Backup of ${NSSWITCH_CONF} created."
     fi
-    # Replace the entire 'hosts' line with a safe, local-only version.
     sudo sed -i -E 's/^(hosts:).*/\1 files myhostname/' "$NSSWITCH_CONF"
     echo "     DNS lookups disabled (set to local-only resolution)."
 
-    # Drop the default gateway to sever outbound internet access
+    # Drop the default gateway
     echo "  -> Dropping default gateway..."
-    sudo ip route del default
-    if [ $? -eq 0 ]; then
-        echo "     Default gateway removed."
-    else
-        echo "     Warning: Could not remove default gateway. It may not have been set."
-    fi
+    sudo ip route del default &>/dev/null
+    
+    # Update the Message of the Day (MOTD) with an affirming message
+    echo "  -> Updating login message..."
+    echo -e "\n\e[1;32m✅ Purist Mode is ACTIVE.\e[0m System optimized for the highest sound quality.\n" | sudo tee "$MOTD_FILE" > /dev/null
+    echo "     Login message set to 'Purist Mode'."
 
     echo ""
     echo "✅ Purist Mode is ACTIVE."
@@ -49,65 +48,54 @@ activate_mode() {
 
 # Function to revert changes
 revert_mode() {
-    echo "⏪ Reverting to Normal Mode..."
+    echo "⏪ Reverting to Standard Mode..."
 
-    # Restore network gateway by restarting the systemd-networkd service
-    echo "  -> Restoring default gateway..."
-    sudo systemctl restart systemd-networkd
-    if [ $? -eq 0 ]; then
-        echo "     Network service restarted. Default gateway should now be active."
-    else
-        echo "     Warning: Failed to restart network service. A reboot may be required to restore the gateway."
-    fi
-
-    # Restore nsswitch.conf from backup
+    # Restore network gateway
+    echo "  -> Restoring network..."
+    sudo systemctl restart systemd-networkd &>/dev/null
+    
+    # Restore DNS configuration
     echo "  -> Restoring DNS configuration..."
     if [ -f "$BACKUP_FILE" ]; then
         sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
-        echo "     DNS settings restored from backup."
-    else
-        echo "     Warning: Backup file not found. DNS settings may need manual correction."
     fi
 
     # Restart services
-    echo "  -> Restarting time synchronization service (chronyd)..."
+    echo "  -> Restarting background services..."
     sudo systemctl start chronyd &>/dev/null
-    echo "  -> Restarting Argon One daemon (argononed.service)..."
     sudo systemctl start argononed.service &>/dev/null
 
+    # Update the MOTD with a cautionary message
+    echo "  -> Updating login message..."
+    echo -e "\n\e[1;33m⚠️ CAUTION: Purist Mode is DISABLED.\e[0m Background activity may impact sound quality.\nFor critical listening, run: \e[1mpurist-mode\e[0m\n" | sudo tee "$MOTD_FILE" > /dev/null
+    echo "     Login message set to 'Standard Mode'."
+
     echo ""
-    echo "✅ Normal Mode Restored. All settings have been reverted."
+    echo "✅ Purist Mode DISABLED. System is in standard operation mode."
 }
 
 # --- Main Script Logic ---
 
-# 1. Check for `sudo` availability before running
+# Check for `sudo` availability
 if ! command -v sudo &> /dev/null; then
     echo "Error: 'sudo' command not found. This script requires sudo to run."
     exit 1
 fi
 
-# 2. Check if we need sudo and prompt for password if we do.
+# Check if we need sudo and prompt for password if we do.
 if [ "$EUID" -ne 0 ]; then
     echo "This script requires sudo privileges. You may be prompted for a password."
     echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
     sudo -v || exit 1 # Prompt for password now.
-    # Keep the sudo ticket alive in the background while the script runs
+    # Keep the sudo ticket alive
     while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 fi
 
-
-# 3. Parse arguments to decide whether to activate or revert
+# Parse arguments to decide whether to activate or revert
 if [[ "$1" == "--revert" || "$1" == "-r" ]]; then
     revert_mode
 else
-    # Check if we are already in purist mode by looking for the backup file
+    # Check if we are already in purist mode
     if [ -f "$BACKUP_FILE" ]; then
-        echo " Purist Mode appears to be already active."
-        echo " To revert, run: purist-mode --revert"
+        echo " Purist Mode is already active."
         exit 0
-    fi
-    activate_mode
-fi
-
-exit 0
