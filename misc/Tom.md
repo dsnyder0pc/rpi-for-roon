@@ -1,7 +1,3 @@
-Of course. Here is a clear, step-by-step set of instructions you can send to your friend, Tom. It's designed to be followed by copying and pasting each command block into the Diretta Target's terminal.
-
------
-
 ### Instructions for Tom: Updating the Purist Mode Setup
 
 Hey Tom,
