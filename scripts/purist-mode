@@ -74,6 +74,14 @@ revert_mode() {
 
 # --- Main Script Logic ---
 
+# Failsafe check to prevent running on the wrong machine.
+# The Host has >2 interfaces (lo, end0, enp*), while the Target only has 2 (lo, end0).
+if (( $(ip -br addr | wc -l) > 2 )); then
+    echo -e "\n\e[1;31mERROR: Detected multiple network interfaces.\e[0m" >&2
+    echo "This script is designed for the single-interface 'Diretta Target' ONLY." >&2
+    exit 1
+fi
+
 # Check for `sudo` availability
 if ! command -v sudo &> /dev/null; then
     echo "Error: 'sudo' command not found. This script requires sudo to run."
