@@ -50,29 +50,27 @@ activate_mode() {
 
 # Function to revert changes
 revert_mode() {
-    # Idempotency check
-    if [ ! -f "$BACKUP_FILE" ]; then
-        echo "✅ System is already in standard operation mode."
-        exit 0
-    fi
+    # Perform the actual revert actions only if necessary
+    if [ -f "$BACKUP_FILE" ]; then
+        echo "⏪ Reverting to Standard Mode..."
 
-    echo "⏪ Reverting to Standard Mode..."
-
-    # Restore network and DNS configuration.
-    sudo systemctl restart systemd-networkd &>/dev/null
-    sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
-    
-    # When run interactively, manually restart services.
-    # When run by systemd at boot, systemd will handle starting them automatically.
-    if [ -t 1 ]; then # This checks if stdout is a terminal (i.e., interactive session)
-        echo "  -> Interactively restarting services..."
-        sudo systemctl start chronyd &>/dev/null
-        if sudo systemctl -q is-enabled argononed.service; then
-             sudo systemctl start argononed.service &>/dev/null
+        # Restore network and DNS configuration.
+        sudo systemctl restart systemd-networkd &>/dev/null
+        sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
+        
+        # When run interactively, manually restart services.
+        if [ -t 1 ]; then
+            echo "  -> Interactively restarting services..."
+            sudo systemctl start chronyd &>/dev/null
+            if sudo systemctl -q is-enabled argononed.service; then
+                 sudo systemctl start argononed.service &>/dev/null
+            fi
         fi
+    else
+        echo "✅ System already in standard mode. Verifying MOTD status."
     fi
     
-    # Update MOTD
+    # Always update the MOTD to ensure it reflects the correct "disabled" state.
     echo "  -> Updating login message..."
     MOTD_DISABLED_MSG=$'\e[1;33m⚠️ CAUTION: Purist Mode is DISABLED.\e[0m Background activity may impact sound quality.'
     if sudo grep -q "Purist Mode is" "$MOTD_FILE"; then
