@@ -17,63 +17,55 @@ MOTD_FILE="/etc/motd"
 activate_mode() {
     echo "🚀 Activating Purist Mode..."
 
-    # Stop services to reduce background processing
-    echo "  -> Stopping time synchronization service (chronyd)..."
+    # Stop services, disable DNS, drop gateway...
     sudo systemctl stop chronyd &>/dev/null
-    echo "  -> Stopping Argon One daemon (argononed.service)..."
     sudo systemctl stop argononed.service &>/dev/null
-
-    # Disable DNS lookups
-    echo "  -> Disabling DNS lookups..."
-    if [ ! -f "$BACKUP_FILE" ]; then
-        sudo cp "$NSSWITCH_CONF" "$BACKUP_FILE"
-        echo "     Backup of ${NSSWITCH_CONF} created."
-    fi
+    sudo cp "$NSSWITCH_CONF" "$BACKUP_FILE"
     sudo sed -i -E 's/^(hosts:).*/\1 files myhostname/' "$NSSWITCH_CONF"
-    echo "     DNS lookups disabled (set to local-only resolution)."
-
-    # Drop the default gateway
-    echo "  -> Dropping default gateway..."
     sudo ip route del default &>/dev/null
     
-    # Update the Message of the Day (MOTD) with an affirming message
+    # Update the Message of the Day (MOTD)
     echo "  -> Updating login message..."
-    # First, remove any existing Purist Mode status line to prevent duplicates.
-    sudo sed -i '/Purist Mode is/d' "$MOTD_FILE"
-    # Now, append the new status line. The -a flag for tee appends instead of overwriting.
-    echo -e "\n\e[1;32m✅ Purist Mode is ACTIVE.\e[0m System optimized for the highest sound quality.\n" | sudo tee -a "$MOTD_FILE" > /dev/null
+    # Use $'' to ensure bash interprets the escape codes for color
+    MOTD_ACTIVE_MSG=$'\e[1;32m✅ Purist Mode is ACTIVE.\e[0m System optimized for the highest sound quality.'
+    # If a status line already exists, replace it. Otherwise, append it.
+    if sudo grep -q "Purist Mode is" "$MOTD_FILE"; then
+        sudo sed -i "s/.*Purist Mode is.*/${MOTD_ACTIVE_MSG}/" "$MOTD_FILE"
+    else
+        echo -e "\n${MOTD_ACTIVE_MSG}" | sudo tee -a "$MOTD_FILE" > /dev/null
+    fi
     echo "     Login message set to 'Purist Mode'."
 
     echo ""
     echo "✅ Purist Mode is ACTIVE."
-    echo "   To restore normal operation, run: purist-mode --revert"
 }
 
 # Function to revert changes
 revert_mode() {
-    echo "⏪ Reverting to Standard Mode..."
-
-    # Restore network gateway
-    echo "  -> Restoring network..."
-    sudo systemctl restart systemd-networkd &>/dev/null
-    
-    # Restore DNS configuration
-    echo "  -> Restoring DNS configuration..."
-    if [ -f "$BACKUP_FILE" ]; then
-        sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
+    # Add idempotency check
+    if [ ! -f "$BACKUP_FILE" ]; then
+        echo "✅ System is already in standard operation mode."
+        exit 0
     fi
 
-    # Restart services
-    echo "  -> Restarting background services..."
+    echo "⏪ Reverting to Standard Mode..."
+
+    # Restore network, DNS, and services...
+    sudo systemctl restart systemd-networkd &>/dev/null
+    sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
     sudo systemctl start chronyd &>/dev/null
     sudo systemctl start argononed.service &>/dev/null
 
     # Update the MOTD with a cautionary message
     echo "  -> Updating login message..."
-    # First, remove any existing Purist Mode status line.
-    sudo sed -i '/Purist Mode is/d' "$MOTD_FILE"
-    # Now, append the new, more concise status line.
-    echo -e "\n\e[1;33m⚠️ CAUTION: Purist Mode is DISABLED.\e[0m Background activity may impact sound quality.\n" | sudo tee -a "$MOTD_FILE" > /dev/null
+    # Use $'' to ensure bash interprets the escape codes for color
+    MOTD_DISABLED_MSG=$'\e[1;33m⚠️ CAUTION: Purist Mode is DISABLED.\e[0m Background activity may impact sound quality.'
+    # If a status line already exists, replace it. Otherwise, append it.
+    if sudo grep -q "Purist Mode is" "$MOTD_FILE"; then
+        sudo sed -i "s/.*Purist Mode is.*/${MOTD_DISABLED_MSG}/" "$MOTD_FILE"
+    else
+        echo -e "\n${MOTD_DISABLED_MSG}" | sudo tee -a "$MOTD_FILE" > /dev/null
+    fi
     echo "     Login message set to 'Standard Mode'."
 
     echo ""
@@ -93,7 +85,6 @@ if [ "$EUID" -ne 0 ]; then
     echo "This script requires sudo privileges. You may be prompted for a password."
     echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
     sudo -v || exit 1 # Prompt for password now.
-    # Keep the sudo ticket alive
     while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 fi
 
@@ -101,9 +92,9 @@ fi
 if [[ "$1" == "--revert" || "$1" == "-r" ]]; then
     revert_mode
 else
-    # Check if we are already in purist mode
+    # Idempotency check for activation
     if [ -f "$BACKUP_FILE" ]; then
-        echo " Purist Mode is already active."
+        echo "✅ Purist Mode is already active."
         exit 0
     fi
     activate_mode
