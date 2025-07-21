@@ -1239,6 +1239,24 @@ EOT
 echo ""
 echo "- Enable the Purist Mode Timer"
 sudo systemctl enable --now purist-mode-auto.timer
+
+echo ""
+echo "- Boot into Standard Mode"
+cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-revert-on-boot.service
+[Unit]
+Description=Revert Purist Mode on Boot to Ensure Standard Operation
+After=network-online.target
+Wants=network-online.target
+Before=chronyd.service purist-mode-auto.timer
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/purist-mode --revert
+
+[Install]
+WantedBy=multi-user.target
+EOT
+sudo systemctl enable purist-mode-revert-on-boot.service
 ```
 
 #### Step 3: Install a wrapper around the `menu` command

@@ -17,18 +17,25 @@ MOTD_FILE="/etc/motd"
 activate_mode() {
     echo "🚀 Activating Purist Mode..."
 
-    # Stop services, disable DNS, drop gateway...
+    # Stop services
     sudo systemctl stop chronyd &>/dev/null
-    sudo systemctl stop argononed.service &>/dev/null
+
+    # Conditionally manage Argon ONE fan/service
+    if sudo systemctl is-active --quiet argononed.service; then
+        echo "  -> Stopping Argon One daemon (argononed.service)..."
+        sudo systemctl stop argononed.service &>/dev/null
+        echo "  -> Setting Argon ONE fan to 0 RPM..."
+        sudo /usr/bin/i2cset -y 1 0x1a 0 &>/dev/null
+    fi
+
+    # Disable DNS, drop gateway...
     sudo cp "$NSSWITCH_CONF" "$BACKUP_FILE"
     sudo sed -i -E 's/^(hosts:).*/\1 files myhostname/' "$NSSWITCH_CONF"
     sudo ip route del default &>/dev/null
-    
-    # Update the Message of the Day (MOTD)
+
+    # Update MOTD
     echo "  -> Updating login message..."
-    # Use $'' to ensure bash interprets the escape codes for color
     MOTD_ACTIVE_MSG=$'\e[1;32m✅ Purist Mode is ACTIVE.\e[0m System optimized for the highest sound quality.'
-    # If a status line already exists, replace it. Otherwise, append it.
     if sudo grep -q "Purist Mode is" "$MOTD_FILE"; then
         sudo sed -i "s/.*Purist Mode is.*/${MOTD_ACTIVE_MSG}/" "$MOTD_FILE"
     else
@@ -42,7 +49,7 @@ activate_mode() {
 
 # Function to revert changes
 revert_mode() {
-    # Add idempotency check
+    # Idempotency check
     if [ ! -f "$BACKUP_FILE" ]; then
         echo "✅ System is already in standard operation mode."
         exit 0
@@ -54,13 +61,16 @@ revert_mode() {
     sudo systemctl restart systemd-networkd &>/dev/null
     sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
     sudo systemctl start chronyd &>/dev/null
-    sudo systemctl start argononed.service &>/dev/null
 
-    # Update the MOTD with a cautionary message
+    # Conditionally restart Argon ONE service
+    if sudo systemctl -q is-enabled argononed.service; then
+         echo "  -> Restarting Argon One daemon (argononed.service)..."
+         sudo systemctl start argononed.service &>/dev/null
+    fi
+
+    # Update MOTD
     echo "  -> Updating login message..."
-    # Use $'' to ensure bash interprets the escape codes for color
     MOTD_DISABLED_MSG=$'\e[1;33m⚠️ CAUTION: Purist Mode is DISABLED.\e[0m Background activity may impact sound quality.'
-    # If a status line already exists, replace it. Otherwise, append it.
     if sudo grep -q "Purist Mode is" "$MOTD_FILE"; then
         sudo sed -i "s/.*Purist Mode is.*/${MOTD_DISABLED_MSG}/" "$MOTD_FILE"
     else
@@ -75,7 +85,6 @@ revert_mode() {
 # --- Main Script Logic ---
 
 # Failsafe check to prevent running on the wrong machine.
-# The Host has >2 interfaces (lo, end0, enp*), while the Target only has 2 (lo, end0).
 if (( $(ip -br addr | wc -l) > 2 )); then
     echo -e "\n\e[1;31mERROR: Detected multiple network interfaces.\e[0m" >&2
     echo "This script is designed for the single-interface 'Diretta Target' ONLY." >&2
@@ -88,19 +97,18 @@ if ! command -v sudo &> /dev/null; then
     exit 1
 fi
 
-# Check if we need sudo and prompt for password if we do.
+# Sudo prompt logic
 if [ "$EUID" -ne 0 ]; then
     echo "This script requires sudo privileges. You may be prompted for a password."
     echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
-    sudo -v || exit 1 # Prompt for password now.
+    sudo -v || exit 1
     while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 fi
 
-# Parse arguments to decide whether to activate or revert
+# Parse arguments
 if [[ "$1" == "--revert" || "$1" == "-r" ]]; then
     revert_mode
 else
-    # Idempotency check for activation
     if [ -f "$BACKUP_FILE" ]; then
         echo "✅ Purist Mode is already active."
         exit 0
