@@ -47,7 +47,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 **Core Components (from [pishop.us](https://www.pishop.us/) or similar supplier):**
 * 2 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/)
-* 2 x Aluminum Heatsink for Raspberry Pi 4B (3-Pack) (check the box to add heatsinks on the PRi 4 producet page)
+* 2 x Aluminum Heatsink for Raspberry Pi 4B (3-Pack) (check the box to add heatsinks on the PRi 4 product page)
 * 2 x [Raspberry Pi 4 Case, Red/White](https://www.pishop.us/product/raspberry-pi-4-case-red-white/)
 * 2 x [MicroSD Card Extreme Pro - 32 GB](https://www.pishop.us/product/microsd-card-extreme-pro-32-gb-class-10-blank/)
 * 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
@@ -110,7 +110,7 @@ After flashing, you must configure each Raspberry Pi individually to avoid netwo
 The default SSH user is `audiolinux` with password `audiolinux`.
 The default sudo/root password is `audiolinux0`.
 
-You'll use the SSH client on your local computer to login to the RPi computers throughout this process. This client requires you to have a way to find the IP address of the RPi computers, which may change from one reobot to the next. The easiest way to get this information is from your home network router's web UI or app, but you can optionally install the [fing](https://www.fing.com/app/) app on your smartphone or tablet.
+You'll use the SSH client on your local computer to login to the RPi computers throughout this process. This client requires you to have a way to find the IP address of the RPi computers, which may change from one reboot to the next. The easiest way to get this information is from your home network router's web UI or app, but you can optionally install the [fing](https://www.fing.com/app/) app on your smartphone or tablet.
 
 Once you have the IP address of one of your RPi computers, use the SSH client on your local computer to login using this process. Make note of the example `ssh` command since you'll use commands similar to this throughout this guide.
 ```bash
@@ -171,7 +171,7 @@ ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 
 #### 4.1. Install "Chrony" to update the system clock
 
-The system clock has to be accureate before we can install updates. The Raspberry Pi has no NVRAM battery, so the clock must be set each time it boots. This is typically done by connecting to a network service. This script will make sure that the clock is set and stays correct during the operation of the computer.
+The system clock has to be accurate before we can install updates. The Raspberry Pi has no NVRAM battery, so the clock must be set each time it boots. This is typically done by connecting to a network service. This script will make sure that the clock is set and stays correct during the operation of the computer.
 
 ```bash
 echo '// Reminder: the root password is audiolinux0'
@@ -545,7 +545,7 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
 ### 7. Clean the Boot Filesystem
 The default behavior for Arch Linux is to leave the /boot filesystem in an unclean state if the computer is not shutdown cleanly. This is usually safe, but I've found that it can create a race condition when bringing up our private network. That, and users are likely to unplug these devices without shutting them down first. To protect against these issues, we'll add a workaround script that keeps the /boot filesystem (which is only changed during software updates) clean.
 
-Please perform these steps on _both_ the Diretta Host and Target computers..
+Please perform these steps on _both_ the Diretta Host and Target computers.
 
 #### 7.1. Create the Repair Script
 
@@ -662,7 +662,7 @@ journalctl -b -u boot-repair.service
     ?
     ```
 5.  You should perform these actions in sequence:
-    * Choose **1) Install/update** to install the software. *(Note: you may see `error: package 'lld' was not found`. Don't worry, that will be corrected automatically by the installation)*
+    * Choose **1) Install/update** to install the software. *(Note: you may see `error: package 'lld' was not found. Don't worry, that will be corrected automatically by the installation)*
     * Choose **2) Enable/Disable Diretta daemon** and enable it.
     * Choose **3) Set Ethernet interface**. It is critical to select `end0`, the interface for the point-to-point link.
         ```
@@ -861,7 +861,7 @@ echo "Checking your group memberships:"
 echo "\$ groups"
 groups
 echo ""
-echo "Above, you you should see:"
+echo "Above, you should see:"
 echo "audiolinux realtime video input audio wheel"
 ```
 
@@ -993,7 +993,7 @@ python roon_remote.py
 
 The first time you run the script, you must **authorize the extension in Roon** by going to `Settings` -> `Extensions`.
 
-With music playing in your new Diretta Roon zone, point your IR remote control directly at the Diretta Host computer and press the Play/Pause button (may be the center button in the 5-way controller). Also try Next and Previous. If these are not working check your terminal window for any error messages.  Once you are finished testing, type CTRL-C to exit.
+With music playing in your new Diretta Roon zone, point your IR remote control directly at the Diretta Host computer and press the Play/Pause button (may be the center button in the 5-way controller). Also try Next and Previous. If these are not working, check your terminal window for any error messages.  Once you are finished testing, type CTRL-C to exit.
 
 -----
 
@@ -1162,7 +1162,7 @@ sudo argonone-cli --decode
 Now, feel free to adjust the values as needed, following the steps above.
 
 ### 12. Appendix 3: Purist Mode
-There is minimal network and background activity on the Diretta Target computer that are not related to music playback using the Diretta protocol. However, some users prefer to take extra steps to reduce the possibility of such activity. We are already on the extreme edge of audio performance, so why not?
+There is minimal network and background activity on the Diretta Target computer that is not related to music playback using the Diretta protocol. However, some users prefer to take extra steps to reduce the possibility of such activity. We are already on the extreme edge of audio performance, so why not?
 
 ----
 > CRITICAL WARNING: For the Diretta Target ONLY
@@ -1203,7 +1203,7 @@ This script requires sudo privileges. You may be prompted for a password.
    To restore normal operation, run: purist-mode --revert
 ```
 
-Listen for a while to see if you prefer the sound (or piece of mind).
+Listen for a while to see if you prefer the sound (or peace of mind).
 
 #### Step 2: Enable Purist Mode by Default
 
