@@ -47,7 +47,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 **Core Components (from [pishop.us](https://www.pishop.us/) or similar supplier):**
 * 2 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/)
-* 2 x Aluminum Heatsink for Raspberry Pi 4B (3-Pack) (check the box to add heatsinks on the PRi 4 product page)
+* 2 x Aluminum Heatsink for Raspberry Pi 4B (3-Pack) (check the box to add heatsinks on the RPi 4 product page)
 * 2 x [Raspberry Pi 4 Case, Red/White](https://www.pishop.us/product/raspberry-pi-4-case-red-white/)
 * 2 x [MicroSD Card Extreme Pro - 32 GB](https://www.pishop.us/product/microsd-card-extreme-pro-32-gb-class-10-blank/)
 * 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
@@ -160,7 +160,7 @@ For the steps in this section, it's usually most efficient (and least confusing)
 
 Each RPi has its own machine ID, so you may power them up now. If you have two network cables, it's more
 convenient to connect both of them to your home network at the same time for the next few steps, but you can
-proceed one-at-at-time otherwise. **Note**: your router will likely assign them different IP addresses from the one you used to login initially. Be sure to use the new IP address with your SSH commands. Here's a reminder:
+proceed one-at-a-time otherwise. **Note**: your router will likely assign them different IP addresses from the one you used to login initially. Be sure to use the new IP address with your SSH commands. Here's a reminder:
 
 ```bash
 read -p "Enter the (new) address of your RPi and hit [enter]: " RPi_IP_Address
@@ -1106,7 +1106,7 @@ printf '%s\n' \
   | sudo tee /etc/systemd/system/argononed.service.d/software-mode.conf > /dev/null
 ```
 
-#### Step 5: Enable the Service
+#### Step 6: Enable the Service
 ```bash
 # Reload the systemd manager to read the new configuration
 sudo systemctl daemon-reload
@@ -1115,7 +1115,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable argononed.service
 ```
 
-#### Step 6: Reboot
+#### Step 7: Reboot
 Finally, reboot your Raspberry Pi for all changes to take effect (Target first, then Host):
 ```bash
 sudo sync && sudo reboot
@@ -1123,13 +1123,13 @@ sudo sync && sudo reboot
 
 Now, the fan will be controlled by the daemon, and the power button will have full functionality.
 
-#### Step 7: Verify the service
+#### Step 8: Verify the service
 ```bash
 systemctl status argononed.service
 journalctl -u argononed.service -b
 ```
 
-#### Step 8: Review Fan Mode and Settings:
+#### Step 9: Review Fan Mode and Settings:
 To see the current configuration values, run the following command:
 ```bash
 sudo argonone-cli --decode
