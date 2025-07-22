@@ -55,7 +55,7 @@ Now, let's get started.
 
 The **Diretta Host** will connect to your main network (for Roon Core, etc.) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC or DDC.
 
-If you are located in the US, expect to pay around $365 in total (plus tax and shipping) to complete this build:
+If you are located in the US, expect to pay around $365 in total (plus tax and shipping) to complete this build (prices subject to change):
 - Hardware ($178)
 - One year Audiolinux subscription ($69)
 - Diretta Target license (€100)
