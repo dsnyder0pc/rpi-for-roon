@@ -2,12 +2,63 @@
 
 This guide provides comprehensive, step-by-step instructions for configuring two Raspberry Pi devices as a dedicated Diretta Host and Diretta Target. This setup uses a direct, point-to-point Ethernet connection between the two devices for the ultimate in network isolation and audio performance.
 
+## An Introduction to the Reference Roon Architecture
+
+Welcome to the definitive guide for building a state-of-the-art Roon streaming endpoint. Before diving into the step-by-step instructions, it's important to understand the "why" behind this project. This introduction will explain the problem this architecture solves, why it's fundamentally superior to many high-cost commercial alternatives, and how this DIY project represents a direct and rewarding path to unlocking the ultimate sound quality from your Roon system.
+
+### The Roon Paradox: A Powerful Experience with a Sonic Caveat
+
+Roon is celebrated, almost universally, as the most powerful and engaging music management system available. Its rich metadata and seamless user experience are second to none. However, this functional supremacy has long been dogged by a persistent critique from a vocal segment of the audiophile community: that Roon's sound quality can be compromised, often described as "flat, dull, and lifeless" compared to other players.
+
+This "Roon Sound" isn't a myth, nor is it a flaw in Roon's bit-perfect software. It is a potential symptom of Roon's powerful and resource-intensive nature. Roon's "heavyweight" Core requires significant processing power, which in turn generates electrical noise (RFI/EMI). When the computer running the Roon Core is in close proximity to your sensitive Digital-to-Analog Converter (DAC), this noise can contaminate the analog output stage, masking detail, shrinking the soundstage, and robbing the music of its vitality.
+
+---
+
+### Moving Beyond "Band-Aids" to a Foundational Solution
+
+Roon Labs itself advocates for a "two-box" architecture to solve this primary issue: separating the demanding **Roon Core** from a lightweight network **Endpoint** (also called a streaming transport). This is the correct first step, as it offloads the heavy processing to a remote machine, isolating its noise from your audio rack.
+
+However, even in this superior two-tier design, a more subtle problem remains. Standard network protocols, including Roon's own RAAT, deliver audio data in intermittent "bursts". This forces the endpoint's CPU to constantly spike its activity to process these bursts, causing rapid fluctuations in current draw. These fluctuations generate their own low-frequency electrical noise right at the endpoint—the component closest to your DAC.
+
+High-end audio manufacturers attempt to combat the *symptoms* of this bursty traffic with various "Band-Aid" solutions: massive linear power supplies to better handle the current spikes, ultra-low-power CPUs to minimize the spikes' intensity, and extra filtering stages to clean up the resulting noise. While these strategies can help, they don't address the root cause of the noise: the bursty processing itself.
+
+This guide presents a more elegant and dramatically more effective solution. Instead of trying to clean up the noise, we will build an architecture that prevents the noise from being generated in the first place.
+
+---
+
+### The Three-Tier Architecture: Roon + Diretta
+
+This project evolves Roon's recommended two-box setup into an ultimate, three-tier system that provides multiple, compounding layers of isolation.
+
+1.  **Tier 1: Roon Core**: Your powerful Roon server runs on a dedicated machine, placed far away from your listening room. It does all the heavy lifting, and its electrical noise is kept isolated from your audio system.
+2.  **Tier 2: Diretta Host**: The first Raspberry Pi in our build acts as the **Diretta Host**. It connects to your main network, receives the audio stream from the Roon Core, and then prepares to forward it using a specialized protocol.
+3.  **Tier 3: Diretta Target**: The second Raspberry Pi, the **Diretta Target**, connects *only* to the Host Pi via a short Ethernet cable, creating a point-to-point, galvanically isolated link. It receives the audio from the Host and connects to your DAC or DDC via USB.
+
+### What Diretta and Audiolinux Bring to the Table
+
+This design's superiority comes from two key software components running on the Raspberry Pi devices:
+
+* **Audiolinux**: This is a purpose-built, real-time operating system designed specifically for audiophile use. Unlike a general-purpose OS, it's optimized to minimize processor latencies and system "jitter," providing a stable, low-noise foundation for our endpoint.
+* **Diretta**: This groundbreaking protocol is the secret sauce that solves the root problem. It recognizes that fluctuations in the endpoint's processing load generate low-frequency electrical noise that can evade a DAC's internal filtering (as defined by its Power Supply Rejection Ratio, or PSRR) and subtly degrade its analog performance. To combat this, Diretta employs its "Host-Target" model, where the Host sends data in a continuous, synchronized stream of small, evenly spaced packets. This "averages" the processing load on the Target device, stabilizing its current draw and minimizing the generation of this pernicious electrical noise.
+
+The combination of the physical galvanic isolation from the point-to-point Ethernet link and the processing noise elimination from the Diretta protocol creates a profoundly clean signal path to your DAC—one that can leapfrog solutions costing many thousands of dollars.
+
+---
+
+### A Rewarding Path to Sonic Excellence
+
+This project is more than just a technical exercise; it's a rewarding way to engage with the hobby and take direct control over your system's performance. By building this "Diretta Bridge," you are not just assembling components; you are implementing a state-of-the-art architecture that addresses the core challenges of digital audio head-on. You will gain a deeper understanding of what truly matters for digital playback and be rewarded with a level of clarity, detail, and musical realism from Roon that you may not have thought possible.
+
+Now, let's get started.
+
+---
+
+The **Diretta Host** will connect to your main network (for Roon Core, etc.) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC or DDC.
+
 If you are located in the US, expect to pay around $365 in total (plus tax and shipping) to complete this build:
 - Hardware ($178)
 - One year Audiolinux subscription ($69)
 - Diretta Target license ($118)
-
-The **Diretta Host** will connect to your main network (for Roon Core, etc.) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC or DDC.
 
 ## Table of Contents
 1.  [Prerequisites](#1-prerequisites)
@@ -283,6 +334,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
 
     **Important:** Remove the old en.network file if present:
     ```
+    # Remove the old generic network file to prevent conflicts.
     sudo rm -fv /etc/systemd/network/en.network
     ```
 
@@ -332,7 +384,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
 
 5.  **Fix the `update_motd.sh` script**
     
-    The script that updates the login banner (`/etc/motd`) does not handle the case of two network interfaces correctly. If we don't update that script, the login banner will be polluted with lots of bogus entries, one for each reboot. The new script below addresses this issue.
+    The script that updates the login banner (`/etc/motd`) does not handle the case of two network interfaces correctly. This prevents the login screen from becoming cluttered with incorrect IP address information after reboots. The new script below addresses this issue.
     ```bash
     [ -f /opt/scripts/update/update_motd.sh.dist ] || \
     sudo mv /opt/scripts/update/update_motd.sh /opt/scripts/update/update_motd.sh.dist
@@ -367,6 +419,7 @@ EOT
 
 **Important:** Remove the old en.network file if present:
 ```bash
+# Remove the old generic network file to prevent conflicts.
 sudo rm -fv /etc/systemd/network/en.network
 ```
 
@@ -716,7 +769,7 @@ This guide provides instructions for installing and configuring an IR remote to 
 
 **Note:** You will _only_ perform these steps on the Diretta Host. The Target should not be used for relaying IR remote control commands to Roon Server.
 
------
+---
 
 #### **Part 1: IR Receiver Hardware Setup**
 
@@ -744,7 +797,7 @@ This guide provides instructions for installing and configuring an IR remote to 
 
     Select the "Flirc" device from the menu. When you press buttons on your remote, you should see keyboard events printed to the screen.
 
------
+---
 
 ##### **Option 2: Argon One IR Remote Setup**
 
@@ -842,7 +895,7 @@ This guide provides instructions for installing and configuring an IR remote to 
     Select the `gpio_ir_recv` device. When you press buttons on the remote, you should see the corresponding key events.
     Type `CTRL-C` when you are finished testing.
 
------
+---
 
 #### **Part 2: Control Script Software Setup**
 
@@ -896,7 +949,7 @@ pyenv global $PYVER
 
 **Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
------
+---
 
 #### **Step 3: Prepare and Patch `roon-ir-remote` Software**
 
@@ -930,7 +983,7 @@ fi
 cd
 ```
 
------
+---
 
 #### **Step 4: Create the Roon Environment Config File**
 
@@ -975,7 +1028,7 @@ cat <<EOT> roon-ir-remote/app_info.json
 EOT
 ```
 
------
+---
 
 #### **Step 5: Prepare and Test `roon-ir-remote`**
 
@@ -995,7 +1048,7 @@ The first time you run the script, you must **authorize the extension in Roon** 
 
 With music playing in your new Diretta Roon zone, point your IR remote control directly at the Diretta Host computer and press the Play/Pause button (may be the center button in the 5-way controller). Also try Next and Previous. If these are not working, check your terminal window for any error messages.  Once you are finished testing, type CTRL-C to exit.
 
------
+---
 
 #### **Step 6: Create a `systemd` Service**
 
@@ -1028,7 +1081,7 @@ sudo systemctl enable --now roon-ir-remote.service
 sudo systemctl status roon-ir-remote.service
 ```
 
------
+---
 
 #### **Step 7: Install `set-roon-zone` script**
 Good to have a script that you can use to update the Roon zone name later if needed. Here's how to install it:
@@ -1048,7 +1101,7 @@ Follow the prompts to enter the new name for your Roon Zone. You may have to ent
 
 Your IR remote should now control Roon. Enjoy!
 
------
+---
 
 ### 11. Appendix 2: Argon ONE Fan Control
 If you decided to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
@@ -1164,13 +1217,13 @@ Now, feel free to adjust the values as needed, following the steps above.
 ### 12. Appendix 3: Purist Mode
 There is minimal network and background activity on the Diretta Target computer that is not related to music playback using the Diretta protocol. However, some users prefer to take extra steps to reduce the possibility of such activity. We are already on the extreme edge of audio performance, so why not?
 
-----
+---
 > CRITICAL WARNING: For the Diretta Target ONLY
 >
 > The `purist-mode` script and all instructions in this appendix are designed exclusively for the Diretta Target.
 > 
 > Do NOT install or run this script on the Diretta Host. Doing so will drop the Host's connection to your main network, making it unreachable and unable to communicate with your Roon Core or streaming services. This would render the entire system inoperable until you can gain console access (with a physical keyboard and monitor) to revert the changes.
-----
+---
 
 #### Step 1: Install the `purist-mode` script **(only on the Diretta Target computer)**
 ```bash
@@ -1303,7 +1356,7 @@ fi
 source ~/.bashrc
 ```
 
------
+---
 
 #### Understanding the Purist Mode States
 
