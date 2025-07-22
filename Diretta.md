@@ -114,7 +114,7 @@ A complete bill of materials is provided below. While other parts can be substit
 **Optional Upgrades:**
 * 2 x [Argon ONE V2 Aluminum Case for Raspberry Pi 4](https://www.amazon.com/Argon-Raspberry-Aluminum-Heatsink-Supports/dp/B07WP8WC3V/) (skip the aluminum heatsinks and official cases above)
 * 1 x [Argon IR Remote](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (to add remote control capabilities to the Diretta Host)
-* 1 x [FLIRC USB Universal Remote Control Receiver](https://www.amazon.com/Universal-Remote-Control-Receiver-Raspberry/dp/B01NBRBWS6/) (needed to use the Argon IR Remote with a non-Argon ONE case)
+* 1 x [FLIRC USB Universal Remote Control Receiver](https://flirc.tv/products/flirc-usb-receiver?variant=43513067569384) (needed to use the Argon IR Remote with a non-Argon ONE case)
 * 1 x [AudioQuest Forest Ethernet Cable 0.75 M](https://www.amazon.com/AudioQuest-RJ-Forest-Ethernet-0-75m/dp/B0073H82U8/) (arrows pointing away from Diretta Host and towards the Diretta Target)
 * 1 x [iFi LAN iSilencer](https://www.amazon.com/iFi-LAN-iSilencer-Electrical-Ethernet/dp/B0BV72SW8V/) (LAN filtering for the Diretta Target)
 * 1 x [iFi Audio iPower Elite](https://www.amazon.com/gp/product/B08S622SM7/) (to provide clean power to the Diretta Target)
