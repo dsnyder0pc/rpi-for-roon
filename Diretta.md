@@ -130,7 +130,7 @@ A complete bill of materials is provided below. While other parts can be substit
 #### Software & Licensing Costs
 
 * **Audiolinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$139** (prices subject to change). However, it's fine to get started with a one year subscription, currently **$69**. Both options allow for installation on multiple devices within the same location.
-* **Diretta Target:** A license is required for the Diretta Target device and currently costs **100 Euros**.
+* **Diretta Target:** A license is required for the Diretta Target device and currently costs **€100**.
     * **CRITICAL:** This license is locked to the specific hardware of the Raspberry Pi it is purchased for. It is essential that you perform the final licensing step on the exact hardware you intend to use permanently.
     * Diretta may offer a one-time replacement license for hardware failure within the first two years (please verify terms at time of purchase). If you change the hardware for any other reason, a new license must be purchased.
 
