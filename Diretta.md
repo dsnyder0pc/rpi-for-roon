@@ -58,7 +58,7 @@ The **Diretta Host** will connect to your main network (for Roon Core, etc.) and
 If you are located in the US, expect to pay around $365 in total (plus tax and shipping) to complete this build:
 - Hardware ($178)
 - One year Audiolinux subscription ($69)
-- Diretta Target license ($118)
+- Diretta Target license (€100)
 
 ## Table of Contents
 1.  [Prerequisites](#1-prerequisites)
