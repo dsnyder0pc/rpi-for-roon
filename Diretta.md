@@ -156,6 +156,8 @@ sudo poweroff
 
 ### 4. System Updates (Perform on Both Devices)
 
+For the steps in this section, it's usually most efficient (and least confusing) to complete all of Section 4 on the Diretta Host and then repeat the entire section on the Diretta Target.
+
 Each RPi has its own machine ID, so you may power them up now. If you have two network cables, it's more
 convenient to connect both of them to your home network at the same time for the next few steps, but you can
 proceed one-at-at-time otherwise. **Note**: your router will likely assign them different IP addresses from the one you used to login initially. Be sure to use the new IP address with your SSH commands. Here's a reminder:
@@ -330,7 +332,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
 
 5.  **Fix the `update_motd.sh` script**
     
-    The script that updates the login banner (`/etc/motd`) does not handle the case of two network interfaces correctly. If we don't update that script, the login banner will be polluted with lots of bogus entries; one for each reboot. The new script below addresses this issue.
+    The script that updates the login banner (`/etc/motd`) does not handle the case of two network interfaces correctly. If we don't update that script, the login banner will be polluted with lots of bogus entries, one for each reboot. The new script below addresses this issue.
     ```bash
     [ -f /opt/scripts/update/update_motd.sh.dist ] || \
     sudo mv /opt/scripts/update/update_motd.sh /opt/scripts/update/update_motd.sh.dist
@@ -393,7 +395,7 @@ fi
 4.  Connect the **USB-to-Ethernet adapter** on the Diretta Host to your main LAN switch/router.
 5.  Power on both devices.
 
-Upon booting, they will automatically use the new network configurations. **Note:** the IP address of your Diretta Host will likely have changed because it is now connected to your home network via the USB3 to Ethernet adapter. You'll have to return to your router's web UI or the Fing app to find the new address, which should be stable at this point.
+Upon booting, they will automatically use the new network configurations. **Note:** the IP address of your Diretta Host will likely have changed because it is now connected to your home network via the USB-to-Ethernet adapter. You'll have to return to your router's web UI or the Fing app to find the new address, which should be stable at this point.
 
 ```bash
 read -p "Enter the final address of your Diretta Host and hit [enter]: " RPi_IP_Address
@@ -580,7 +582,7 @@ Not critical, but to make sure this is working as expected, do a reboot test. **
 ```bash
 sudo sync && sudo reboot
 ```
-After the system is back online, check the journal for the service's logs from that boot session.
+After the system is back online, check the journal on each computer for the service's logs from that boot session.
 ```bash
 journalctl -b -u boot-repair.service
 ```
@@ -672,7 +674,7 @@ journalctl -b -u boot-repair.service
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient.
 
 6.  **Minimize disk I/O on the Diretta Host:** (optional but recommended for optimal performance)
-    * Chang `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
+    * Change `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
     ```bash
     sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ```
@@ -712,7 +714,7 @@ This guide provides instructions for installing and configuring an IR remote to 
   * **Part 1** covers the hardware-specific setup. You will choose **one** of the two appendices depending on whether you are using the Flirc USB receiver or the Argon One case's built-in receiver.
   * **Part 2** covers the software setup for the `roon-ir-remote` control script, which is identical for both hardware options.
 
-**Note:** You will _only_ perform these steps on the Diretta Host. The Target should not be used for for relaying IR remote control commands to Roon Server.
+**Note:** You will _only_ perform these steps on the Diretta Host. The Target should not be used for relaying IR remote control commands to Roon Server.
 
 -----
 
@@ -892,7 +894,7 @@ pyenv install $PYVER
 pyenv global $PYVER
 ```
 
-**Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Dont give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
+**Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
 -----
 
@@ -1049,7 +1051,7 @@ Your IR remote should now control Roon. Enjoy!
 -----
 
 ### 11. Appendix 2: Argon ONE Fan Control
-If you decoded to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
+If you decided to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
 
 If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on both computers.
 
