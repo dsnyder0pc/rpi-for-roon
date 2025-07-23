@@ -33,7 +33,7 @@ activate_mode() {
     # Modify config files and network state
     sudo sed -i -E 's/^(hosts:).*/\1 files myhostname/' "$NSSWITCH_CONF"
     sudo ip route del default &>/dev/null
-    
+
     # Update MOTD
     echo "  -> Updating login message..."
     MOTD_ACTIVE_MSG=$'\e[1;32m✅ Purist Mode is ACTIVE.\e[0m System optimized for the highest sound quality.'
@@ -50,27 +50,26 @@ activate_mode() {
 
 # Function to revert changes
 revert_mode() {
-    # Perform the actual revert actions only if necessary
-    if [ -f "$BACKUP_FILE" ]; then
-        echo "⏪ Reverting to Standard Mode..."
-
-        # Restore network and DNS configuration.
-        sudo systemctl restart systemd-networkd &>/dev/null
-        sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
-        
-        # When run interactively, manually restart services.
-        if [ -t 1 ]; then
-            echo "  -> Interactively restarting services..."
-            sudo systemctl start chronyd &>/dev/null
-            if sudo systemctl -q is-enabled argononed.service; then
-                 sudo systemctl start argononed.service &>/dev/null
-            fi
-        fi
-    else
-        echo "✅ System already in standard mode. Verifying MOTD status."
+    # Idempotency check
+    if [ ! -f "$BACKUP_FILE" ]; then
+        echo "✅ System is already in standard operation mode."
+        exit 0
     fi
-    
-    # Always update the MOTD to ensure it reflects the correct "disabled" state.
+
+    echo "⏪ Reverting to Standard Mode..."
+
+    # Restore network and DNS configuration.
+    sudo systemctl restart systemd-networkd &>/dev/null
+    sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
+
+    # Always restart services when this script is called.
+    echo "  -> Restarting services..."
+    sudo systemctl start chronyd &>/dev/null
+    if sudo systemctl -q is-enabled argononed.service; then
+         sudo systemctl start argononed.service &>/dev/null
+    fi
+
+    # Update MOTD
     echo "  -> Updating login message..."
     MOTD_DISABLED_MSG=$'\e[1;33m⚠️ CAUTION: Purist Mode is DISABLED.\e[0m Background activity may impact sound quality.'
     if sudo grep -q "Purist Mode is" "$MOTD_FILE"; then
@@ -118,3 +117,4 @@ else
 fi
 
 exit 0
+
