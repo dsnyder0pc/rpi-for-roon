@@ -1553,6 +1553,7 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
     cat <<EOT | sudo tee /etc/avahi/avahi-daemon.conf.d/interface-scoping.conf
     [server]
     allow-interfaces=$USB_INTERFACE
+    deny-interfaces=end0
     EOT
 
     # Enable and start the Avahi daemon
