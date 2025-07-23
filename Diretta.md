@@ -1431,7 +1431,7 @@ On the **Diretta Target**, we will create a new, non-interactive user with very 
 2.  **Create a New User for the App:**
     This command creates a new user named `purist-app` that cannot be used for interactive logins.
     ```bash
-    sudo useradd --system --shell /usr/bin/nologin purist-app
+    sudo useradd --system --create-home --shell /usr/bin/nologin purist-app
     ```
 
 3.  **Create Secure Command Scripts:**
