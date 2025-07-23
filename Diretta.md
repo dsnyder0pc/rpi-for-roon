@@ -73,6 +73,7 @@ If you are located in the US, expect to pay around $365 in total (plus tax and s
 10. [Appendix 1: Optional IR Remote Control Setup](#10-appendix-1-optional-ir-remote-control-setup)
 11. [Appendix 2: Argon ONE Fan Control](#11-appendix-2-argon-one-fan-control)
 12. [Appendix 3: Purist Mode](#12-appendix-3-purist-mode)
+13. [Appendix 4: Purist Mode Web UI Setup](#13-appendix-4-purist-mode-web-ui-setup)
 
 ---
 
@@ -312,24 +313,24 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     *File: `/etc/systemd/network/end0.network`*
     ```bash
     cat <<'EOT' | sudo tee /etc/systemd/network/end0.network
-    [Match]
-    Name=end0
-    
-    [Network]
-    Address=172.20.0.1/24
-    EOT
+[Match]
+Name=end0
+
+[Network]
+Address=172.20.0.1/24
+EOT
     ```
 
     *File: `/etc/systemd/network/enp.network`*
     ```bash
     cat <<'EOT' | sudo tee /etc/systemd/network/enp.network
-    [Match]
-    Name=enp*
-    
-    [Network]
-    DHCP=yes
-    DNSSEC=no
-    EOT
+[Match]
+Name=enp*
+
+[Network]
+DHCP=yes
+DNSSEC=no
+EOT
     ```
 
     **Important:** Remove the old en.network file if present:
@@ -354,7 +355,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     ```bash
     # Enable it for the current session
     sudo sysctl -w net.ipv4.ip_forward=1
-    
+
     # Make it permanent across reboots
     echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-ip-forwarding.conf
     ```
@@ -377,13 +378,13 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     The default USB driver does not support all of the features of the Plugable Ethernet adapter. To get reliable performance, we need to tell the kernel's device manager how to handle the device when it's plugged in:
     ```bash
     cat <<'EOT' | sudo tee /etc/udev/rules.d/99-ax88179a.rules
-    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0b95", ATTR{idProduct}=="1790", ATTR{bConfigurationValue}!="1", ATTR{bConfigurationValue}="1"
-    EOT
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0b95", ATTR{idProduct}=="1790", ATTR{bConfigurationValue}!="1", ATTR{bConfigurationValue}="1"
+EOT
     sudo udevadm control --reload-rules
     ```
 
 5.  **Fix the `update_motd.sh` script**
-    
+
     The script that updates the login banner (`/etc/motd`) does not handle the case of two network interfaces correctly. This prevents the login screen from becoming cluttered with incorrect IP address information after reboots. The new script below addresses this issue.
     ```bash
     [ -f /opt/scripts/update/update_motd.sh.dist ] || \
@@ -563,7 +564,7 @@ While you can use passwords over the proxied connection, the most secure and con
 
 2.  **Set up `keychain` (for Linux users):**
     `keychain` makes the `ssh-agent` persistent across logins. macOS handles this automatically.
-    
+
     * **Install keychain (Ubuntu/Debian):**
         ```bash
         sudo apt update && sudo apt install keychain
@@ -846,21 +847,21 @@ This guide provides instructions for installing and configuring an IR remote to 
       * Create a new keymap file:
         ```bash
         cat <<'EOT' | sudo tee /etc/rc_keymaps/argon.toml
-        # /etc/rc_keymaps/argon.toml
-        [[protocols]]
-        name = "argon_remote"
-        protocol = "nec"
-        [protocols.scancodes]
-        0xca = "KEY_UP"
-        0xd2 = "KEY_DOWN"
-        0x99 = "KEY_LEFT"
-        0xc1 = "KEY_RIGHT"
-        0xce = "KEY_ENTER"
-        0x90 = "KEY_ESC"
-        0x80 = "KEY_VOLUMEUP"
-        0x81 = "KEY_VOLUMEDOWN"
-        0xcb = "KEY_MUTE"
-        EOT
+# /etc/rc_keymaps/argon.toml
+[[protocols]]
+name = "argon_remote"
+protocol = "nec"
+[protocols.scancodes]
+0xca = "KEY_UP"
+0xd2 = "KEY_DOWN"
+0x99 = "KEY_LEFT"
+0xc1 = "KEY_RIGHT"
+0xce = "KEY_ENTER"
+0x90 = "KEY_ESC"
+0x80 = "KEY_VOLUMEUP"
+0x81 = "KEY_VOLUMEDOWN"
+0xcb = "KEY_MUTE"
+EOT
         ```
       * If the scan codes in the example file above don't match the ones you recorded, edit the file (`sudo nano /etc/rc_keymaps/argon.toml`) and change them to match.
 
@@ -870,17 +871,17 @@ This guide provides instructions for installing and configuring an IR remote to 
     Create a new service file and enable the service:
     ```bash
     cat <<'EOT' | sudo tee /etc/systemd/system/ir-keymap.service
-    [Unit]
-    Description=Load custom IR keymap
-    After=multi-user.target
+[Unit]
+Description=Load custom IR keymap
+After=multi-user.target
 
-    [Service]
-    Type=oneshot
-    RemainAfterExit=yes
-    ExecStart=/usr/bin/ir-keytable -c -p nec -w /etc/rc_keymaps/argon.toml
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/ir-keytable -c -p nec -w /etc/rc_keymaps/argon.toml
 
-    [Install]
-    WantedBy=multi-user.target
+[Install]
+WantedBy=multi-user.target
     EOT
     sudo systemctl enable --now ir-keymap.service
     ```
@@ -1404,3 +1405,177 @@ You have full interactive control over the system at any time.
     # This disables the auto-activation on the next boot
     purist-mode-auto-disable
     ```
+
+---
+
+### **Appendix 4: Purist Mode Web UI Setup**
+
+This appendix provides instructions for installing a simple web-based application on the **Diretta Host**. This application provides an easy-to-use interface, accessible from a phone or tablet, to control Purist Mode on the **Diretta Target** without needing to use the command line.
+
+> **CRITICAL WARNING: Perform these steps carefully.**
+> This setup involves creating a new user and modifying security settings. Follow the instructions precisely to ensure the system remains secure and functional.
+
+The setup is divided into two parts: first, we configure the **Diretta Target** to securely accept commands, and second, we install the web application on the **Diretta Host**.
+
+---
+
+#### **Part 1: Diretta Target Configuration**
+
+On the **Diretta Target**, we will create a new, non-interactive user with very limited permissions. This user will only be allowed to run the specific commands needed to manage Purist Mode.
+
+1.  **SSH to the Diretta Target:**
+    ```bash
+    ssh diretta-target
+    ```
+
+2.  **Create a New User for the App:**
+    This command creates a new user named `purist-app` that cannot be used for interactive logins.
+    ```bash
+    sudo useradd --system --shell /usr/bin/nologin purist-app
+    ```
+
+3.  **Create Secure Command Scripts:**
+    We will create three small, dedicated scripts that are the *only* actions the web app is allowed to perform. This is a critical security step.
+    ```bash
+    # Script to get the current status
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
+#!/bin/bash
+IS_ACTIVE="false"
+IS_AUTO_ENABLED="false"
+if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+    IS_ACTIVE="true"
+fi
+if systemctl is-enabled --quiet purist-mode-auto.service; then
+    IS_AUTO_ENABLED="true"
+fi
+echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED}"
+EOT
+
+    # Script to toggle Purist Mode
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-mode
+#!/bin/bash
+if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+    /usr/local/bin/purist-mode --revert
+else
+    /usr/local/bin/purist-mode
+fi
+EOT
+
+    # Script to toggle the auto-start service
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-auto
+#!/bin/bash
+if systemctl is-enabled --quiet purist-mode-auto.service; then
+    systemctl disable --now purist-mode-auto.service
+else
+    systemctl enable purist-mode-auto.service
+fi
+EOT
+
+    # Make the new scripts executable
+    sudo chmod +x /usr/local/bin/pm-*
+    ```
+
+4.  **Grant Sudo Permissions:**
+    This step allows the `purist-app` user to run our three new scripts with root privileges, without needing a password.
+    ```bash
+    cat <<'EOT' | sudo tee /etc/sudoers.d/purist-app
+# Allow the purist-app user to run the specific control scripts
+purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-status
+purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-mode
+purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
+EOT
+    ```
+
+---
+
+#### **Part 2: Diretta Host Configuration**
+
+Now, on the **Diretta Host**, we will generate the SSH key, install the web application, and set it up to run as a service.
+
+1.  **SSH to the Diretta Host:**
+    ```bash
+    ssh diretta-host
+    ```
+
+2.  **Generate a Dedicated SSH Key:**
+    This creates a new SSH key pair specifically for the web app. It will have no passphrase.
+    ```bash
+    ssh-keygen -t ed25519 -f ~/.ssh/purist_app_key -N "" -C "purist-app-key"
+    ```
+
+3.  **Authorize the Key on the Target:**
+    This is the most important step. We will copy the **public key** from the Host to the Target's `authorized_keys` file. We will also add strict security restrictions that limit what this key can do.
+
+    * First, display the public key on the **Host** and copy it to your clipboard:
+        ```bash
+        echo "--- Please copy the entire line below, starting with ssh-ed25519 ---"
+        cat ~/.ssh/purist_app_key.pub
+        echo "--------------------------------------------------------------------"
+        ```
+
+    * Now, on the **Target**, open the `authorized_keys` file for the `purist-app` user using `vi`:
+        ```bash
+        sudo -u purist-app -s
+        mkdir -p ~/.ssh && chmod 700 ~/.ssh
+        vi ~/.ssh/authorized_keys
+        # Press 'i' to enter insert mode
+        ```
+
+    * Paste the public key you just copied. Then, **at the very beginning of the line**, add the following security restrictions. The final line should look like this (all on one line):
+        `command="sudo $SSH_ORIGINAL_COMMAND",from="172.20.0.1",no-port-forwarding,no-x11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA... purist-app-key`
+
+    * Save and exit the file (press `Esc`, then type `:wq` and `Enter`). Then type `exit` to return to the `audiolinux` user shell.
+
+4.  **Install Dependencies and Avahi:**
+    Install Flask and the Avahi daemon for `.local` name resolution.
+    ```bash
+    sudo pacman -Syu --noconfirm
+    sudo pacman -S --noconfirm python-flask avahi
+    sudo systemctl enable --now avahi-daemon.service
+    ```
+
+5.  **Install the Flask App:**
+    Create a directory for the app and download the Python script directly from GitHub.
+    ```bash
+    mkdir -p ~/purist-mode-webui
+    curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py -o ~/purist-mode-webui/app.py
+    ```
+
+6.  **Create the `systemd` Service:**
+    This service will run the web app automatically on boot.
+    ```bash
+    cat <<'EOT' | sudo tee /etc/systemd/system/purist-webui.service
+[Unit]
+Description=Purist Mode Web UI
+After=network-online.target
+
+[Service]
+Type=simple
+User=audiolinux
+Group=audiolinux
+WorkingDirectory=/home/audiolinux/purist-mode-webui
+ExecStart=/usr/bin/python app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOT
+    ```
+
+7.  **Enable and Start the Web App:**
+    ```bash
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now purist-webui.service
+    ```
+
+---
+
+#### **Part 3: Access the Web UI**
+
+You're all set! Open a web browser on your phone, tablet, or computer connected to the same network as the Diretta Host. Navigate to:
+
+[http://diretta-host.local](http://diretta-host.local)
+
+You should now see the control panel, allowing you to easily manage Purist Mode.
+
