@@ -1505,7 +1505,7 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
 
 3.  **Authorize the Key on the Target:**
     This step will securely copy the public key to the Target and configure it with the necessary security restrictions, all in one command.
-    ```
+    ```bash
 		echo "--- Authorizing the new SSH key on the Diretta Target ---"
 
 		# Step A: Copy the public key to the Target's home directory
