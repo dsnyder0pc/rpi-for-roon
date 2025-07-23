@@ -445,8 +445,9 @@ fi
     ```
 2.  Disconnect both devices from your main LAN switch/router.
 3.  Connect the **onboard Ethernet port** of the Diretta Host directly to the **onboard Ethernet port** of the Diretta Target using a single Ethernet cable.
-4.  Connect the **USB-to-Ethernet adapter** on the Diretta Host to your main LAN switch/router.
-5.  Power on both devices.
+4.  Plug the **USB-to-Ethernet adapter** into one of the blue USB 3.0 ports on the Diretta Host computer
+5.  Connect the **USB-to-Ethernet adapter** on the Diretta Host to your main LAN switch/router.
+6.  Power on both devices.
 
 Upon booting, they will automatically use the new network configurations. **Note:** the IP address of your Diretta Host will likely have changed because it is now connected to your home network via the USB-to-Ethernet adapter. You'll have to return to your router's web UI or the Fing app to find the new address, which should be stable at this point.
 
