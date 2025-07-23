@@ -1504,27 +1504,40 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
     ```
 
 3.  **Authorize the Key on the Target:**
-    This is the most important step. We will copy the **public key** from the Host to the Target's `authorized_keys` file. We will also add strict security restrictions that limit what this key can do.
+    This step will securely copy the public key to the Target and configure it with the necessary security restrictions, all in one command.
+    ```
+    echo "--- Authorizing the new SSH key on the Diretta Target ---"
+    # Create a small script to run on the target
+    cat <<'SCRIPT' > setup_target_key.sh
+    #!/bin/bash
+    set -e
+    echo "--> Running on Target: Setting up authorized_keys for purist-app..."
 
-    * First, display the public key on the **Host** and copy it to your clipboard:
-        ```bash
-        echo "--- Please copy the entire line below, starting with ssh-ed25519 ---"
-        cat ~/.ssh/purist_app_key.pub
-        echo "--------------------------------------------------------------------"
-        ```
+    # Read the public key content passed from stdin
+    PUB_KEY=$(cat)
 
-    * Now, on the **Target**, open the `authorized_keys` file for the `purist-app` user using `vi`:
-        ```bash
-        sudo -u purist-app -s
-        mkdir -p ~/.ssh && chmod 700 ~/.ssh
-        vi ~/.ssh/authorized_keys
-        # Press 'i' to enter insert mode
-        ```
+    # Ensure the .ssh directory exists and has correct permissions
+    sudo mkdir -p /home/purist-app/.ssh
+    sudo chmod 0700 /home/purist-app/.ssh
 
-    * Paste the public key you just copied. Then, **at the very beginning of the line**, add the following security restrictions. The final line should look like this (all on one line):
-        `command="sudo $SSH_ORIGINAL_COMMAND",from="172.20.0.1",no-port-forwarding,no-x11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA... purist-app-key`
+    # Create the authorized_keys file with the required security restrictions
+    echo "command=\"sudo \$SSH_ORIGINAL_COMMAND\",from=\"172.20.0.1\",no-port-forwarding,no-x11-forwarding,no-agent-forwarding,no-pty ${PUB_KEY}" | sudo tee /home/purist-app/.ssh/authorized_keys > /dev/null
 
-    * Save and exit the file (press `Esc`, then type `:wq` and `Enter`). Then type `exit` to return to the `audiolinux` user shell.
+    # Set final ownership and permissions
+    sudo chown -R purist-app:purist-app /home/purist-app/.ssh
+    sudo chmod 0600 /home/purist-app/.ssh/authorized_keys
+
+    echo "--> Target setup complete."
+    SCRIPT
+
+    # Execute the script on the target, piping the public key into it
+    cat ~/.ssh/purist_app_key.pub | ssh diretta-target 'bash -s' < setup_target_key.sh
+
+    # Clean up the local script file
+    rm setup_target_key.sh
+
+    echo "✅ SSH key has been successfully authorized on the Target."
+    ```
 
 4.  **Install Dependencies and Avahi:**
     Install Flask and the Avahi daemon for `.local` name resolution.
