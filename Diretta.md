@@ -1531,6 +1531,19 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
     ```bash
     sudo pacman -Syu --noconfirm
     sudo pacman -S --noconfirm python-flask avahi
+
+    # Dynamically find the USB Ethernet interface name (e.g., enp1s0u1u2)
+    USB_INTERFACE=$(ip -o link show | awk -F': ' '/enp/{print $2}')
+
+    # Create a configuration override for Avahi to isolate it to the USB interface
+    echo "--- Configuring Avahi to use interface: $USB_INTERFACE ---"
+    sudo mkdir -p /etc/avahi/avahi-daemon.conf.d
+    cat <<EOT | sudo tee /etc/avahi/avahi-daemon.conf.d/interface-scoping.conf
+    [server]
+    allow-interfaces=$USB_INTERFACE
+    EOT
+
+    # Enable and start the Avahi daemon
     sudo systemctl enable --now avahi-daemon.service
     ```
 
