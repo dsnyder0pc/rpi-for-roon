@@ -1570,7 +1570,7 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
 6.  **Create the `systemd` Service:**
     This service will run the web app automatically on boot.
     ```bash
-    cat <<'EOT' | sudo tee /etc/systemd/system/purist-webui.service
+    cat <<EOT | sudo tee /etc/systemd/system/purist-webui.service
     [Unit]
     Description=Purist Mode Web UI
     After=network-online.target
