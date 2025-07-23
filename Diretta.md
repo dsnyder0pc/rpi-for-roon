@@ -1431,7 +1431,7 @@ On the **Diretta Target**, we will create a new, non-interactive user with very 
 2.  **Create a New User for the App:**
     This command creates a new user named `purist-app` that cannot be used for interactive logins.
     ```bash
-    sudo useradd --system --create-home --shell /usr/bin/nologin purist-app
+    sudo useradd --create-home purist-app
     ```
 
 3.  **Create Secure Command Scripts:**
@@ -1568,7 +1568,7 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
     ```
 
 6.  **Create the `systemd` Service:**
-    This service will run the web app automatically on boot.
+    This service will run the web app automatically on boot. It includes special directives to allow the unprivileged user to bind to the privileged port 80.
     ```bash
     cat <<EOT | sudo tee /etc/systemd/system/purist-webui.service
     [Unit]
@@ -1584,10 +1584,18 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
     Restart=on-failure
     RestartSec=5
 
+    # --- Systemd Magic to allow binding to port 80 ---
+    # 1. Add the capability to the bounding set
+    CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+    # 2. Grant the capability to the process
+    AmbientCapabilities=CAP_NET_BIND_SERVICE
+
     [Install]
     WantedBy=multi-user.target
     EOT
     ```
+
+    After you update the guide and the user runs these steps, the `purist-webui` service will start as the `audiolinux` user, but `systemd` will grant the Python process the specific, temporary ability to bind to port 80. It's secure, clean, and exactly the kind of trick `systemd` was designed for.
 
 7.  **Enable and Start the Web App:**
     ```bash
