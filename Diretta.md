@@ -1479,7 +1479,10 @@ On the **Diretta Target**, we will create a new, non-interactive user with very 
     This step allows the `purist-app` user to run our three new scripts with root privileges, without needing a password.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/purist-app
-    # Allow the purist-app user to run the specific control scripts
+    # Tell sudo not to require a TTY for the purist-app user
+    Defaults:purist-app !requiretty
+
+    # Allow the purist-app user to run the specific control scripts without a password
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-status
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-mode
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
