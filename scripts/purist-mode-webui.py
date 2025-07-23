@@ -7,6 +7,7 @@ import os
 import subprocess
 import json
 import logging
+import sys
 from flask import Flask, render_template_string, jsonify
 
 # --- Configuration ---
@@ -17,10 +18,9 @@ SSH_KEY_PATH = os.path.expanduser("~/.ssh/purist_app_key")
 app = Flask(__name__)
 
 # --- Configure Logging ---
-# This will print helpful debug messages to the terminal when run interactively.
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- HTML & CSS Template (unchanged) ---
+# --- HTML & CSS Template ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en" class="bg-gray-900 text-gray-200">
@@ -51,15 +51,15 @@ HTML_TEMPLATE = """
             <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">AnCaolas Link</h1>
             <p class="text-lg text-gray-400">Purist Mode Control</p>
         </div>
-        <div id="status-panel" 
-             class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10"
-             hx-get="/status" 
-             hx-trigger="load, every 5s">
+
+        <!-- The initial container for the status panel -->
+        <div hx-get="/status" hx-trigger="load, every 30s" hx-swap="innerHTML">
             <div class="p-8 text-center text-gray-400">
                 <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
                 <p class="mt-2">Connecting to Diretta Target...</p>
             </div>
         </div>
+
         <div class="text-center mt-8 text-sm text-gray-500">
             <p>&copy; 2025 AnCaolas Link</p>
         </div>
@@ -68,8 +68,9 @@ HTML_TEMPLATE = """
 </html>
 """
 
+# This is the partial template that htmx will swap into the page.
 STATUS_PANEL_TEMPLATE = """
-<div class="p-6 sm:p-8 space-y-6">
+<div id="status-panel" class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-6">
     <!-- Purist Mode Status & Toggle -->
     <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
         <div>
@@ -82,7 +83,7 @@ STATUS_PANEL_TEMPLATE = """
         </div>
         <button hx-post="/toggle-mode" hx-target="#status-panel" hx-swap="outerHTML"
                 class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
-                       {% if status.purist_mode_active %} bg-red-600 hover:bg-red-500 text-white {% else %} bg-green-600 hover:bg-green-500 text-white {% endif %}">
+                       {% if status.purist_mode_active %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
             <span class="btn-text">{% if status.purist_mode_active %}Disable{% else %}Enable{% endif %}</span>
             <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
         </button>
@@ -100,7 +101,7 @@ STATUS_PANEL_TEMPLATE = """
         </div>
         <button hx-post="/toggle-auto" hx-target="#status-panel" hx-swap="outerHTML"
                 class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
-                       {% if status.auto_start_enabled %} bg-red-600 hover:bg-red-500 text-white {% else %} bg-green-600 hover:bg-green-500 text-white {% endif %}">
+                       {% if status.auto_start_enabled %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
             <span class="btn-text">{% if status.auto_start_enabled %}Disable{% else %}Enable{% endif %}</span>
             <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
         </button>
@@ -108,7 +109,7 @@ STATUS_PANEL_TEMPLATE = """
 </div>
 """
 
-# --- Backend Logic (with improved error handling and correct command paths) ---
+# --- Backend Logic ---
 
 def run_remote_command(command):
     """Executes a command on the Diretta Target via SSH."""
@@ -174,6 +175,16 @@ def toggle_auto():
     return status()
 
 if __name__ == "__main__":
-    # Run on port 80. The systemd service grants the necessary permissions.
-    app.run(host="0.0.0.0", port=80, debug=True)
+    # Check if we are running in an interactive terminal or as a service
+    is_interactive = sys.stdout.isatty()
+
+    # Use port 8080 for interactive testing, port 80 for the service
+    port = 8080 if is_interactive else 80
+
+    # Enable debug mode only for interactive testing
+    debug_mode = is_interactive
+
+    app.logger.info(f"Starting Flask server. Interactive: {is_interactive}, Port: {port}, Debug: {debug_mode}")
+
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
 
