@@ -313,24 +313,24 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     *File: `/etc/systemd/network/end0.network`*
     ```bash
     cat <<'EOT' | sudo tee /etc/systemd/network/end0.network
-[Match]
-Name=end0
+    [Match]
+    Name=end0
 
-[Network]
-Address=172.20.0.1/24
-EOT
+    [Network]
+    Address=172.20.0.1/24
+    EOT
     ```
 
     *File: `/etc/systemd/network/enp.network`*
     ```bash
     cat <<'EOT' | sudo tee /etc/systemd/network/enp.network
-[Match]
-Name=enp*
+    [Match]
+    Name=enp*
 
-[Network]
-DHCP=yes
-DNSSEC=no
-EOT
+    [Network]
+    DHCP=yes
+    DNSSEC=no
+    EOT
     ```
 
     **Important:** Remove the old en.network file if present:
@@ -378,8 +378,8 @@ EOT
     The default USB driver does not support all of the features of the Plugable Ethernet adapter. To get reliable performance, we need to tell the kernel's device manager how to handle the device when it's plugged in:
     ```bash
     cat <<'EOT' | sudo tee /etc/udev/rules.d/99-ax88179a.rules
-ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0b95", ATTR{idProduct}=="1790", ATTR{bConfigurationValue}!="1", ATTR{bConfigurationValue}="1"
-EOT
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0b95", ATTR{idProduct}=="1790", ATTR{bConfigurationValue}!="1", ATTR{bConfigurationValue}="1"
+    EOT
     sudo udevadm control --reload-rules
     ```
 
@@ -847,21 +847,21 @@ This guide provides instructions for installing and configuring an IR remote to 
       * Create a new keymap file:
         ```bash
         cat <<'EOT' | sudo tee /etc/rc_keymaps/argon.toml
-# /etc/rc_keymaps/argon.toml
-[[protocols]]
-name = "argon_remote"
-protocol = "nec"
-[protocols.scancodes]
-0xca = "KEY_UP"
-0xd2 = "KEY_DOWN"
-0x99 = "KEY_LEFT"
-0xc1 = "KEY_RIGHT"
-0xce = "KEY_ENTER"
-0x90 = "KEY_ESC"
-0x80 = "KEY_VOLUMEUP"
-0x81 = "KEY_VOLUMEDOWN"
-0xcb = "KEY_MUTE"
-EOT
+        # /etc/rc_keymaps/argon.toml
+        [[protocols]]
+        name = "argon_remote"
+        protocol = "nec"
+        [protocols.scancodes]
+        0xca = "KEY_UP"
+        0xd2 = "KEY_DOWN"
+        0x99 = "KEY_LEFT"
+        0xc1 = "KEY_RIGHT"
+        0xce = "KEY_ENTER"
+        0x90 = "KEY_ESC"
+        0x80 = "KEY_VOLUMEUP"
+        0x81 = "KEY_VOLUMEDOWN"
+        0xcb = "KEY_MUTE"
+        EOT
         ```
       * If the scan codes in the example file above don't match the ones you recorded, edit the file (`sudo nano /etc/rc_keymaps/argon.toml`) and change them to match.
 
@@ -871,17 +871,17 @@ EOT
     Create a new service file and enable the service:
     ```bash
     cat <<'EOT' | sudo tee /etc/systemd/system/ir-keymap.service
-[Unit]
-Description=Load custom IR keymap
-After=multi-user.target
+    [Unit]
+    Description=Load custom IR keymap
+    After=multi-user.target
 
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=/usr/bin/ir-keytable -c -p nec -w /etc/rc_keymaps/argon.toml
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    ExecStart=/usr/bin/ir-keytable -c -p nec -w /etc/rc_keymaps/argon.toml
 
-[Install]
-WantedBy=multi-user.target
+    [Install]
+    WantedBy=multi-user.target
     EOT
     sudo systemctl enable --now ir-keymap.service
     ```
@@ -1439,37 +1439,37 @@ On the **Diretta Target**, we will create a new, non-interactive user with very 
     ```bash
     # Script to get the current status
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
-#!/bin/bash
-IS_ACTIVE="false"
-IS_AUTO_ENABLED="false"
-if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
-    IS_ACTIVE="true"
-fi
-if systemctl is-enabled --quiet purist-mode-auto.service; then
-    IS_AUTO_ENABLED="true"
-fi
-echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED}"
-EOT
+    #!/bin/bash
+    IS_ACTIVE="false"
+    IS_AUTO_ENABLED="false"
+    if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+        IS_ACTIVE="true"
+    fi
+    if systemctl is-enabled --quiet purist-mode-auto.service; then
+        IS_AUTO_ENABLED="true"
+    fi
+    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED}"
+    EOT
 
     # Script to toggle Purist Mode
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-mode
-#!/bin/bash
-if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
-    /usr/local/bin/purist-mode --revert
-else
-    /usr/local/bin/purist-mode
-fi
-EOT
+    #!/bin/bash
+    if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+        /usr/local/bin/purist-mode --revert
+    else
+        /usr/local/bin/purist-mode
+    fi
+    EOT
 
     # Script to toggle the auto-start service
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-auto
-#!/bin/bash
-if systemctl is-enabled --quiet purist-mode-auto.service; then
-    systemctl disable --now purist-mode-auto.service
-else
-    systemctl enable purist-mode-auto.service
-fi
-EOT
+    #!/bin/bash
+    if systemctl is-enabled --quiet purist-mode-auto.service; then
+        systemctl disable --now purist-mode-auto.service
+    else
+        systemctl enable purist-mode-auto.service
+    fi
+    EOT
 
     # Make the new scripts executable
     sudo chmod +x /usr/local/bin/pm-*
@@ -1479,11 +1479,11 @@ EOT
     This step allows the `purist-app` user to run our three new scripts with root privileges, without needing a password.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/purist-app
-# Allow the purist-app user to run the specific control scripts
-purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-status
-purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-mode
-purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
-EOT
+    # Allow the purist-app user to run the specific control scripts
+    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-status
+    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-mode
+    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
+    EOT
     ```
 
 ---
@@ -1545,22 +1545,22 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
     This service will run the web app automatically on boot.
     ```bash
     cat <<'EOT' | sudo tee /etc/systemd/system/purist-webui.service
-[Unit]
-Description=Purist Mode Web UI
-After=network-online.target
+    [Unit]
+    Description=Purist Mode Web UI
+    After=network-online.target
 
-[Service]
-Type=simple
-User=audiolinux
-Group=audiolinux
-WorkingDirectory=/home/audiolinux/purist-mode-webui
-ExecStart=/usr/bin/python app.py
-Restart=on-failure
-RestartSec=5
+    [Service]
+    Type=simple
+    User=audiolinux
+    Group=audiolinux
+    WorkingDirectory=/home/audiolinux/purist-mode-webui
+    ExecStart=/usr/bin/python app.py
+    Restart=on-failure
+    RestartSec=5
 
-[Install]
-WantedBy=multi-user.target
-EOT
+    [Install]
+    WantedBy=multi-user.target
+    EOT
     ```
 
 7.  **Enable and Start the Web App:**
