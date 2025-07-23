@@ -1506,37 +1506,36 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
 3.  **Authorize the Key on the Target:**
     This step will securely copy the public key to the Target and configure it with the necessary security restrictions, all in one command.
     ```
-    echo "--- Authorizing the new SSH key on the Diretta Target ---"
-    # Create a small script to run on the target
-    cat <<'SCRIPT' > setup_target_key.sh
-    #!/bin/bash
-    set -e
-    echo "--> Running on Target: Setting up authorized_keys for purist-app..."
+		echo "--- Authorizing the new SSH key on the Diretta Target ---"
 
-    # Read the public key content passed from stdin
-    PUB_KEY=$(cat)
+		# Step A: Copy the public key to the Target's home directory
+		echo "--> Copying public key to the Target..."
+		scp ~/.ssh/purist_app_key.pub diretta-target:
 
-    # Ensure the .ssh directory exists and has correct permissions
-    sudo mkdir -p /home/purist-app/.ssh
-    sudo chmod 0700 /home/purist-app/.ssh
+		# Step B: Run a script on the Target to set up the key for the 'purist-app' user
+		echo "--> Running setup script on the Target..."
+		ssh diretta-target <<'END_OF_REMOTE_SCRIPT'
+		set -e
+		# Read the public key from the file we just copied
+		PUB_KEY=$(cat purist_app_key.pub)
 
-    # Create the authorized_keys file with the required security restrictions
-    echo "command=\"sudo \$SSH_ORIGINAL_COMMAND\",from=\"172.20.0.1\",no-port-forwarding,no-x11-forwarding,no-agent-forwarding,no-pty ${PUB_KEY}" | sudo tee /home/purist-app/.ssh/authorized_keys > /dev/null
+		# Ensure the .ssh directory exists and has correct permissions
+		sudo mkdir -p /home/purist-app/.ssh
+		sudo chmod 0700 /home/purist-app/.ssh
 
-    # Set final ownership and permissions
-    sudo chown -R purist-app:purist-app /home/purist-app/.ssh
-    sudo chmod 0600 /home/purist-app/.ssh/authorized_keys
+		# Create the authorized_keys file with the required security restrictions
+		echo "command=\"sudo \$SSH_ORIGINAL_COMMAND\",from=\"172.20.0.1\",no-port-forwarding,no-x11-forwarding,no-agent-forwarding,no-pty ${PUB_KEY}" | sudo tee /home/purist-app/.ssh/authorized_keys > /dev/null
 
-    echo "--> Target setup complete."
-    SCRIPT
+		# Set final ownership and permissions
+		sudo chown -R purist-app:purist-app /home/purist-app/.ssh
+		sudo chmod 0600 /home/purist-app/.ssh/authorized_keys
 
-    # Execute the script on the target, piping the public key into it
-    cat ~/.ssh/purist_app_key.pub | ssh diretta-target 'bash -s' < setup_target_key.sh
+		# Clean up the copied public key file
+		rm purist_app_key.pub
+		echo "--> Target setup complete."
+		END_OF_REMOTE_SCRIPT
 
-    # Clean up the local script file
-    rm setup_target_key.sh
-
-    echo "✅ SSH key has been successfully authorized on the Target."
+		echo "✅ SSH key has been successfully authorized on the Target."
     ```
 
 4.  **Install Dependencies and Avahi:**
