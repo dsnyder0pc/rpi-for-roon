@@ -1577,8 +1577,8 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
 
     [Service]
     Type=simple
-    User=audiolinux
-    Group=audiolinux
+    User=${LOGNAME}
+    Group=${LOGNAME}
     WorkingDirectory=/home/${LOGNAME}/purist-mode-webui
     ExecStart=/usr/bin/python app.py
     Restart=on-failure
