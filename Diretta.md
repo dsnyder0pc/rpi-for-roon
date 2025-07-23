@@ -73,7 +73,7 @@ If you are located in the US, expect to pay around $365 in total (plus tax and s
 10. [Appendix 1: Optional IR Remote Control Setup](#10-appendix-1-optional-ir-remote-control-setup)
 11. [Appendix 2: Argon ONE Fan Control](#11-appendix-2-argon-one-fan-control)
 12. [Appendix 3: Purist Mode](#12-appendix-3-purist-mode)
-13. [Appendix 4: Purist Mode Web UI Setup](#13-appendix-4-purist-mode-web-ui-setup)
+13. [Appendix 4: Purist Mode Web UI Setup](#appendix-4-purist-mode-web-ui-setup)
 
 ---
 
