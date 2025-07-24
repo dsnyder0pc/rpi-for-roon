@@ -759,7 +759,7 @@ journalctl -b -u boot-repair.service
     * Click `Enable`, give it a name, and you are ready to play music!
 
 Your dedicated Diretta link is now fully configured for pristine, isolated audio playback.
-**Note:** The "Limited" zone for Diretta Target testing will disappear from Roon after six minutes of playback.  This is normal. At that point, you'll need to purchase a license for the Diretta Target. Cost is currently 100 Euros and it can take up to 48 hours for activation to complete. Once you receive the activation email from the Diretta team, just reboot your Target computer to pick up the activation.
+**Note:** The "Limited" zone for Diretta Target testing will disappear from Roon after six minutes of hi-res music playback. This is normal. At that point, you'll need to purchase a license for the Diretta Target. Cost is currently €100 and it can take up to 48 hours for activation to complete. You will receive two emails from the Diretta team. The first is your receipt; the second, your activation notification. Once you receive the activation email, restart your Target computer to pick up the activation.
 
 ---
 
@@ -1763,5 +1763,5 @@ You're all set! Open a web browser on your phone, tablet, or computer connected 
 
 You may see a browser warning about the connection not being secure. This is expected since we are intentionally not using TLS encryption to reduce resource usage. This is safe as long as you are at home on your personal network.
 
-You should now see the control panel, allowing you to easily manage Purist Mode. If you have not acticated your Diretta Target license yet, the web UI will also include a buttion for restarting the Dirtta Target service. Use this button after you receive the second email from the Direta team confirming that they have activated a license for your hardware.
+You should now see the control panel, allowing you to easily manage Purist Mode. If you have not activated your Diretta Target license yet, the web UI will also include a buttion for restarting the Dirtta Target service. Use this button after you receive the second email from the Direta team confirming that they have activated a license for your hardware.
 
