@@ -1583,9 +1583,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ```
 
 5.  **Install Python via pyenv** (if you did not already for the IR Remote setup)
-
     Install `pyenv` and the latest stable version of Python.
-
     ```bash
 		# Install build dependencies
 		sudo pacman -Syu --noconfirm
