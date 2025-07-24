@@ -132,6 +132,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 * **Audiolinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$139** (prices subject to change). However, it's fine to get started with a one year subscription, currently **$69**. Both options allow for installation on multiple devices within the same location.
 * **Diretta Target:** A license is required for the Diretta Target device and currently costs **€100**.
+    * You may evaluate the Diretta Target using 44.1 kHz streams for an extended period of time. Therefore, I recommend using Roon's **Sample rate conversion** feature under **MUSE** DSP settings to convert all content to 44.1 kHz during your evaluation period. Once you are satisfied, purchase the Diretta Target license to remove the restriction. Leave sample rate conversion settings engaged until you receive the second email from the Diretta team indicating that your hardware has been activated.
     * **CRITICAL:** This license is locked to the specific hardware of the Raspberry Pi it is purchased for. It is essential that you perform the final licensing step on the exact hardware you intend to use permanently.
     * Diretta may offer a one-time replacement license for hardware failure within the first two years (please verify terms at time of purchase). If you change the hardware for any other reason, a new license must be purchased.
 
@@ -1760,7 +1761,7 @@ You're all set! Open a web browser on your phone, tablet, or computer connected 
 
 [http://diretta-host.local](http://diretta-host.local)
 
-You may see a browser warning about the connection not being secure. This is expected since we are intentionaly not using TLS encryption to resource resource usage. It's safe as long as you are at home on your private network.
+You may see a browser warning about the connection not being secure. This is expected since we are intentionally not using TLS encryption to reduce resource usage. This is safe as long as you are at home on your personal network.
 
 You should now see the control panel, allowing you to easily manage Purist Mode. If you have not acticated your Diretta Target license yet, the web UI will also include a buttion for restarting the Dirtta Target service. Use this button after you receive the second email from the Direta team confirming that they have activated a license for your hardware.
 
