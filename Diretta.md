@@ -1597,6 +1597,9 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
     # Test Toggling Auto-Start on Boot (run this twice to enable, then disable)
     ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-toggle-auto'
+
+    # Test Restarting the Diretta Target Service
+    ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-restart-target'
     ```
 
 5.  **Install Python via pyenv** (feel free to skip this step if you did this already to get the IR Remote working)
