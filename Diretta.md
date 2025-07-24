@@ -1421,7 +1421,7 @@ The setup is divided into two parts: first, we configure the **Diretta Target** 
 
 #### **Part 1: Diretta Target Configuration**
 
-On the **Diretta Target**, we will create a new, non-interactive user with very limited permissions. This user will only be allowed to run the specific commands needed to manage Purist Mode.
+On the **Diretta Target**, we will create a new user with very limited permissions. This user will only be allowed to run the specific commands needed to manage Purist Mode.
 
 1.  **SSH to the Diretta Target:**
     ```bash
@@ -1429,9 +1429,9 @@ On the **Diretta Target**, we will create a new, non-interactive user with very 
     ```
 
 2.  **Create a New User for the App:**
-    This command creates a new user named `purist-app` that cannot be used for interactive logins.
+    This command creates a new user named `purist-app` and its home directory. A valid shell is required for non-interactive SSH commands to function.
     ```bash
-    sudo useradd --create-home purist-app
+    sudo useradd --create-home --shell /bin/bash purist-app
     ```
 
 3.  **Create Secure Command Scripts:**
@@ -1439,61 +1439,61 @@ On the **Diretta Target**, we will create a new, non-interactive user with very 
     ```bash
     # Script to get the current status
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
-    #!/bin/bash
-    IS_ACTIVE="false"
-    IS_AUTO_ENABLED="false"
-    if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
-        IS_ACTIVE="true"
-    fi
-    if systemctl is-enabled --quiet purist-mode-auto.service; then
-        IS_AUTO_ENABLED="true"
-    fi
-    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED}"
-    EOT
+#!/bin/bash
+IS_ACTIVE="false"
+IS_AUTO_ENABLED="false"
+if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+    IS_ACTIVE="true"
+fi
+if systemctl is-enabled --quiet purist-mode-auto.service; then
+    IS_AUTO_ENABLED="true"
+fi
+echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED}"
+EOT
 
     # Script to toggle Purist Mode
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-mode
-    #!/bin/bash
-    if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
-        /usr/local/bin/purist-mode --revert
-    else
-        /usr/local/bin/purist-mode
-    fi
-    EOT
+#!/bin/bash
+if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+    /usr/local/bin/purist-mode --revert
+else
+    /usr/local/bin/purist-mode
+fi
+EOT
 
     # Script to toggle the auto-start service
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-auto
-    #!/bin/bash
-    if systemctl is-enabled --quiet purist-mode-auto.service; then
-        systemctl disable --now purist-mode-auto.service
-    else
-        systemctl enable purist-mode-auto.service
-    fi
-    EOT
+#!/bin/bash
+if systemctl is-enabled --quiet purist-mode-auto.service; then
+    systemctl disable --now purist-mode-auto.service
+else
+    systemctl enable purist-mode-auto.service
+fi
+EOT
 
     # Make the new scripts executable
     sudo chmod +x /usr/local/bin/pm-*
     ```
 
 4.  **Grant Sudo Permissions:**
-    This step allows the `purist-app` user to run our three new scripts with root privileges, without needing a password.
+    This step allows the `purist-app` user to run our three new scripts with root privileges and without needing an interactive terminal.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/purist-app
-    # Tell sudo not to require a TTY for the purist-app user
-    Defaults:purist-app !requiretty
+# Tell sudo not to require a TTY for the purist-app user
+Defaults:purist-app !requiretty
 
-    # Allow the purist-app user to run the specific control scripts without a password
-    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-status
-    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-mode
-    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
-    EOT
+# Allow the purist-app user to run the specific control scripts without a password
+purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-status
+purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-mode
+purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
+EOT
     ```
 
 ---
 
 #### **Part 2: Diretta Host Configuration**
 
-Now, on the **Diretta Host**, we will generate the SSH key, install the web application, and set it up to run as a service.
+Now, on the **Diretta Host**, we will perform all the steps to install and configure the web application. You should be logged in as the `audiolinux` user for this entire section.
 
 1.  **SSH to the Diretta Host:**
     ```bash
@@ -1507,20 +1507,20 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
     ```
 
 3.  **Authorize the Key on the Target:**
-    This step will securely copy the public key to the Target and configure it with the necessary security restrictions, all in one command.
+    This step will securely copy the public key to the Target and then run a remote script to configure it with the necessary security restrictions.
     ```bash
     echo "--- Authorizing the new SSH key on the Diretta Target ---"
 
     # Step A: Copy the public key to the Target's home directory
     echo "--> Copying public key to the Target..."
-    scp ~/.ssh/purist_app_key.pub diretta-target:
+    scp ~/.ssh/purist_app_key.pub diretta-target:/home/audiolinux/
 
     # Step B: Run a script on the Target to set up the key for the 'purist-app' user
     echo "--> Running setup script on the Target..."
     ssh diretta-target <<'END_OF_REMOTE_SCRIPT'
     set -e
     # Read the public key from the file we just copied
-    PUB_KEY=$(cat purist_app_key.pub)
+    PUB_KEY=$(cat /home/audiolinux/purist_app_key.pub)
 
     # Ensure the .ssh directory exists and has correct permissions
     sudo mkdir -p /home/purist-app/.ssh
@@ -1534,18 +1534,32 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
     sudo chmod 0600 /home/purist-app/.ssh/authorized_keys
 
     # Clean up the copied public key file
-    rm purist_app_key.pub
+    rm /home/audiolinux/purist_app_key.pub
     echo "--> Target setup complete."
     END_OF_REMOTE_SCRIPT
 
     echo "✅ SSH key has been successfully authorized on the Target."
     ```
 
-4.  **Install Dependencies and Avahi:**
-    Install Flask and the Avahi daemon for `.local` name resolution.
+4.  **Manually Test the Remote Commands (Recommended):**
+    Before starting the web app, test each of the remote commands from the **Diretta Host's** terminal to confirm the backend is working.
     ```bash
+    # Test the Status Command (should return a JSON string)
+    ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-get-status'
+
+    # Test Toggling Purist Mode (run this twice to turn it on, then off)
+    ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-toggle-mode'
+
+    # Test Toggling Auto-Start on Boot (run this twice to enable, then disable)
+    ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-toggle-auto'
+    ```
+
+5.  **Install Avahi and Python Dependencies:**
+    This step installs the Avahi daemon and uses a `requirements.txt` file to install Flask into a dedicated virtual environment.
+    ```bash
+    # Install Avahi for .local name resolution
     sudo pacman -Syu --noconfirm
-    sudo pacman -S --noconfirm python-flask avahi
+    sudo pacman -S --noconfirm avahi
 
     # Dynamically find the USB Ethernet interface name (e.g., enp1s0u1u2)
     USB_INTERFACE=$(ip -o link show | awk -F': ' '/enp/{print $2}')
@@ -1561,17 +1575,36 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
 
     # Enable and start the Avahi daemon
     sudo systemctl enable --now avahi-daemon.service
-    ```
 
-5.  **Install the Flask App:**
-    Create a directory for the app and download the Python script directly from GitHub.
-    ```bash
+    # Create the application directory and the requirements file
     mkdir -p ~/purist-mode-webui
-    curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py -o ~/purist-mode-webui/app.py
+    echo "Flask" > ~/purist-mode-webui/requirements.txt
+
+    # Create a virtual environment and install dependencies
+    echo "--- Setting up Python environment for the Web UI ---"
+    pyenv virtualenv purist-webui
+    pyenv activate purist-webui
+    pip install -r ~/purist-mode-webui/requirements.txt
+    pyenv deactivate
     ```
 
-6.  **Create the `systemd` Service:**
-    This service will run the web app automatically on boot. It includes special directives to allow the unprivileged user to bind to the privileged port 80.
+6.  **Install the Flask App:**
+    Download the Python script directly from GitHub into the application directory.
+    ```bash
+    curl -L [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py) -o ~/purist-mode-webui/app.py
+    ```
+
+7.  **Test the Flask App Interactively:**
+    Now, run the app from the command line to ensure it starts correctly.
+    ```bash
+    cd ~/purist-mode-webui
+    pyenv activate purist-webui
+    python app.py
+    ```
+    You should see output indicating the Flask server has started on port **8080**. From another device, access `http://diretta-host.local:8080`. If it works, return to the SSH terminal and press `Ctrl+C` to stop the server.
+
+8.  **Create the `systemd` Service:**
+    This service will run the web app automatically on boot, using the correct Python executable from our `pyenv` virtual environment.
     ```bash
     cat <<EOT | sudo tee /etc/systemd/system/purist-webui.service
     [Unit]
@@ -1583,14 +1616,12 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
     User=${LOGNAME}
     Group=${LOGNAME}
     WorkingDirectory=/home/${LOGNAME}/purist-mode-webui
-    ExecStart=/usr/bin/python app.py
+    ExecStart=/home/${LOGNAME}/.pyenv/versions/purist-webui/bin/python app.py
     Restart=on-failure
     RestartSec=5
 
-    # --- Systemd Magic to allow binding to port 80 ---
-    # 1. Add the capability to the bounding set
+    # Grant the capability to bind to a privileged port
     CapabilityBoundingSet=CAP_NET_BIND_SERVICE
-    # 2. Grant the capability to the process
     AmbientCapabilities=CAP_NET_BIND_SERVICE
 
     [Install]
@@ -1598,9 +1629,7 @@ Now, on the **Diretta Host**, we will generate the SSH key, install the web appl
     EOT
     ```
 
-    After you update the guide and the user runs these steps, the `purist-webui` service will start as the `audiolinux` user, but `systemd` will grant the Python process the specific, temporary ability to bind to port 80. It's secure, clean, and exactly the kind of trick `systemd` was designed for.
-
-7.  **Enable and Start the Web App:**
+9.  **Enable and Start the Web App:**
     ```bash
     sudo systemctl daemon-reload
     sudo systemctl enable --now purist-webui.service
