@@ -763,15 +763,15 @@ Your dedicated Diretta link is now fully configured for pristine, isolated audio
 
 ---
 
-### 10. Appendix 1: Argon ONE Fan Control
+## 10. Appendix 1: Argon ONE Fan Control
 If you decided to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
 
 If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on both computers.
 
-#### Step 1: Skip the `argon1.sh` script in the manual
+### Step 1: Skip the `argon1.sh` script in the manual
 The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work, so skip this step and follow the steps below instead.
 
-#### Step 2: Configure your system:
+### Step 2: Configure your system:
 These commands will enable the I2C interface and add the specific `dtoverlay`
 for the Argon ONE case. The script first attempts to uncomment the `i2c_arm`
 parameter if it's commented out and then adds the `argonone` overlay if it's
@@ -796,19 +796,19 @@ else
 fi
 ```
 
-#### Step 3: Configure `udev` permissions
+### Step 3: Configure `udev` permissions
 ```bash
 cat <<'EOT' | sudo tee /etc/udev/rules.d/99-i2c.rules
 KERNEL=="i2c-[0-9]*", MODE="0666"
 EOT
 ```
 
-#### Step 4: Install the Argon One Package
+### Step 4: Install the Argon One Package
 ```bash
 yay -S argonone-c-git
 ```
 
-#### Step 5: Switch Argon ONE case from hardware to software control
+### Step 5: Switch Argon ONE case from hardware to software control
 ```bash
 sudo pacman -S --noconfirm --needed i2c-tools
 # Create a systemd override file to switch the case to software mode on boot
@@ -819,7 +819,7 @@ printf '%s\n' \
   | sudo tee /etc/systemd/system/argononed.service.d/software-mode.conf > /dev/null
 ```
 
-#### Step 6: Enable the Service
+### Step 6: Enable the Service
 ```bash
 # Reload the systemd manager to read the new configuration
 sudo systemctl daemon-reload
@@ -828,7 +828,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable argononed.service
 ```
 
-#### Step 7: Reboot
+### Step 7: Reboot
 Finally, reboot your Raspberry Pi for all changes to take effect (Target first, then Host):
 ```bash
 sudo sync && sudo reboot
@@ -836,13 +836,13 @@ sudo sync && sudo reboot
 
 Now, the fan will be controlled by the daemon, and the power button will have full functionality.
 
-#### Step 8: Verify the service
+### Step 8: Verify the service
 ```bash
 systemctl status argononed.service
 journalctl -u argononed.service -b
 ```
 
-#### Step 9: Review Fan Mode and Settings:
+### Step 9: Review Fan Mode and Settings:
 To see the current configuration values, run the following command:
 ```bash
 sudo argonone-cli --decode
@@ -876,7 +876,7 @@ Now, feel free to adjust the values as needed, following the steps above.
 
 ---
 
-### 11. Appendix 2: Optional IR Remote Control
+## 11. Appendix 2: Optional IR Remote Control
 
 This guide provides instructions for installing and configuring an IR remote to control Roon. The setup is divided into two parts.
 
@@ -887,11 +887,11 @@ This guide provides instructions for installing and configuring an IR remote to 
 
 ---
 
-#### **Part 1: IR Receiver Hardware Setup**
+### **Part 1: IR Receiver Hardware Setup**
 
 *Follow the appendix for the hardware you are using.*
 
-##### **Option 1: Flirc USB IR Receiver Setup**
+#### **Option 1: Flirc USB IR Receiver Setup**
 
 1.  **Purchase and Program the Flirc Device:**
     You'll need the Flirc USB IR Receiver, which can be purchased from their website: [https://flirc.tv/products/flirc-usb-receiver](https://flirc.tv/products/flirc-usb-receiver)
@@ -915,7 +915,7 @@ This guide provides instructions for installing and configuring an IR remote to 
 
 ---
 
-##### **Option 2: Argon One IR Remote Setup**
+#### **Option 2: Argon One IR Remote Setup**
 
 1.  **Enable the IR Receiver Hardware:**
     You must enable the hardware overlay for the Argon One case's IR receiver.
@@ -1013,11 +1013,11 @@ This guide provides instructions for installing and configuring an IR remote to 
 
 ---
 
-#### **Part 2: Control Script Software Setup**
+### **Part 2: Control Script Software Setup**
 
 *After setting up your hardware in Part 1, follow these steps to install and configure the Python control script.*
 
-##### **Step 1: Add `audiolinux` to the `input` group**
+#### **Step 1: Add `audiolinux` to the `input` group**
 This is needed so that the `audiolinux` account has access to events from the remote control receiver.
 ```bash
 sudo usermod --append --groups input audiolinux
@@ -1036,7 +1036,7 @@ echo "audiolinux realtime video input audio wheel"
 
 ---
 
-##### **Step 2: Install Python via pyenv**
+#### **Step 2: Install Python via pyenv**
 
 Install `pyenv` and the latest stable version of Python.
 
@@ -1086,7 +1086,7 @@ pyenv global $PYVER
 
 ---
 
-#### **Step 3: Prepare and Patch `roon-ir-remote` Software**
+### **Step 3: Prepare and Patch `roon-ir-remote` Software**
 
 Clone the script repository and fetch a patch to correctly handle keycodes by name instead of by number.
 
@@ -1120,7 +1120,7 @@ cd
 
 --- 
 
-#### **Step 4: Create the Roon Environment Config File**
+### **Step 4: Create the Roon Environment Config File**
 
 Configure the script with your Roon details. **Note:** The `event_mapping` codes must match the key names you defined in your hardware setup (`KEY_ENTER`, `KEY_VOLUMEUP`, etc.).
 
@@ -1165,7 +1165,7 @@ EOT
 
 ---
 
-#### **Step 5: Prepare and Test `roon-ir-remote`**
+### **Step 5: Prepare and Test `roon-ir-remote`**
 
 Install the script's dependencies into a virtual environment and run it for the first time.
 
@@ -1191,7 +1191,7 @@ With music playing in your new Diretta Roon zone, point your IR remote control d
 
 ---
 
-#### **Step 6: Create a `systemd` Service**
+### **Step 6: Create a `systemd` Service**
 
 Create a service to run the script automatically in the background.
 
@@ -1224,7 +1224,7 @@ sudo systemctl status roon-ir-remote.service
 
 ---
 
-#### **Step 7: Install `set-roon-zone` script**
+### **Step 7: Install `set-roon-zone` script**
 Good to have a script that you can use to update the Roon zone name later if needed. Here's how to install it:
 ```bash
 curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone
@@ -1238,13 +1238,13 @@ set-roon-zone
 ```
 Follow the prompts to enter the new name for your Roon Zone. You may have to enter the root password to make the changes take effect.
 
-#### **Step 8: Profit! 📈**
+### **Step 8: Profit! 📈**
 
 Your IR remote should now control Roon. Enjoy!
 
 ---
 
-### 12. Appendix 3: Optional Purist Mode
+## 12. Appendix 3: Optional Purist Mode
 There is minimal network and background activity on the Diretta Target computer that is not related to music playback using the Diretta protocol. However, some users prefer to take extra steps to reduce the possibility of such activity. We are already on the extreme edge of audio performance, so why not?
 
 ---
@@ -1255,7 +1255,7 @@ There is minimal network and background activity on the Diretta Target computer 
 > Do NOT install or run this script on the Diretta Host. Doing so will drop the Host's connection to your main network, making it unreachable and unable to communicate with your Roon Core or streaming services. This would render the entire system inoperable until you can gain console access (with a physical keyboard and monitor) to revert the changes.
 ---
 
-#### Step 1: Install the `purist-mode` script **(only on the Diretta Target computer)**
+### Step 1: Install the `purist-mode` script **(only on the Diretta Target computer)**
 ```bash
 curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode
 sudo install -m 0755 purist-mode /usr/local/bin
@@ -1290,7 +1290,7 @@ Listen for a while to see if you prefer the sound (or peace of mind).
 
 ---
 
-#### Step 2: Enable Purist Mode by Default
+### Step 2: Enable Purist Mode by Default
 
 If you've decided that you prefer the sound with Purist Mode enabled, make it the default after each reboot.
 
@@ -1339,7 +1339,7 @@ sudo systemctl enable purist-mode-auto.service
 
 ---
 
-#### Step 3: Install a wrapper around the `menu` command
+### Step 3: Install a wrapper around the `menu` command
 Many functions in the Audiolinux require Internet access. To keep things working as expected, add a wrapper around the `menu` command that disables Purist mode while you are using the menu, enabling it again when you exit to the terminal.
 
 ```bash
@@ -1392,7 +1392,7 @@ source ~/.bashrc
 
 ---
 
-#### Understanding the Purist Mode States
+### Understanding the Purist Mode States
 
 The Purist Mode system is designed to be flexible, allowing you to control it manually or have it activate automatically after the system boots. It operates in two primary states:
 
@@ -1404,7 +1404,7 @@ The Purist Mode system is designed to be flexible, allowing you to control it ma
 
 These states are managed in two ways: **automatically** on boot and **manually** via the command line.
 
-##### Automatic Control (On Boot)
+#### Automatic Control (On Boot)
 
 The boot-up process is designed to be safe and predictable, with an optional automated switch to Purist Mode.
 
@@ -1412,7 +1412,7 @@ The boot-up process is designed to be safe and predictable, with an optional aut
 
 2.  **Optional Auto-Activation:** If you have enabled the automatic feature, the system will wait 60 seconds after booting and then automatically switch to **Purist Mode**. This provides a "set it and forget it" experience for users who always prefer listening in the optimized state.
 
-##### Manual Control (Interactive Use)
+#### Manual Control (Interactive Use)
 
 You have full interactive control over the system at any time.
 
@@ -1440,7 +1440,7 @@ You have full interactive control over the system at any time.
 
 ---
 
-### 13. Appendix 4: Optional Purist Mode Web UI
+## 13. Appendix 4: Optional Purist Mode Web UI
 
 This appendix provides instructions for installing a simple web-based application on the **Diretta Host**. This application provides an easy-to-use interface, accessible from a phone or tablet, to control Purist Mode on the **Diretta Target** without needing to use the command line.
 
@@ -1451,7 +1451,7 @@ The setup is divided into two parts: first, we configure the **Diretta Target** 
 
 ---
 
-#### **Part 1: Diretta Target Configuration**
+### **Part 1: Diretta Target Configuration**
 
 On the **Diretta Target**, we will create a new user with very limited permissions. This user will only be allowed to run the specific commands needed to manage Purist Mode.
 
@@ -1547,7 +1547,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
 
 ---
 
-#### **Part 2: Diretta Host Configuration**
+### **Part 2: Diretta Host Configuration**
 
 Now, on the **Diretta Host**, we will perform all the steps to install and configure the web application. You should be logged in as the `audiolinux` user for this entire section.
 
@@ -1755,7 +1755,7 @@ Type CTRL-C once you're satisfied that things are working as expected.
 
 ---
 
-#### **Access the Web UI**
+### **Access the Web UI**
 
 You're all set! Open a web browser on your phone, tablet, or computer connected to the same network as the Diretta Host. Navigate to:
 
