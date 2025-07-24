@@ -1458,18 +1458,30 @@ On the **Diretta Target**, we will create a new user with very limited permissio
 3.  **Create Secure Command Scripts:**
     We will create three small, dedicated scripts that are the *only* actions the web app is allowed to perform. This is a critical security step.
     ```bash
-    # Script to get the current status
+    # Script to get the current status, including license state
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
     #!/bin/bash
     IS_ACTIVE="false"
     IS_AUTO_ENABLED="false"
+    LICENSE_LIMITED="false"
+
+    # Check for Purist Mode
     if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
       IS_ACTIVE="true"
     fi
+
+    # Check if auto-start is enabled
     if systemctl is-enabled --quiet purist-mode-auto.service; then
       IS_AUTO_ENABLED="true"
     fi
-    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED}"
+
+    # Check the Diretta service logs for the "Limited" keyword, which indicates a trial license
+    if journalctl -u diretta_alsa_target.service -n 20 --no-pager | grep -q "Limited"; then
+      LICENSE_LIMITED="true"
+    fi
+
+    # Output all status flags as a single JSON object
+    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED}"
     EOT
 
     # Script to toggle Purist Mode
@@ -1494,6 +1506,17 @@ On the **Diretta Target**, we will create a new user with very limited permissio
 
     # Make the new scripts executable
     sudo chmod +x /usr/local/bin/pm-*
+
+    # Create the script to restart the Diretta service
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-restart-target
+    #!/bin/bash
+    # Restarts the Diretta ALSA Target service.
+    # This script is intended to be called via sudo by the purist-app user.
+    /usr/bin/systemctl restart diretta_alsa_target.service
+    EOT
+
+    # Make the new script executable
+    sudo chmod +x /usr/local/bin/pm-restart-target
     ```
 
 4.  **Grant Sudo Permissions:**
@@ -1507,6 +1530,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-status
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-mode
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
+    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-restart-target
     EOT
     ```
 

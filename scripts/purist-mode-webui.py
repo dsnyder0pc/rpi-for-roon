@@ -9,6 +9,7 @@ import json
 import logging
 import sys
 from flask import Flask, render_template_string, jsonify
+from datetime import datetime
 
 # --- Configuration ---
 REMOTE_USER = "purist-app"
@@ -49,11 +50,11 @@ HTML_TEMPLATE = """
     <div class="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
         <div class="text-center mb-8">
             <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">AnCaolas Link</h1>
-            <p class="text-lg text-gray-400">Purist Mode Control</p>
+            <p class="text-lg text-gray-400">System Control</p>
         </div>
 
         <!-- The initial container for the status panel -->
-        <div hx-get="/status" hx-trigger="load, every 30s" hx-swap="innerHTML">
+        <div id="control-panel" hx-get="/status" hx-trigger="load, every 30s" hx-swap="innerHTML">
             <div class="p-8 text-center text-gray-400">
                 <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
                 <p class="mt-2">Connecting to Diretta Target...</p>
@@ -70,7 +71,8 @@ HTML_TEMPLATE = """
 
 # This is the partial template that htmx will swap into the page.
 STATUS_PANEL_TEMPLATE = """
-<div id="status-panel" class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-6">
+<!-- Purist Mode Control Panel -->
+<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-6">
     <!-- Purist Mode Status & Toggle -->
     <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
         <div>
@@ -81,7 +83,7 @@ STATUS_PANEL_TEMPLATE = """
                 <p class="text-sm text-yellow-400">DISABLED - System in standard mode.</p>
             {% endif %}
         </div>
-        <button hx-post="/toggle-mode" hx-target="#status-panel" hx-swap="outerHTML"
+        <button hx-post="/toggle-mode" hx-target="#control-panel" hx-swap="outerHTML"
                 class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
                        {% if status.purist_mode_active %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
             <span class="btn-text">{% if status.purist_mode_active %}Disable{% else %}Enable{% endif %}</span>
@@ -99,7 +101,7 @@ STATUS_PANEL_TEMPLATE = """
                 <p class="text-sm text-yellow-400">DISABLED - System will remain in standard mode.</p>
             {% endif %}
         </div>
-        <button hx-post="/toggle-auto" hx-target="#status-panel" hx-swap="outerHTML"
+        <button hx-post="/toggle-auto" hx-target="#control-panel" hx-swap="outerHTML"
                 class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
                        {% if status.auto_start_enabled %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
             <span class="btn-text">{% if status.auto_start_enabled %}Disable{% else %}Enable{% endif %}</span>
@@ -107,6 +109,26 @@ STATUS_PANEL_TEMPLATE = """
         </button>
     </div>
 </div>
+
+<!-- Diretta Restart Control Panel (Conditional) -->
+{% if status.license_needs_activation %}
+<div class="mt-8 bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="font-semibold text-lg text-white">License Activation</h2>
+            <p class="text-sm text-yellow-400">Trial license detected. Restart after activation.</p>
+        </div>
+        <button hx-post="/restart-target" hx-target="#restart-message" hx-swap="innerHTML"
+                class="relative inline-flex items-center justify-center w-40 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-blue-600 hover:bg-blue-500 text-white">
+            <span class="btn-text">Restart Diretta</span>
+            <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
+        </button>
+    </div>
+    <div id="restart-message" class="mt-4 text-center text-green-400 h-5">
+        <!-- Status messages will appear here -->
+    </div>
+</div>
+{% endif %}
 """
 
 # --- Backend Logic ---
@@ -173,6 +195,17 @@ def toggle_auto():
     """Toggles the auto-start service on/off."""
     run_remote_command("/usr/local/bin/pm-toggle-auto")
     return status()
+
+@app.route("/restart-target", methods=["POST"])
+def restart_target():
+    """Restarts the Diretta service on the Target."""
+    run_remote_command("/usr/local/bin/pm-restart-target")
+    now = datetime.now().strftime("%H:%M:%S")
+    # Return a confirmation message that will be cleared after 5 seconds using an htmx out-of-band swap.
+    return f"""
+    <span>Restart command sent at {now}. Page will refresh shortly.</span>
+    <div hx-trigger="load delay:3s" hx-get="/status" hx-target="#control-panel"></div>
+    """
 
 if __name__ == "__main__":
     # Check if we are running in an interactive terminal or as a service
