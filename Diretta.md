@@ -929,24 +929,46 @@ Install `pyenv` and the latest stable version of Python.
 sudo pacman -Syu --noconfirm
 sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi openssl ncurses readline util-linux db gdbm sqlite vim jq
 
-# Install pyenv
-curl -fsSL https://pyenv.run | bash
+# Install pyenv only if it's not already installed
+if [ ! -d "$HOME/.pyenv" ]; then
+    echo "--- Installing pyenv ---"
+    curl -fsSL https://pyenv.run | bash
+else
+    echo "--- pyenv is already installed. Skipping installation. ---"
+fi
 
 # Configure shell for pyenv
-cat <<'EOT'>> ~/.bashrc
+if grep -q 'pyenv init' ~/.bashrc; then
+  :
+else
+    cat <<'EOT'>> ~/.bashrc
 
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init - bash)"
 eval "$(pyenv virtualenv-init -)"
 EOT
+fi
 
+# Source the file to make pyenv available in the current shell
 . ~/.bashrc
 
-# Install and set latest Python version
-PYVER=$(pyenv install --list | grep '  3[0-9.]*$' | tail -n 1)
-pyenv install $PYVER
+# Install and set the latest Python version only if it's not already installed
+PYVER=$(pyenv install --list | grep -E '^\s{2}3\.[0-9]+\.[0-9]+$' | tail -n 1 | tr -d ' ')
+if ! pyenv versions --bare | grep -q "^${PYVER}$"; then
+    echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
+    pyenv install $PYVER
+else
+    echo "--- Python ${PYVER} is already installed. Skipping installation. ---"
+fi
+
+# Set the global Python version
 pyenv global $PYVER
+```
+
+**Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
+
+---
 ```
 
 **Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
@@ -1038,7 +1060,13 @@ Install the script's dependencies into a virtual environment and run it for the 
 
 ```bash
 cd ~/roon-ir-remote
-pyenv virtualenv roon-ir-remote
+# Create the virtual environment only if it doesn't already exist
+if ! pyenv versions --bare | grep -q "^roon-ir-remote$"; then
+    echo "--- Creating 'roon-ir-remote' virtual environment ---"
+    pyenv virtualenv roon-ir-remote
+else
+    echo "--- 'roon-ir-remote' virtual environment already exists ---"
+fi
 pyenv activate roon-ir-remote
 pip3 install --upgrade pip
 pip3 install -r requirements.txt
@@ -1513,14 +1541,14 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
     # Step A: Copy the public key to the Target's home directory
     echo "--> Copying public key to the Target..."
-    scp ~/.ssh/purist_app_key.pub diretta-target:/home/audiolinux/
+    scp ~/.ssh/purist_app_key.pub diretta-target:
 
     # Step B: Run a script on the Target to set up the key for the 'purist-app' user
     echo "--> Running setup script on the Target..."
-    ssh diretta-target <<'END_OF_REMOTE_SCRIPT'
+    ssh diretta-target <<'EOT'
     set -e
     # Read the public key from the file we just copied
-    PUB_KEY=$(cat /home/audiolinux/purist_app_key.pub)
+    PUB_KEY=$(cat purist_app_key.pub)
 
     # Ensure the .ssh directory exists and has correct permissions
     sudo mkdir -p /home/purist-app/.ssh
@@ -1534,9 +1562,9 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     sudo chmod 0600 /home/purist-app/.ssh/authorized_keys
 
     # Clean up the copied public key file
-    rm /home/audiolinux/purist_app_key.pub
+    rm purist_app_key.pub
     echo "--> Target setup complete."
-    END_OF_REMOTE_SCRIPT
+    EOT
 
     echo "✅ SSH key has been successfully authorized on the Target."
     ```
@@ -1554,7 +1582,57 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-toggle-auto'
     ```
 
-5.  **Install Avahi and Python Dependencies:**
+5.  **Install Python via pyenv** (if you did not already for the IR Remote setup)
+
+    Install `pyenv` and the latest stable version of Python.
+
+    ```bash
+		# Install build dependencies
+		sudo pacman -Syu --noconfirm
+		sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi openssl ncurses readline util-linux db gdbm sqlite vim jq
+
+		# Install pyenv only if it's not already installed
+		if [ ! -d "$HOME/.pyenv" ]; then
+				echo "--- Installing pyenv ---"
+				curl -fsSL https://pyenv.run | bash
+		else
+				echo "--- pyenv is already installed. Skipping installation. ---"
+		fi
+
+		# Configure shell for pyenv
+		if grep -q 'pyenv init' ~/.bashrc; then
+			:
+		else
+				cat <<'EOT'>> ~/.bashrc
+
+		export PYENV_ROOT="$HOME/.pyenv"
+		[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+		eval "$(pyenv init - bash)"
+		eval "$(pyenv virtualenv-init -)"
+		EOT
+		fi
+
+		# Source the file to make pyenv available in the current shell
+		. ~/.bashrc
+
+		# Install and set the latest Python version only if it's not already installed
+		PYVER=$(pyenv install --list | grep -E '^\s{2}3\.[0-9]+\.[0-9]+$' | tail -n 1 | tr -d ' ')
+		if ! pyenv versions --bare | grep -q "^${PYVER}$"; then
+				echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
+				pyenv install $PYVER
+		else
+				echo "--- Python ${PYVER} is already installed. Skipping installation. ---"
+		fi
+
+		# Set the global Python version
+		pyenv global $PYVER
+    ```
+
+    **Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
+
+---
+
+6.  **Install Avahi and Python Dependencies:**
     This step installs the Avahi daemon and uses a `requirements.txt` file to install Flask into a dedicated virtual environment.
     ```bash
     # Install Avahi for .local name resolution
@@ -1580,21 +1658,27 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     mkdir -p ~/purist-mode-webui
     echo "Flask" > ~/purist-mode-webui/requirements.txt
 
-    # Create a virtual environment and install dependencies
-    echo "--- Setting up Python environment for the Web UI ---"
-    pyenv virtualenv purist-webui
+		# Create a virtual environment and install dependencies
+		echo "--- Setting up Python environment for the Web UI ---"
+		# Create the virtual environment only if it doesn't already exist
+		if ! pyenv versions --bare | grep -q "^purist-webui$"; then
+				echo "--- Creating 'purist-webui' virtual environment ---"
+				pyenv virtualenv purist-webui
+		else
+				echo "--- 'purist-webui' virtual environment already exists ---"
+		fi
     pyenv activate purist-webui
     pip install -r ~/purist-mode-webui/requirements.txt
     pyenv deactivate
     ```
 
-6.  **Install the Flask App:**
+7.  **Install the Flask App:**
     Download the Python script directly from GitHub into the application directory.
     ```bash
-    curl -L [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py) -o ~/purist-mode-webui/app.py
+    curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py -o ~/purist-mode-webui/app.py
     ```
 
-7.  **Test the Flask App Interactively:**
+8.  **Test the Flask App Interactively:**
     Now, run the app from the command line to ensure it starts correctly.
     ```bash
     cd ~/purist-mode-webui
@@ -1603,7 +1687,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ```
     You should see output indicating the Flask server has started on port **8080**. From another device, access `http://diretta-host.local:8080`. If it works, return to the SSH terminal and press `Ctrl+C` to stop the server.
 
-8.  **Create the `systemd` Service:**
+9.  **Create the `systemd` Service:**
     This service will run the web app automatically on boot, using the correct Python executable from our `pyenv` virtual environment.
     ```bash
     cat <<EOT | sudo tee /etc/systemd/system/purist-webui.service
@@ -1629,11 +1713,18 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     EOT
     ```
 
-9.  **Enable and Start the Web App:**
+10. **Enable and Start the Web App:**
     ```bash
     sudo systemctl daemon-reload
     sudo systemctl enable --now purist-webui.service
     ```
+
+11. **Watch the logs for a bit:**
+    ```bash
+    sudo journalctl -b -u purist-webui.service -f
+    ```
+
+Type CTRL-C once you're satisfied that things are working as expected.
 
 ---
 
