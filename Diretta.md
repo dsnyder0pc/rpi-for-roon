@@ -1439,37 +1439,37 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     ```bash
     # Script to get the current status
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
-#!/bin/bash
-IS_ACTIVE="false"
-IS_AUTO_ENABLED="false"
-if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
-    IS_ACTIVE="true"
-fi
-if systemctl is-enabled --quiet purist-mode-auto.service; then
-    IS_AUTO_ENABLED="true"
-fi
-echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED}"
-EOT
+    #!/bin/bash
+    IS_ACTIVE="false"
+    IS_AUTO_ENABLED="false"
+    if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+        IS_ACTIVE="true"
+    fi
+    if systemctl is-enabled --quiet purist-mode-auto.service; then
+        IS_AUTO_ENABLED="true"
+    fi
+    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED}"
+    EOT
 
     # Script to toggle Purist Mode
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-mode
-#!/bin/bash
-if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
-    /usr/local/bin/purist-mode --revert
-else
-    /usr/local/bin/purist-mode
-fi
-EOT
+    #!/bin/bash
+    if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+        /usr/local/bin/purist-mode --revert
+    else
+        /usr/local/bin/purist-mode
+    fi
+    EOT
 
     # Script to toggle the auto-start service
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-auto
-#!/bin/bash
-if systemctl is-enabled --quiet purist-mode-auto.service; then
-    systemctl disable --now purist-mode-auto.service
-else
-    systemctl enable purist-mode-auto.service
-fi
-EOT
+    #!/bin/bash
+    if systemctl is-enabled --quiet purist-mode-auto.service; then
+        systemctl disable --now purist-mode-auto.service
+    else
+        systemctl enable purist-mode-auto.service
+    fi
+    EOT
 
     # Make the new scripts executable
     sudo chmod +x /usr/local/bin/pm-*
@@ -1479,14 +1479,14 @@ EOT
     This step allows the `purist-app` user to run our three new scripts with root privileges and without needing an interactive terminal.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/purist-app
-# Tell sudo not to require a TTY for the purist-app user
-Defaults:purist-app !requiretty
+    # Tell sudo not to require a TTY for the purist-app user
+    Defaults:purist-app !requiretty
 
-# Allow the purist-app user to run the specific control scripts without a password
-purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-status
-purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-mode
-purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
-EOT
+    # Allow the purist-app user to run the specific control scripts without a password
+    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-status
+    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-mode
+    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
+    EOT
     ```
 
 ---
