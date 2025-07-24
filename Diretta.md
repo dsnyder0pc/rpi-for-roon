@@ -1585,45 +1585,45 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 5.  **Install Python via pyenv** (if you did not already for the IR Remote setup)
     Install `pyenv` and the latest stable version of Python.
     ```bash
-		# Install build dependencies
-		sudo pacman -Syu --noconfirm
-		sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi openssl ncurses readline util-linux db gdbm sqlite vim jq
+    # Install build dependencies
+    sudo pacman -Syu --noconfirm
+    sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi openssl ncurses readline util-linux db gdbm sqlite vim jq
 
-		# Install pyenv only if it's not already installed
-		if [ ! -d "$HOME/.pyenv" ]; then
-				echo "--- Installing pyenv ---"
-				curl -fsSL https://pyenv.run | bash
-		else
-				echo "--- pyenv is already installed. Skipping installation. ---"
-		fi
+    # Install pyenv only if it's not already installed
+    if [ ! -d "$HOME/.pyenv" ]; then
+        echo "--- Installing pyenv ---"
+        curl -fsSL https://pyenv.run | bash
+    else
+        echo "--- pyenv is already installed. Skipping installation. ---"
+    fi
 
-		# Configure shell for pyenv
-		if grep -q 'pyenv init' ~/.bashrc; then
-			:
-		else
-				cat <<'EOT'>> ~/.bashrc
+    # Configure shell for pyenv
+    if grep -q 'pyenv init' ~/.bashrc; then
+        :
+    else
+        cat <<'EOT'>> ~/.bashrc
 
-		export PYENV_ROOT="$HOME/.pyenv"
-		[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-		eval "$(pyenv init - bash)"
-		eval "$(pyenv virtualenv-init -)"
-		EOT
-		fi
+    export PYENV_ROOT="$HOME/.pyenv"
+    [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init - bash)"
+    eval "$(pyenv virtualenv-init -)"
+    EOT
+    fi
 
-		# Source the file to make pyenv available in the current shell
-		. ~/.bashrc
+    # Source the file to make pyenv available in the current shell
+    . ~/.bashrc
 
-		# Install and set the latest Python version only if it's not already installed
-		PYVER=$(pyenv install --list | grep -E '^\s{2}3\.[0-9]+\.[0-9]+$' | tail -n 1 | tr -d ' ')
-		if ! pyenv versions --bare | grep -q "^${PYVER}$"; then
-				echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
-				pyenv install $PYVER
-		else
-				echo "--- Python ${PYVER} is already installed. Skipping installation. ---"
-		fi
+    # Install and set the latest Python version only if it's not already installed
+    PYVER=$(pyenv install --list | grep -E '^\s{2}3\.[0-9]+\.[0-9]+$' | tail -n 1 | tr -d ' ')
+    if ! pyenv versions --bare | grep -q "^${PYVER}$"; then
+        echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
+        pyenv install $PYVER
+    else
+        echo "--- Python ${PYVER} is already installed. Skipping installation. ---"
+    fi
 
-		# Set the global Python version
-		pyenv global $PYVER
+    # Set the global Python version
+    pyenv global $PYVER
     ```
 
     **Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
@@ -1656,15 +1656,15 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     mkdir -p ~/purist-mode-webui
     echo "Flask" > ~/purist-mode-webui/requirements.txt
 
-		# Create a virtual environment and install dependencies
-		echo "--- Setting up Python environment for the Web UI ---"
-		# Create the virtual environment only if it doesn't already exist
-		if ! pyenv versions --bare | grep -q "^purist-webui$"; then
-				echo "--- Creating 'purist-webui' virtual environment ---"
-				pyenv virtualenv purist-webui
-		else
-				echo "--- 'purist-webui' virtual environment already exists ---"
-		fi
+    # Create a virtual environment and install dependencies
+    echo "--- Setting up Python environment for the Web UI ---"
+    # Create the virtual environment only if it doesn't already exist
+    if ! pyenv versions --bare | grep -q "^purist-webui$"; then
+        echo "--- Creating 'purist-webui' virtual environment ---"
+        pyenv virtualenv purist-webui
+    else
+        echo "--- 'purist-webui' virtual environment already exists ---"
+    fi
     pyenv activate purist-webui
     pip install -r ~/purist-mode-webui/requirements.txt
     pyenv deactivate
