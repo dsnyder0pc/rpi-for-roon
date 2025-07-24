@@ -875,8 +875,7 @@ Now, feel free to adjust the values as needed, following the steps above.
 
 ---
 
-11. [Appendix 2: Optional IR Remote Control](#11-appendix-2-optional-ir-remote-control)
-### 10. Appendix 1: Optional IR Remote Control Setup
+### 11. Appendix 2: Optional IR Remote Control
 
 This guide provides instructions for installing and configuring an IR remote to control Roon. The setup is divided into two parts.
 
