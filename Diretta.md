@@ -154,7 +154,7 @@ After flashing, you must configure each Raspberry Pi individually to avoid netwo
 >
 > **You must perform the initial boot and configuration for each device one at a time.**
 
-1.  Insert the microSD card into the **first** Raspberry Pi, connect it to your network, and power it on.
+1.  Insert the microSD card into the **first** Raspberry Pi, connect it to your network, and power it on. **Note:** If you're using the Argon ONE case, you may hear audible noise from the fan. Don't worry. Once you've finished with Diretta setup, there are instructions in [Appendix 1](#10-appendix-1-argon-one-fan-control) for addressing the fan noise.
 2.  Complete **all of Section 3** for this first device.
 3.  Once the first device has rebooted with its new unique configuration, power it down.
 4.  Now, power on the **second** Raspberry Pi and repeat **all of Section 3** for it.
