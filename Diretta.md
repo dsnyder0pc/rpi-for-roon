@@ -190,7 +190,7 @@ echo "New Machine ID: $(cat /etc/machine-id)"
 
 #### 3.2. Set Unique Hostnames
 
-Set a clear hostname for each device to easily identify them.
+Set a clear hostname for each device to easily identify them. **Note:** If this is not your first build using these instructions and you already have a Diretta Host/Target pair on your network, consider selecting a different name for this new Diretta Host, like `diretta-host2`, just for this part. Doing so will make it easier to access the two independently later.
 
 ```bash
 # On the Diretta Host
@@ -427,7 +427,7 @@ EOT
 sudo rm -fv /etc/systemd/network/en.network
 ```
 
-Add an /etc/hosts entry for the Diretta Host:
+Add an /etc/hosts entry for the Diretta Host. **Note:** Even if you selected a different network name for your Diretta Host, it's best for the Diretta Target to know your Host as `diretta-host`.
 ```bash
 HOSTS_FILE="/etc/hosts"
 HOST_IP="172.20.0.1"
@@ -1662,6 +1662,13 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     **Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
 6.  **Install Avahi and Python Dependencies:**
+    **Note:** If you have more than one Diretta Host on your network, please make sure that they have unique names. You can use a command like the following to rename this one befor proceeding:
+
+    ```bash
+    # On the Diretta Host
+    sudo hostnamectl set-hostname diretta-host2
+    ```
+
     This step installs the Avahi daemon and uses a `requirements.txt` file to install Flask into a dedicated virtual environment.
     ```bash
     # Install Avahi for .local name resolution

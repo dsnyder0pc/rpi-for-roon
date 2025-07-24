@@ -9,12 +9,14 @@ import json
 import logging
 import sys
 from flask import Flask, render_template_string, jsonify
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # --- Configuration ---
 REMOTE_USER = "purist-app"
 REMOTE_HOST = "diretta-target"
 SSH_KEY_PATH = os.path.expanduser("~/.ssh/purist_app_key")
+# The number of seconds of inactivity before we assume music is no longer playing.
+PLAYBACK_THRESHOLD_SECONDS = 15
 
 app = Flask(__name__)
 
@@ -53,7 +55,6 @@ HTML_TEMPLATE = """
             <p class="text-lg text-gray-400">System Control</p>
         </div>
 
-        <!-- The initial container for the status panel -->
         <div id="control-panel" hx-get="/status" hx-trigger="load, every 30s" hx-swap="innerHTML">
             <div class="p-8 text-center text-gray-400">
                 <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
@@ -71,9 +72,7 @@ HTML_TEMPLATE = """
 
 # This is the partial template that htmx will swap into the page.
 STATUS_PANEL_TEMPLATE = """
-<!-- Purist Mode Control Panel -->
 <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-6">
-    <!-- Purist Mode Status & Toggle -->
     <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
         <div>
             <h2 class="font-semibold text-lg text-white">Purist Mode</h2>
@@ -91,7 +90,6 @@ STATUS_PANEL_TEMPLATE = """
         </button>
     </div>
 
-    <!-- Auto-Start on Boot Status & Toggle -->
     <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
         <div>
             <h2 class="font-semibold text-lg text-white">Activate on Boot</h2>
@@ -110,7 +108,6 @@ STATUS_PANEL_TEMPLATE = """
     </div>
 </div>
 
-<!-- Diretta Restart Control Panel (Conditional) -->
 {% if status.license_needs_activation %}
 <div class="mt-8 bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
     <div class="flex items-center justify-between">
@@ -125,13 +122,79 @@ STATUS_PANEL_TEMPLATE = """
         </button>
     </div>
     <div id="restart-message" class="mt-4 text-center text-green-400 h-5">
-        <!-- Status messages will appear here -->
-    </div>
+        </div>
 </div>
 {% endif %}
 """
 
+# Template to display when music is playing. It polls to auto-restore the UI.
+MUSIC_PLAYING_TEMPLATE = """
+<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center" hx-get="/status" hx-trigger="every 30s" hx-swap="outerHTML">
+    <div class="flex items-center justify-center mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"></path>
+          <path d="M13 12.434V8a1 1 0 0 0-2 0v5a1 1 0 0 0 .553.894l3 1.5a1 1 0 0 0 .447-1.939L13 12.434z"></path>
+        </svg>
+    </div>
+    <h2 class="text-xl font-bold text-white mb-2">Shhhh... Music in Progress</h2>
+    <p class="text-gray-400">The control panel is paused to ensure an uninterrupted performance.
+    <br>It will automatically reappear after the music has finished.</p>
+</div>
+"""
+
+
 # --- Backend Logic ---
+
+def is_music_playing():
+    """
+    Checks if music is actively playing by inspecting the Diretta service log.
+    Returns True if a recent 'info rcv' entry is found, False otherwise.
+    """
+    try:
+        # Use journalctl to get the last log line containing "info rcv"
+        cmd = [
+            "journalctl",
+            "-u", "diretta_alsa.service",
+            "--no-pager",
+            "-n", "20", # Check the last 20 lines for a recent entry
+            "-g", "info rcv" # Grep for the relevant line
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+
+        if result.returncode != 0 or not result.stdout:
+            # Command failed or returned no lines
+            return False
+
+        # Get the very last log line from the output
+        last_line = result.stdout.strip().split('\n')[-1]
+
+        # Extract timestamp (e.g., "Jul 26 08:49:32")
+        log_time_str = ' '.join(last_line.split()[:3])
+
+        # Parse the timestamp, which lacks a year.
+        log_time = datetime.strptime(log_time_str, "%b %d %H:%M:%S")
+        now = datetime.now()
+
+        # Assume the log entry is from the current year.
+        log_time = log_time.replace(year=now.year)
+
+        # Handle year-end case: if log is Dec and now is Jan, log was last year.
+        if log_time > now:
+            log_time = log_time.replace(year=now.year - 1)
+
+        # Check if the log entry is recent.
+        delta = now - log_time
+        if delta.total_seconds() < PLAYBACK_THRESHOLD_SECONDS:
+            app.logger.info(f"Playback detected. Last log entry was {delta.total_seconds():.2f}s ago.")
+            return True
+
+    except (subprocess.TimeoutExpired, FileNotFoundError, IndexError, ValueError) as e:
+        app.logger.error(f"Error checking playback status: {e}")
+        return False
+
+    app.logger.info("No recent playback detected.")
+    return False
+
 
 def run_remote_command(command):
     """Executes a command on the Diretta Target via SSH."""
@@ -178,11 +241,22 @@ def index():
 
 @app.route("/status")
 def status():
-    """Serves the status panel, intended for HTMX updates."""
+    """
+    Serves the status panel, intended for HTMX updates.
+    First checks for active playback before making remote calls.
+    """
+    if is_music_playing():
+        # If music is playing, show the "shhhh" message and keep polling.
+        return render_template_string(MUSIC_PLAYING_TEMPLATE)
+
+    # If no music, proceed to get status from the Target.
     current_status = get_status()
     if current_status is None:
         return '<div class="p-8 text-center text-red-400">Error: Could not connect to Diretta Target. Please check the connection and try again.</div>'
+
+    # Render the full control panel, which will re-enable polling.
     return render_template_string(STATUS_PANEL_TEMPLATE, status=current_status)
+
 
 @app.route("/toggle-mode", methods=["POST"])
 def toggle_mode():
@@ -201,23 +275,16 @@ def restart_target():
     """Restarts the Diretta service on the Target."""
     run_remote_command("/usr/local/bin/pm-restart-target")
     now = datetime.now().strftime("%H:%M:%S")
-    # Return a confirmation message that will be cleared after 5 seconds using an htmx out-of-band swap.
+    # Return a confirmation message that will trigger a status refresh after a delay.
     return f"""
     <span>Restart command sent at {now}. Page will refresh shortly.</span>
     <div hx-trigger="load delay:3s" hx-get="/status" hx-target="#control-panel"></div>
     """
 
 if __name__ == "__main__":
-    # Check if we are running in an interactive terminal or as a service
     is_interactive = sys.stdout.isatty()
-
-    # Use port 8080 for interactive testing, port 80 for the service
     port = 8080 if is_interactive else 80
-
-    # Enable debug mode only for interactive testing
     debug_mode = is_interactive
 
     app.logger.info(f"Starting Flask server. Interactive: {is_interactive}, Port: {port}, Debug: {debug_mode}")
-
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
-
