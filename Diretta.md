@@ -334,13 +334,13 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     ```
 
     **Important:** Remove the old en.network file if present:
-    ```
+    ```bash
     # Remove the old generic network file to prevent conflicts.
     sudo rm -fv /etc/systemd/network/en.network
     ```
 
     Add an /etc/hosts entry for the Diretta Target:
-    ```
+    ```bash
     HOSTS_FILE="/etc/hosts"
     TARGET_IP="172.20.0.2"
     TARGET_HOST="diretta-target"
@@ -467,14 +467,14 @@ ping -c 3 172.20.0.2
 ```
 
 Also, you should be able to login to the Target from the Host:
-```
+```bash
 echo ""
 echo "\$ ssh target"
 ssh -o StrictHostKeyChecking=accept-new target
 ```
 
 From the target, let's try ping a host on the Internet to verify that the connection is working:
-```
+```bash
 echo ""
 echo "\$ ping -c 3 one.one.one.one"
 ping -c 3 one.one.one.one
@@ -665,7 +665,7 @@ journalctl -b -u boot-repair.service
 3.  Run `menu`.
 4.  Select **AUDIO extra menu**.
 5.  Select **DIRETTA target installation**. You will see the following menu:
-    ```
+    ```text
     What do you want to do?
 
     1) Install/update
@@ -680,7 +680,7 @@ journalctl -b -u boot-repair.service
     * Choose **1) Install/update** to install the software.
     * Choose **2) Enable/Disable Diretta Target** and enable it.
     * Choose **3) Configure Audio card**. The system will list your available audio devices. Enter the card number corresponding to your USB DAC.
-        ```
+        ```text
         ?3
         This option will set DIRETTA target to use a specific card
         Your available cards are:
@@ -705,7 +705,7 @@ journalctl -b -u boot-repair.service
 2.  Run `menu`.
 3.  Select **AUDIO extra menu**.
 4.  Select **DIRETTA host installation/configuration**. You will see the following menu:
-    ```
+    ```text
     What do you want to do?
 
     1) Install/update
@@ -720,7 +720,7 @@ journalctl -b -u boot-repair.service
     * Choose **1) Install/update** to install the software. *(Note: you may see `error: package 'lld' was not found. Don't worry, that will be corrected automatically by the installation)*
     * Choose **2) Enable/Disable Diretta daemon** and enable it.
     * Choose **3) Set Ethernet interface**. It is critical to select `end0`, the interface for the point-to-point link.
-        ```
+        ```text
         ?3
         Your available Ethernet interfaces are: end0  enp1s0u1u2
         Please type the name of your preferred interface:
@@ -931,17 +931,17 @@ sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi op
 
 # Install pyenv only if it's not already installed
 if [ ! -d "$HOME/.pyenv" ]; then
-    echo "--- Installing pyenv ---"
-    curl -fsSL https://pyenv.run | bash
+  echo "--- Installing pyenv ---"
+  curl -fsSL https://pyenv.run | bash
 else
-    echo "--- pyenv is already installed. Skipping installation. ---"
+  echo "--- pyenv is already installed. Skipping installation. ---"
 fi
 
 # Configure shell for pyenv
 if grep -q 'pyenv init' ~/.bashrc; then
   :
 else
-    cat <<'EOT'>> ~/.bashrc
+  cat <<'EOT'>> ~/.bashrc
 
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
@@ -956,10 +956,10 @@ fi
 # Install and set the latest Python version only if it's not already installed
 PYVER=$(pyenv install --list | grep -E '^\s{2}3\.[0-9]+\.[0-9]+$' | tail -n 1 | tr -d ' ')
 if ! pyenv versions --bare | grep -q "^${PYVER}$"; then
-    echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
-    pyenv install $PYVER
+  echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
+  pyenv install $PYVER
 else
-    echo "--- Python ${PYVER} is already installed. Skipping installation. ---"
+  echo "--- Python ${PYVER} is already installed. Skipping installation. ---"
 fi
 
 # Set the global Python version
@@ -967,13 +967,6 @@ pyenv global $PYVER
 ```
 
 **Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
-
----
-```
-
-**Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
-
----
 
 #### **Step 3: Prepare and Patch `roon-ir-remote` Software**
 
@@ -1062,10 +1055,10 @@ Install the script's dependencies into a virtual environment and run it for the 
 cd ~/roon-ir-remote
 # Create the virtual environment only if it doesn't already exist
 if ! pyenv versions --bare | grep -q "^roon-ir-remote$"; then
-    echo "--- Creating 'roon-ir-remote' virtual environment ---"
-    pyenv virtualenv roon-ir-remote
+  echo "--- Creating 'roon-ir-remote' virtual environment ---"
+  pyenv virtualenv roon-ir-remote
 else
-    echo "--- 'roon-ir-remote' virtual environment already exists ---"
+  echo "--- 'roon-ir-remote' virtual environment already exists ---"
 fi
 pyenv activate roon-ir-remote
 pip3 install --upgrade pip
@@ -1348,31 +1341,31 @@ else
 
 # Custom wrapper for the Audiolinux menu to manage Purist Mode
 menu_wrapper() {
-    local was_active=false
-    # Check the initial state of Purist Mode by looking for the backup file.
-    if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
-        was_active=true
-    fi
+  local was_active=false
+  # Check the initial state of Purist Mode by looking for the backup file.
+  if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+    was_active=true
+  fi
 
-    # If Purist Mode was active, temporarily revert it for the menu.
-    if [ "$was_active" = true ]; then
-        echo "Checking credentials to manage Purist Mode..."
-        echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
-        sudo -v
+  # If Purist Mode was active, temporarily revert it for the menu.
+  if [ "$was_active" = true ]; then
+    echo "Checking credentials to manage Purist Mode..."
+    echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
+    sudo -v
 
-        echo "Temporarily disabling Purist Mode to run menu..."
-        purist-mode --revert > /dev/null 2>&1 # Revert quietly
-    fi
+    echo "Temporarily disabling Purist Mode to run menu..."
+    purist-mode --revert > /dev/null 2>&1 # Revert quietly
+  fi
 
-    # Call the original menu command
-    /usr/bin/menu
+  # Call the original menu command
+  /usr/bin/menu
 
-    # If Purist Mode was active before, re-enable it now.
-    if [ "$was_active" = true ]; then
-        echo "Re-activating Purist Mode..."
-        purist-mode > /dev/null 2>&1 # Activate quietly
-        echo "Purist Mode is active again."
-    fi
+  # If Purist Mode was active before, re-enable it now.
+  if [ "$was_active" = true ]; then
+    echo "Re-activating Purist Mode..."
+    purist-mode > /dev/null 2>&1 # Activate quietly
+    echo "Purist Mode is active again."
+  fi
 }
 
 # Alias the 'menu' command to our new wrapper function
@@ -1471,10 +1464,10 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     IS_ACTIVE="false"
     IS_AUTO_ENABLED="false"
     if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
-        IS_ACTIVE="true"
+      IS_ACTIVE="true"
     fi
     if systemctl is-enabled --quiet purist-mode-auto.service; then
-        IS_AUTO_ENABLED="true"
+      IS_AUTO_ENABLED="true"
     fi
     echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED}"
     EOT
@@ -1483,9 +1476,9 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-mode
     #!/bin/bash
     if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
-        /usr/local/bin/purist-mode --revert
+      /usr/local/bin/purist-mode --revert
     else
-        /usr/local/bin/purist-mode
+      /usr/local/bin/purist-mode
     fi
     EOT
 
@@ -1493,9 +1486,9 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-auto
     #!/bin/bash
     if systemctl is-enabled --quiet purist-mode-auto.service; then
-        systemctl disable --now purist-mode-auto.service
+      systemctl disable --now purist-mode-auto.service
     else
-        systemctl enable purist-mode-auto.service
+      systemctl enable purist-mode-auto.service
     fi
     EOT
 
@@ -1582,7 +1575,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-toggle-auto'
     ```
 
-5.  **Install Python via pyenv** (if you did not already for the IR Remote setup)
+5.  **Install Python via pyenv** (feel free to skip this step if you did this already to get the IR Remote working)
     Install `pyenv` and the latest stable version of Python.
     ```bash
     # Install build dependencies
@@ -1591,17 +1584,17 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
     # Install pyenv only if it's not already installed
     if [ ! -d "$HOME/.pyenv" ]; then
-        echo "--- Installing pyenv ---"
-        curl -fsSL https://pyenv.run | bash
+      echo "--- Installing pyenv ---"
+      curl -fsSL https://pyenv.run | bash
     else
-        echo "--- pyenv is already installed. Skipping installation. ---"
+      echo "--- pyenv is already installed. Skipping installation. ---"
     fi
 
     # Configure shell for pyenv
     if grep -q 'pyenv init' ~/.bashrc; then
-        :
+      :
     else
-        cat <<'EOT'>> ~/.bashrc
+      cat <<'EOT'>> ~/.bashrc
 
     export PYENV_ROOT="$HOME/.pyenv"
     [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
@@ -1616,10 +1609,10 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     # Install and set the latest Python version only if it's not already installed
     PYVER=$(pyenv install --list | grep -E '^\s{2}3\.[0-9]+\.[0-9]+$' | tail -n 1 | tr -d ' ')
     if ! pyenv versions --bare | grep -q "^${PYVER}$"; then
-        echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
-        pyenv install $PYVER
+      echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
+      pyenv install $PYVER
     else
-        echo "--- Python ${PYVER} is already installed. Skipping installation. ---"
+      echo "--- Python ${PYVER} is already installed. Skipping installation. ---"
     fi
 
     # Set the global Python version
@@ -1627,8 +1620,6 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ```
 
     **Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
-
----
 
 6.  **Install Avahi and Python Dependencies:**
     This step installs the Avahi daemon and uses a `requirements.txt` file to install Flask into a dedicated virtual environment.
@@ -1660,10 +1651,10 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     echo "--- Setting up Python environment for the Web UI ---"
     # Create the virtual environment only if it doesn't already exist
     if ! pyenv versions --bare | grep -q "^purist-webui$"; then
-        echo "--- Creating 'purist-webui' virtual environment ---"
-        pyenv virtualenv purist-webui
+      echo "--- Creating 'purist-webui' virtual environment ---"
+      pyenv virtualenv purist-webui
     else
-        echo "--- 'purist-webui' virtual environment already exists ---"
+      echo "--- 'purist-webui' virtual environment already exists ---"
     fi
     pyenv activate purist-webui
     pip install -r ~/purist-mode-webui/requirements.txt
