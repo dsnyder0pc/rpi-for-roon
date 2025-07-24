@@ -70,10 +70,10 @@ If you are located in the US, expect to pay around $365 in total (plus tax and s
 7.  [Clean the Boot Filesystem](#7-clean-the-boot-filesystem)
 8.  [Diretta Software Installation & Configuration](#8-diretta-software-installation--configuration)
 9.  [Final Steps & Roon Integration](#9-final-steps--roon-integration)
-10. [Appendix 1: Optional IR Remote Control Setup](#10-appendix-1-optional-ir-remote-control-setup)
-11. [Appendix 2: Argon ONE Fan Control](#11-appendix-2-argon-one-fan-control)
-12. [Appendix 3: Purist Mode](#12-appendix-3-purist-mode)
-13. [Appendix 4: Purist Mode Web UI Setup](#13-appendix-4-purist-mode-web-ui-setup)
+10. [Appendix 1: Argon ONE Fan Control](#10-appendix-1-argon-one-fan-control)
+11. [Appendix 2: Optional IR Remote Control](#11-appendix-2-optional-ir-remote-control)
+12. [Appendix 3: Optional Purist Mode](#12-appendix-3-optional-purist-mode)
+13. [Appendix 4: Optional Purist Mode Web UI](#13-appendix-4-optional-purist-mode-web-ui)
 
 ---
 
@@ -762,6 +762,120 @@ Your dedicated Diretta link is now fully configured for pristine, isolated audio
 
 ---
 
+### 10. Appendix 1: Argon ONE Fan Control
+If you decided to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
+
+If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on both computers.
+
+#### Step 1: Skip the `argon1.sh` script in the manual
+The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work, so skip this step and follow the steps below instead.
+
+#### Step 2: Configure your system:
+These commands will enable the I2C interface and add the specific `dtoverlay`
+for the Argon ONE case. The script first attempts to uncomment the `i2c_arm`
+parameter if it's commented out and then adds the `argonone` overlay if it's
+missing, preventing errors and duplicate entries.
+```bash
+BOOT_CONFIG="/boot/config.txt"
+I2C_PARAM="dtparam=i2c_arm=on"
+ARGON_OVERLAY="dtoverlay=argonone"
+
+# --- Enable I2C by uncommenting the line if it exists ---
+if grep -q -F "#$I2C_PARAM" "$BOOT_CONFIG"; then
+  echo "Enabling I2C parameter..."
+  sudo sed -i -e "s/^#\($I2C_PARAM\)/\1/" "$BOOT_CONFIG"
+fi
+
+# --- Add the Argon One overlay if it's not already there ---
+if ! grep -q -F "$ARGON_OVERLAY" "$BOOT_CONFIG"; then
+  echo "Adding Argon One overlay..."
+  echo "$ARGON_OVERLAY" | sudo tee -a "$BOOT_CONFIG" > /dev/null
+else
+  echo "Argon One overlay already present."
+fi
+```
+
+#### Step 3: Configure `udev` permissions
+```bash
+cat <<'EOT' | sudo tee /etc/udev/rules.d/99-i2c.rules
+KERNEL=="i2c-[0-9]*", MODE="0666"
+EOT
+```
+
+#### Step 4: Install the Argon One Package
+```bash
+yay -S argonone-c-git
+```
+
+#### Step 5: Switch Argon ONE case from hardware to software control
+```bash
+sudo pacman -S --noconfirm --needed i2c-tools
+# Create a systemd override file to switch the case to software mode on boot
+sudo mkdir -pv /etc/systemd/system/argononed.service.d
+printf '%s\n' \
+  '[Service]' \
+  'ExecStartPre=/usr/bin/i2cset -y 1 0x1a 0' \
+  | sudo tee /etc/systemd/system/argononed.service.d/software-mode.conf > /dev/null
+```
+
+#### Step 6: Enable the Service
+```bash
+# Reload the systemd manager to read the new configuration
+sudo systemctl daemon-reload
+
+# Enable the service to start on boot
+sudo systemctl enable argononed.service
+```
+
+#### Step 7: Reboot
+Finally, reboot your Raspberry Pi for all changes to take effect (Target first, then Host):
+```bash
+sudo sync && sudo reboot
+```
+
+Now, the fan will be controlled by the daemon, and the power button will have full functionality.
+
+#### Step 8: Verify the service
+```bash
+systemctl status argononed.service
+journalctl -u argononed.service -b
+```
+
+#### Step 9: Review Fan Mode and Settings:
+To see the current configuration values, run the following command:
+```bash
+sudo argonone-cli --decode
+```
+
+To adjust those values, you must create a config file. Use these values to start:
+```bash
+cat <<'EOT' | sudo tee /etc/argononed.conf
+[Schedule]
+temp0=55
+fan0=0
+temp1=60
+fan1=50
+temp2=65
+fan2=100
+
+[Setting]
+hysteresis=3
+EOT
+```
+
+Restart the service to pick up the new configuration values:
+```bash
+sudo systemctl restart argononed.service
+echo ""
+echo "Updated fan values:"
+sudo argonone-cli --decode
+```
+
+Now, feel free to adjust the values as needed, following the steps above.
+
+---
+
+11. [Appendix 2: Optional IR Remote Control](#11-appendix-2-optional-ir-remote-control)
 ### 10. Appendix 1: Optional IR Remote Control Setup
 
 This guide provides instructions for installing and configuring an IR remote to control Roon. The setup is divided into two parts.
@@ -920,6 +1034,8 @@ echo "Above, you should see:"
 echo "audiolinux realtime video input audio wheel"
 ```
 
+---
+
 ##### **Step 2: Install Python via pyenv**
 
 Install `pyenv` and the latest stable version of Python.
@@ -968,6 +1084,8 @@ pyenv global $PYVER
 
 **Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
+---
+
 #### **Step 3: Prepare and Patch `roon-ir-remote` Software**
 
 Clone the script repository and fetch a patch to correctly handle keycodes by name instead of by number.
@@ -1000,7 +1118,7 @@ fi
 cd
 ```
 
----
+--- 
 
 #### **Step 4: Create the Roon Environment Config File**
 
@@ -1126,118 +1244,7 @@ Your IR remote should now control Roon. Enjoy!
 
 ---
 
-### 11. Appendix 2: Argon ONE Fan Control
-If you decided to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
-
-If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on both computers.
-
-#### Step 1: Skip the `argon1.sh` script in the manual
-The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work, so skip this step and follow the steps below instead.
-
-#### Step 2: Configure your system:
-These commands will enable the I2C interface and add the specific `dtoverlay`
-for the Argon ONE case. The script first attempts to uncomment the `i2c_arm`
-parameter if it's commented out and then adds the `argonone` overlay if it's
-missing, preventing errors and duplicate entries.
-```bash
-BOOT_CONFIG="/boot/config.txt"
-I2C_PARAM="dtparam=i2c_arm=on"
-ARGON_OVERLAY="dtoverlay=argonone"
-
-# --- Enable I2C by uncommenting the line if it exists ---
-if grep -q -F "#$I2C_PARAM" "$BOOT_CONFIG"; then
-  echo "Enabling I2C parameter..."
-  sudo sed -i -e "s/^#\($I2C_PARAM\)/\1/" "$BOOT_CONFIG"
-fi
-
-# --- Add the Argon One overlay if it's not already there ---
-if ! grep -q -F "$ARGON_OVERLAY" "$BOOT_CONFIG"; then
-  echo "Adding Argon One overlay..."
-  echo "$ARGON_OVERLAY" | sudo tee -a "$BOOT_CONFIG" > /dev/null
-else
-  echo "Argon One overlay already present."
-fi
-```
-
-#### Step 3: Configure `udev` permissions
-```bash
-cat <<'EOT' | sudo tee /etc/udev/rules.d/99-i2c.rules
-KERNEL=="i2c-[0-9]*", MODE="0666"
-EOT
-```
-
-#### Step 4: Install the Argon One Package
-```bash
-yay -S argonone-c-git
-```
-
-#### Step 5: Switch Argon ONE case from hardware to software control
-```bash
-sudo pacman -S --noconfirm --needed i2c-tools
-# Create a systemd override file to switch the case to software mode on boot
-sudo mkdir -pv /etc/systemd/system/argononed.service.d
-printf '%s\n' \
-  '[Service]' \
-  'ExecStartPre=/usr/bin/i2cset -y 1 0x1a 0' \
-  | sudo tee /etc/systemd/system/argononed.service.d/software-mode.conf > /dev/null
-```
-
-#### Step 6: Enable the Service
-```bash
-# Reload the systemd manager to read the new configuration
-sudo systemctl daemon-reload
-
-# Enable the service to start on boot
-sudo systemctl enable argononed.service
-```
-
-#### Step 7: Reboot
-Finally, reboot your Raspberry Pi for all changes to take effect (Target first, then Host):
-```bash
-sudo sync && sudo reboot
-```
-
-Now, the fan will be controlled by the daemon, and the power button will have full functionality.
-
-#### Step 8: Verify the service
-```bash
-systemctl status argononed.service
-journalctl -u argononed.service -b
-```
-
-#### Step 9: Review Fan Mode and Settings:
-To see the current configuration values, run the following command:
-```bash
-sudo argonone-cli --decode
-```
-
-To adjust those values, you must create a config file. Use these values to start:
-```bash
-cat <<'EOT' | sudo tee /etc/argononed.conf
-[Schedule]
-temp0=55
-fan0=0
-temp1=60
-fan1=50
-temp2=65
-fan2=100
-
-[Setting]
-hysteresis=3
-EOT
-```
-
-Restart the service to pick up the new configuration values:
-```bash
-sudo systemctl restart argononed.service
-echo ""
-echo "Updated fan values:"
-sudo argonone-cli --decode
-```
-
-Now, feel free to adjust the values as needed, following the steps above.
-
-### 12. Appendix 3: Purist Mode
+### 12. Appendix 3: Optional Purist Mode
 There is minimal network and background activity on the Diretta Target computer that is not related to music playback using the Diretta protocol. However, some users prefer to take extra steps to reduce the possibility of such activity. We are already on the extreme edge of audio performance, so why not?
 
 ---
@@ -1280,6 +1287,8 @@ This script requires sudo privileges. You may be prompted for a password.
 ```
 
 Listen for a while to see if you prefer the sound (or peace of mind).
+
+---
 
 #### Step 2: Enable Purist Mode by Default
 
@@ -1327,6 +1336,8 @@ sudo systemctl daemon-reload
 sudo systemctl enable purist-mode-revert-on-boot.service
 sudo systemctl enable purist-mode-auto.service
 ```
+
+---
 
 #### Step 3: Install a wrapper around the `menu` command
 Many functions in the Audiolinux require Internet access. To keep things working as expected, add a wrapper around the `menu` command that disables Purist mode while you are using the menu, enabling it again when you exit to the terminal.
@@ -1429,7 +1440,7 @@ You have full interactive control over the system at any time.
 
 ---
 
-### 13. Appendix 4: Purist Mode Web UI Setup
+### 13. Appendix 4: Optional Purist Mode Web UI
 
 This appendix provides instructions for installing a simple web-based application on the **Diretta Host**. This application provides an easy-to-use interface, accessible from a phone or tablet, to control Purist Mode on the **Diretta Target** without needing to use the command line.
 
@@ -1744,11 +1755,13 @@ Type CTRL-C once you're satisfied that things are working as expected.
 
 ---
 
-#### **Part 3: Access the Web UI**
+#### **Access the Web UI**
 
 You're all set! Open a web browser on your phone, tablet, or computer connected to the same network as the Diretta Host. Navigate to:
 
 [http://diretta-host.local](http://diretta-host.local)
 
-You should now see the control panel, allowing you to easily manage Purist Mode.
+You may see a browser warning about the connection not being secure. This is expected since we are intentionaly not using TLS encryption to resource resource usage. It's safe as long as you are at home on your private network.
+
+You should now see the control panel, allowing you to easily manage Purist Mode. If you have not acticated your Diretta Target license yet, the web UI will also include a buttion for restarting the Dirtta Target service. Use this button after you receive the second email from the Direta team confirming that they have activated a license for your hardware.
 
