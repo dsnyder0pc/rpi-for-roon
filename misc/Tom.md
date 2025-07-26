@@ -91,28 +91,27 @@ echo "✅ New services enabled."
 
 #### Step 5: Update the Convenience Aliases
 
-The aliases in your `~/.bashrc` file need to be updated to work with the new service.
+The wrapper and aliases in your `~/.bashrc` file on the target need to be updated to work with the new service.
 
-1.  Open the file for editing:
-    ```bash
-    nano ~/.bashrc
-    ```
-2.  Find and **delete** the old alias block. It will look like this:
-    ```bash
-    # Aliases to manage the automatic Purist Mode timer
-    alias purist-mode-auto-enable='...'
-    alias purist-mode-auto-disable='...'
-    ```
-3.  Paste in this **new, corrected block** of code (usually at the end of the file):
-    ```bash
-    # Aliases to manage the automatic Purist Mode service
-    alias purist-mode-auto-enable='echo "Enabling Purist Mode on boot..."; purist-mode; sudo systemctl enable purist-mode-auto.service'
-    alias purist-mode-auto-disable='echo "Disabling Purist Mode on boot..."; purist-mode --revert; sudo systemctl disable --now purist-mode-auto.service'
-    ```
-4.  Save and exit the file
-5.  Activate the new aliases in your current session:
-    ```bash
-    source ~/.bashrc
-    ```
+First, let's clean out the old customizations:
+```bash
+cat <<'EOT' > ~/.bashrc
+#
+# ~/.bashrc
+#
+
+# If not running interactively, don't do anything
+[[ $- != *i* ]] && return
+
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+PS1='[\u@\h \W]\$ '
+
+export EDITOR=vim
+export VISUAL=vim
+EOT
+```
+
+Next, follow (**Step 3** in **Appendix 3** of the main guide[https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md#step-3-install-a-wrapper-around-the-menu-command] to add the updated wrapper and aliases.
 
 You're all set\! Just `sudo reboot` the Diretta Target, and everything should now be working perfectly.
