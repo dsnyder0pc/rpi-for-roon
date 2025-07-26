@@ -112,6 +112,6 @@ export VISUAL=vim
 EOT
 ```
 
-Next, follow (**Step 3** in **Appendix 3** of the main guide[https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md#step-3-install-a-wrapper-around-the-menu-command] to add the updated wrapper and aliases.
+Next, follow [**Step 3** in **Appendix 3** of the main guide](https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md#step-3-install-a-wrapper-around-the-menu-command) to add the updated wrapper and aliases.
 
 You're all set\! Just `sudo reboot` the Diretta Target, and everything should now be working perfectly.
