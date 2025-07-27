@@ -204,7 +204,7 @@ sudo hostnamectl set-hostname diretta-target
 
 **At this point, shutdown the device. Repeat the [above steps](#3-core-system-configuration-perform-on-both-devices) for the second Raspberry Pi.**
 ```bash
-sudo poweroff
+sudo sync; sudo poweroff
 ```
 
 ---
