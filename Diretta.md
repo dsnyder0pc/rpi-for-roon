@@ -771,7 +771,7 @@ If you decided to use an Argon ONE case for your Raspberry Pi, the default insta
 If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on both computers.
 
 ### Step 1: Skip the `argon1.sh` script in the manual
-The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work, so skip this step and follow the steps below instead.
+The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work on Audiolinux since the script assumes a Debian-based O/S, so skip this step and follow the steps below instead.
 
 ### Step 2: Configure your system:
 These commands will enable the I2C interface and add the specific `dtoverlay`
