@@ -1547,9 +1547,13 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     EOT
 
     # Allow audiolinux user to run commands needed to set up the purist-app keys
-    cat <<'EOT' | sudo tee /etc/sudoers.d/audiolinux
+    if sudo grep -q 'audiolinux.*mkdir.*chmod.*tee.*chown' /etc/sudoers
+      :
+    else
+      cat <<'EOT' | sudo tee -a /etc/sudoers
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/mkdir, /usr/bin/chmod, /usr/bin/tee, /usr/bin/chown
     EOT
+    fi
     ```
 
 ---
