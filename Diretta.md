@@ -1545,6 +1545,11 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-restart-target
     EOT
+
+    # Allow audiolinux user to run commands needed to set up the purist-app keys
+    cat <<'EOT' | sudo tee /etc/sudoers.d/audiolinux
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/mkdir, /usr/bin/chmod, /usr/bin/tee, /usr/bin/chown
+    EOT
     ```
 
 ---
@@ -1575,7 +1580,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
     # Step B: Run a script on the Target to set up the key for the 'purist-app' user
     echo "--> Running setup script on the Target..."
-    ssh -t diretta-target <<'EOT'
+    ssh -tt diretta-target <<'EOT'
     set -e
     # Read the public key from the file we just copied
     PUB_KEY=$(cat purist_app_key.pub)
