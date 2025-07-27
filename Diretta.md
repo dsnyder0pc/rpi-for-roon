@@ -1575,7 +1575,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
     # Step B: Run a script on the Target to set up the key for the 'purist-app' user
     echo "--> Running setup script on the Target..."
-    ssh diretta-target <<'EOT'
+    ssh -t diretta-target <<'EOT'
     set -e
     # Read the public key from the file we just copied
     PUB_KEY=$(cat purist_app_key.pub)
