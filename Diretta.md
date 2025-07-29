@@ -774,10 +774,7 @@ If you are using Argon ONE cases for both Diretta Host and Target, you'll need t
 The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work on Audiolinux since the script assumes a Debian-based O/S, so skip this step and follow the steps below instead.
 
 ### Step 2: Configure your system:
-These commands will enable the I2C interface and add the specific `dtoverlay`
-for the Argon ONE case. The script first attempts to uncomment the `i2c_arm`
-parameter if it's commented out and then adds the `argonone` overlay if it's
-missing, preventing errors and duplicate entries.
+These commands will enable the I2C interface and add the specific `dtoverlay` for the Argon ONE case. The script first attempts to uncomment the `i2c_arm` parameter if it's commented out and then adds the `argonone` overlay if it's missing, preventing errors and duplicate entries.
 ```bash
 BOOT_CONFIG="/boot/config.txt"
 I2C_PARAM="dtparam=i2c_arm=on"
@@ -798,44 +795,66 @@ else
 fi
 ```
 
-### Step 3: Configure `udev` permissions
-```bash
-cat <<'EOT' | sudo tee /etc/udev/rules.d/99-i2c.rules
-KERNEL=="i2c-[0-9]*", MODE="0666"
-EOT
-```
-
-### Step 4: Install the Argon One Package
+### Step 3: Install the Argon One Package
 ```bash
 yay -S argonone-c-git
 ```
 
-### Step 5: Switch Argon ONE case from hardware to software control
+### Step 4: Create a Service to Initialize the Case
+This service will run the `i2cset` command at boot to safely switch the case into software-control mode without conflicting with the main daemon.
 ```bash
-sudo pacman -S --noconfirm --needed i2c-tools
+cat <<'EOT' | sudo tee /etc/systemd/system/argon-case-init.service
+[Unit]
+Description=Set Argon ONE Case to Software Control Mode
+DefaultDependencies=no
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/i2cset -y 1 0x1a 0
+
+[Install]
+WantedBy=multi-user.target
+EOT
 ```
 
+### Step 5: Create a Wrapper Script for the Daemon
+The argononed daemon has a bug where it fails to signal its startup correctly to systemd. This wrapper script fixes that issue.
 ```bash
-# Create a systemd override file to switch the case to software mode on boot
-sudo mkdir -pv /etc/systemd/system/argononed.service.d
-printf '%s\n' \
-  '[Service]' \
-  'ExecStartPre=/usr/bin/i2cset -y 1 0x1a 0' \
-  | sudo tee /etc/systemd/system/argononed.service.d/software-mode.conf > /dev/null
+cat <<'EOT' | sudo tee /usr/local/sbin/argononed-wrapper.sh
+#!/bin/sh
+# Launch the real daemon in the background
+/usr/sbin/argononed
+
+# Give the daemon a moment to fork
+sleep 1
+
+# Find the PID of the forked process and write it to the file for systemd
+pgrep -x argononed > /run/argononed.pid
+EOT
+
+sudo chmod +x /usr/local/sbin/argononed-wrapper.sh
 ```
 
-### Step 6: Enable the Service
+### Step 6: Create the Final `systemd` Override
 ```bash
-# Reload the systemd manager to read the new configuration
+sudo mkdir -p /etc/systemd/system/argononed.service.d
+cat <<'EOT' | sudo tee /etc/systemd/system/argononed.service.d/override.conf
+[Unit]
+Requires=argon-case-init.service
+After=argon-case-init.service
+
+[Service]
+ExecStart=
+ExecStart=/usr/local/sbin/argononed-wrapper.sh
+EOT
+```
+
+### Step 7: Enable the Services and Reboot
+```bash
 sudo systemctl daemon-reload
-
-# Enable the service to start on boot
+sudo systemctl enable argon-case-init.service
 sudo systemctl enable argononed.service
-```
-
-### Step 7: Reboot
-Finally, reboot your Raspberry Pi for all changes to take effect (Target first, then Host):
-```bash
 sudo sync && sudo reboot
 ```
 
