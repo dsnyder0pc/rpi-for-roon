@@ -1472,7 +1472,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     ```
 
 3.  **Create Secure Command Scripts:**
-    We will create three small, dedicated scripts that are the *only* actions the web app is allowed to perform. This is a critical security step.
+    We will create four small, dedicated scripts that are the *only* actions the web app is allowed to perform. This is a critical security step.
     ```bash
     # Script to get the current status, including license state
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
@@ -1520,9 +1520,6 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     fi
     EOT
 
-    # Make the new scripts executable
-    sudo chmod +x /usr/local/bin/pm-*
-
     # Create the script to restart the Diretta service
     cat <<'EOT' | sudo tee /usr/local/bin/pm-restart-target
     #!/bin/bash
@@ -1531,8 +1528,8 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     /usr/bin/systemctl restart diretta_alsa_target.service
     EOT
 
-    # Make the new script executable
-    sudo chmod +x /usr/local/bin/pm-restart-target
+    # Make the new scripts executable
+    sudo chmod +x /usr/local/bin/pm-*
     ```
 
 4.  **Grant Sudo Permissions:**
