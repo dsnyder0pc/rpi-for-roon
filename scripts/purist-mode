@@ -48,8 +48,13 @@ revert_mode() {
     echo "⏪ Reverting to Standard Mode..."
 
     # Restore network and DNS configuration.
-    sudo systemctl restart systemd-networkd &>/dev/null
     sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
+
+    # If no default route exists (likely interactive use), restart networking to restore it.
+    # If a route exists (likely boot service), this step is skipped as it's redundant.
+    if ! ip route | grep -q default; then
+        sudo systemctl restart systemd-networkd &>/dev/null
+    fi
 
     # Always restart services when this script is called.
     echo "  -> Restarting services..."
