@@ -705,9 +705,15 @@ journalctl -b -u boot-repair.service
 #### 8.2. On the Diretta Host
 
 1.  SSH to the Host: `ssh diretta-host`.
-2.  Run `menu`.
-3.  Select **AUDIO extra menu**.
-4.  Select **DIRETTA host installation/configuration**. You will see the following menu:
+
+2.  **Minimize disk I/O on the Diretta Host:** (optional but recommended for optimal performance)
+    * Change `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
+    ```bash
+    sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
+    ```
+3.  Run `menu`.
+4.  Select **AUDIO extra menu**.
+5.  Select **DIRETTA host installation/configuration**. You will see the following menu:
     ```text
     What do you want to do?
 
@@ -719,7 +725,7 @@ journalctl -b -u boot-repair.service
 
     ?
     ```
-5.  You should perform these actions in sequence:
+6.  You should perform these actions in sequence:
     * Choose **1) Install/update** to install the software. *(Note: you may see `error: package 'lld' was not found. Don't worry, that will be corrected automatically by the installation)*
     * Choose **2) Enable/Disable Diretta daemon** and enable it.
     * Choose **3) Set Ethernet interface**. It is critical to select `end0`, the interface for the point-to-point link.
@@ -730,12 +736,6 @@ journalctl -b -u boot-repair.service
         end0
         ```
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient.
-
-6.  **Minimize disk I/O on the Diretta Host:** (optional but recommended for optimal performance)
-    * Change `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
-    ```bash
-    sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
-    ```
 
 ---
 
