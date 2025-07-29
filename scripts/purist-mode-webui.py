@@ -55,7 +55,7 @@ HTML_TEMPLATE = """
             <p class="text-lg text-gray-400">System Control</p>
         </div>
 
-        <div id="control-panel" hx-get="/status" hx-trigger="load, every 30s" hx-swap="innerHTML">
+        <div id="control-panel" hx-get="/status" hx-trigger="load, every 30s, visibilitychange from:document" hx-swap="innerHTML">
             <div class="p-8 text-center text-gray-400">
                 <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
                 <p class="mt-2">Connecting to Diretta Target...</p>
@@ -129,7 +129,7 @@ STATUS_PANEL_TEMPLATE = """
 
 # Template to display when music is playing. It polls to auto-restore the UI.
 MUSIC_PLAYING_TEMPLATE = """
-<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center" hx-get="/status" hx-trigger="every 30s" hx-swap="outerHTML">
+<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center" hx-get="/status" hx-trigger="every 30s visibilitychange from:document" hx-swap="outerHTML">
     <div class="flex items-center justify-center mb-4">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"></path>
