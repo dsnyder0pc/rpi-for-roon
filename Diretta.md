@@ -1548,15 +1548,6 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-restart-target
     EOT
-
-    # Allow audiolinux user to run commands needed to set up the purist-app keys
-    if sudo grep -q 'audiolinux.*mkdir.*chmod.*tee.*chown' /etc/sudoers; then
-      :
-    else
-      cat <<'EOT' | sudo tee -a /etc/sudoers
-    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/mkdir, /usr/bin/chmod, /usr/bin/tee, /usr/bin/chown
-    EOT
-    fi
     ```
 
 ---
@@ -1576,18 +1567,20 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ssh-keygen -t ed25519 -f ~/.ssh/purist_app_key -N "" -C "purist-app-key"
     ```
 
-3.  **Authorize the Key on the Target:**
-    This step will securely copy the public key to the Target and then run a remote script to configure it with the necessary security restrictions.
+3.  **Copy the Key to the Target:**
+    This step will securely copy the public key to the Target.
     ```bash
     echo "--- Authorizing the new SSH key on the Diretta Target ---"
 
     # Step A: Copy the public key to the Target's home directory
     echo "--> Copying public key to the Target..."
     scp ~/.ssh/purist_app_key.pub diretta-target:
+    ```
 
-    # Step B: Run a script on the Target to set up the key for the 'purist-app' user
+4.  **Authorize the Key on the Target:**
+    Run this script on the Target to set up the key for the 'purist-app' user
+    ```bash
     echo "--> Running setup script on the Target..."
-    ssh -t diretta-target <<'EOT'
     set -e
     # Read the public key from the file we just copied
     PUB_KEY=$(cat purist_app_key.pub)
@@ -1605,13 +1598,11 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
     # Clean up the copied public key file
     rm purist_app_key.pub
-    echo "--> Target setup complete."
-    EOT
 
     echo "✅ SSH key has been successfully authorized on the Target."
     ```
 
-4.  **Manually Test the Remote Commands (Recommended):**
+5.  **Manually Test the Remote Commands (Recommended):**
     Before starting the web app, test each of the remote commands from the **Diretta Host's** terminal to confirm the backend is working.
     ```bash
     # Test the Status Command (should return a JSON string)
@@ -1627,7 +1618,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-restart-target'
     ```
 
-5.  **Install Python via pyenv** (feel free to skip this step if you did this already to get the IR Remote working)
+6.  **Install Python via pyenv** (feel free to skip this step if you did this already to get the IR Remote working)
     Install `pyenv` and the latest stable version of Python.
     ```bash
     # Install build dependencies
@@ -1673,7 +1664,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
     **Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
-6.  **Install Avahi and Python Dependencies:**
+7.  **Install Avahi and Python Dependencies:**
     **Note:** If you have more than one Diretta Host on your network, please make sure that they have unique names. You can use a command like the following to rename this one befor proceeding:
 
     ```bash
@@ -1720,13 +1711,13 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     pyenv deactivate
     ```
 
-7.  **Install the Flask App:**
+8.  **Install the Flask App:**
     Download the Python script directly from GitHub into the application directory.
     ```bash
     curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py -o ~/purist-mode-webui/app.py
     ```
 
-8.  **Test the Flask App Interactively:**
+9.  **Test the Flask App Interactively:**
     Now, run the app from the command line to ensure it starts correctly.
     ```bash
     cd ~/purist-mode-webui
@@ -1735,7 +1726,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ```
     You should see output indicating the Flask server has started on port **8080**. From another device, access `http://diretta-host.local:8080`. If it works, return to the SSH terminal and press `Ctrl+C` to stop the server.
 
-9.  **Create the `systemd` Service:**
+10. **Create the `systemd` Service:**
     This service will run the web app automatically on boot, using the correct Python executable from our `pyenv` virtual environment.
     ```bash
     cat <<EOT | sudo tee /etc/systemd/system/purist-webui.service
@@ -1761,13 +1752,13 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     EOT
     ```
 
-10. **Enable and Start the Web App:**
+11. **Enable and Start the Web App:**
     ```bash
     sudo systemctl daemon-reload
     sudo systemctl enable --now purist-webui.service
     ```
 
-11. **Watch the logs for a bit:**
+12. **Watch the logs for a bit:**
     ```bash
     sudo journalctl -b -u purist-webui.service -f
     ```
