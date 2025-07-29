@@ -813,6 +813,9 @@ yay -S argonone-c-git
 ### Step 5: Switch Argon ONE case from hardware to software control
 ```bash
 sudo pacman -S --noconfirm --needed i2c-tools
+```
+
+```bash
 # Create a systemd override file to switch the case to software mode on boot
 sudo mkdir -pv /etc/systemd/system/argononed.service.d
 printf '%s\n' \
