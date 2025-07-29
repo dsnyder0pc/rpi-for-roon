@@ -19,13 +19,11 @@ activate_mode() {
     # Stop services
     sudo systemctl stop chronyd &>/dev/null
 
-    # Conditionally manage Argon ONE fan/service
-    if sudo systemctl is-active --quiet argononed.service; then
-        echo "  -> Stopping Argon One daemon (argononed.service)..."
-        sudo systemctl stop argononed.service &>/dev/null
-        echo "  -> Setting Argon ONE fan to 0 RPM..."
-        sudo /usr/bin/i2cset -y 1 0x1a 0 &>/dev/null
-    fi
+    # Manage Argon ONE fan/service
+    echo "  -> Ensuring Argon One daemon is stopped..."
+    sudo systemctl stop argononed.service &>/dev/null
+    echo "  -> Setting Argon ONE fan to 0 RPM..."
+    sudo /usr/bin/i2cset -y 1 0x1a 0 &>/dev/null
 
     # Create backup file before making changes
     sudo cp "$NSSWITCH_CONF" "$BACKUP_FILE"
