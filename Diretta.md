@@ -1491,8 +1491,8 @@ On the **Diretta Target**, we will create a new user with very limited permissio
       IS_AUTO_ENABLED="true"
     fi
 
-    # Check the Diretta service logs for the "Limited" keyword, which indicates a trial license
-    if journalctl -u diretta_alsa_target.service -n 20 --no-pager | grep -q "Limited"; then
+    # Check for the presense of the Diretta License Key File
+    if ! ls /opt/diretta-alsa-target/ | grep -qv '^diretta'; then
       LICENSE_LIMITED="true"
     fi
 
@@ -1662,10 +1662,11 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     **Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
 7.  **Install Avahi and Python Dependencies:**
-    **Note:** If you have more than one Diretta Host on your network, please make sure that they have unique names. You can use a command like the following to rename this one befor proceeding:
+
+    **Note:** OPTIONAL - If you have more than one Diretta Host on your network, please make sure that they have unique names. You can use a command like the following to rename this one befor proceeding:
 
     ```bash
-    # On the Diretta Host
+    # Optionally rename the Diretta Host if this is your second build on the same network
     sudo hostnamectl set-hostname diretta-host2
     ```
 
