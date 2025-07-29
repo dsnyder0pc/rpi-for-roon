@@ -82,7 +82,7 @@ STATUS_PANEL_TEMPLATE = """
                 <p class="text-sm text-yellow-400">DISABLED - System in standard mode.</p>
             {% endif %}
         </div>
-        <button hx-post="/toggle-mode" hx-target="#control-panel" hx-swap="outerHTML"
+        <button hx-post="/toggle-mode" hx-target="#control-panel" hx-swap="innerHTML"
                 class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
                        {% if status.purist_mode_active %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
             <span class="btn-text">{% if status.purist_mode_active %}Disable{% else %}Enable{% endif %}</span>
@@ -99,7 +99,7 @@ STATUS_PANEL_TEMPLATE = """
                 <p class="text-sm text-yellow-400">DISABLED - System will remain in standard mode.</p>
             {% endif %}
         </div>
-        <button hx-post="/toggle-auto" hx-target="#control-panel" hx-swap="outerHTML"
+        <button hx-post="/toggle-auto" hx-target="#control-panel" hx-swap="innerHTML"
                 class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
                        {% if status.auto_start_enabled %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
             <span class="btn-text">{% if status.auto_start_enabled %}Disable{% else %}Enable{% endif %}</span>
@@ -129,7 +129,7 @@ STATUS_PANEL_TEMPLATE = """
 
 # Template to display when music is playing. It polls to auto-restore the UI.
 MUSIC_PLAYING_TEMPLATE = """
-<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center" hx-get="/status" hx-trigger="every 30s visibilitychange from:document" hx-swap="outerHTML">
+<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center">
     <div class="flex items-center justify-center mb-4">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"></path>
