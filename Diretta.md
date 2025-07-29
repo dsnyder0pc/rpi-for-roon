@@ -399,7 +399,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
 
     Finally, power-off the Host:
     ```bash
-    sudo poweroff
+    sudo sync; sudo poweroff
     ```
 
 #### 5.2. Pre-configure the Diretta Target
