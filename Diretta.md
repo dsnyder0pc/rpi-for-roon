@@ -1265,6 +1265,18 @@ There is minimal network and background activity on the Diretta Target computer 
 curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode
 sudo install -m 0755 purist-mode /usr/local/bin
 rm purist-mode
+
+# Script for showing Purist Mode status on login
+cat <<'EOT' | sudo tee /etc/profile.d/purist-status.sh
+#!/bin/sh
+BACKUP_FILE="/etc/nsswitch.conf.purist-bak"
+
+if [ -f "$BACKUP_FILE" ]; then
+    echo -e '\n\e[1;32m✅ Purist Mode is ACTIVE.\e[0m System optimized for the highest sound quality.'
+else
+    echo -e '\n\e[1;33m⚠️ CAUTION: Purist Mode is DISABLED.\e[0m Background activity may impact sound quality.'
+fi
+EOT
 ```
 
 To run it, simply login to the Diretta Target and type `purist-mode`:
