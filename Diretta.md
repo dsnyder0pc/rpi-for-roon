@@ -774,7 +774,7 @@ If you are using Argon ONE cases for both Diretta Host and Target, you'll need t
 The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work on Audiolinux since the script assumes a Debian-based O/S, so skip this step and follow the steps below instead.
 
 ### Step 2: Configure your system:
-These commands will enable the I2C interface and add the specific `dtoverlay` for the Argon ONE case. The script first attempts to uncomment the `i2c_arm` parameter if it's commented out and then adds the `argonone` overlay if it's missing, preventing errors and duplicate entries.
+This enables the I2C interface and the necessary overlay for the case.
 ```bash
 BOOT_CONFIG="/boot/config.txt"
 I2C_PARAM="dtparam=i2c_arm=on"
@@ -795,7 +795,7 @@ else
 fi
 ```
 
-### Step 3: Install the Argon One Package
+### Step 3: Install the Argon One Package and I2C Tools
 ```bash
 yay -S argonone-c-git
 sudo pacman -S --noconfirm --needed i2c-tools
@@ -811,7 +811,7 @@ After=sysinit.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/i2cset -y 1 0x1a 0xff
+ExecStart=/usr/bin/i2cset -y 1 0x1a 0
 
 [Install]
 WantedBy=multi-user.target
@@ -845,6 +845,8 @@ Requires=argon-case-init.service
 After=argon-case-init.service
 
 [Service]
+Type=forking
+PIDFile=/run/argononed.pid
 ExecStart=
 ExecStart=/usr/local/sbin/argononed-wrapper.sh
 EOT
@@ -893,6 +895,7 @@ Restart the service to pick up the new configuration values:
 sudo systemctl restart argononed.service
 echo ""
 echo "Updated fan values:"
+sleep 5
 sudo argonone-cli --decode
 ```
 
@@ -941,46 +944,42 @@ This guide provides instructions for installing and configuring an IR remote to 
 
 #### **Option 2: Argon One IR Remote Setup**
 
-1.  **Enable the IR Receiver Hardware:**
-    You must enable the hardware overlay for the Argon One case's IR receiver.
+If you have completed the Argon ONE setup in Appendix 1, the hardware is already configured. The `dtoverlay=argonone` in `/boot/config.txt` also enables the IR receiver.
 
-      * This command will safely add the required hardware overlay to your `/boot/config.txt` file, first checking to ensure it isn't added more than once.
-        ```bash
-        BOOT_CONFIG="/boot/config.txt"
-        IR_CONFIG="dtoverlay=gpio-ir,gpio_pin=23"
+**CRITICAL:** You must not add the generic `dtoverlay=gpio-ir` overlay to your `/boot/config.txt` file. It will conflict with the `argonone` overlay and cause system instability.
 
-        # Add the IR overlay if it's not already there
-        if ! grep -q -F "$IR_CONFIG" "$BOOT_CONFIG"; then
-          echo "Enabling Argon One IR Receiver..."
-          echo "$IR_CONFIG" | sudo tee -a "$BOOT_CONFIG" > /dev/null
-        else
-          echo "Argon One IR Receiver already enabled."
-        fi
-        ```
-      * A reboot is required for the hardware change to take effect.
-        ```bash
-        sudo sync && sudo reboot
-        ```
+The procedure is to install the `ir-keytable` tools and map the signals from the input device created by the `argononed` daemon.
 
-2.  **Install IR Tools and Enable Protocols:**
+1.  **Install IR Tools and Enable Protocols:**
     Install `ir-keytable` and enable all kernel protocols so it can decode signals from your remote.
 
     ```bash
     sudo pacman -S --noconfirm v4l-utils
-    sudo ir-keytable -p all
     ```
 
-3.  **Capture Button Scancodes:**
-    Run the test tool to see the unique scancode for each remote button.
+2.  **Test the Remote and Capture Scancodes:**
+    This command will automatically find the Argon ONE's input device and start a test.
 
     ```bash
-    sudo ir-keytable -t
+    sudo ir-keytable -p all
+    # Find the persistent path for the Argon ONE case's IR input device
+    ARGON_DEVICE_PATH=$(find /dev/input/by-path/ -name '*-event-if00' | head -n 1)
+
+    # Check if the device was found before proceeding
+    if [ -z "$ARGON_DEVICE_PATH" ]; then
+      echo "❌ ERROR: Could not find the Argon ONE input device."
+      echo "Please ensure the argononed.service is running and try again."
+    else
+      echo "✅ Found device: $ARGON_DEVICE_PATH"
+      echo "--- Starting test. Press buttons on your remote. Press Ctrl+C to exit. ---"
+      sudo ir-keytable -t -d "$ARGON_DEVICE_PATH"
+    fi
     ```
 
     Press each button you want to use and note its scancode from the `MSC_SCAN` event output (e.g., `value ca`). Press `Ctrl+C` when done.
 
-4.  **Create the Keymap File:**
-    This file maps the scancodes to standard key names.
+3.  **Create the Keymap File:**
+    This file maps the scancodes to standard key names. Use the scancodes you captured in the previous step.
 
       * Create a new keymap file:
         ```bash
@@ -1003,37 +1002,50 @@ This guide provides instructions for installing and configuring an IR remote to 
         ```
       * If the scan codes in the example file above don't match the ones you recorded, edit the file (`sudo nano /etc/rc_keymaps/argon.toml`) and change them to match.
 
-5.  **Create a `systemd` Service to Load the Keymap:**
-    This service will load your keymap automatically on boot.
+4.  **Create and Enable the Keymap Service:**
+    This script will automatically find the device path again and create a `systemd` service to load your keymap on boot.
 
-    Create a new service file and enable the service:
     ```bash
-    cat <<'EOT' | sudo tee /etc/systemd/system/ir-keymap.service
+    # Find the persistent path for the Argon ONE case's IR input device
+    ARGON_DEVICE_PATH=$(find /dev/input/by-path/ -name '*-event-if00' | head -n 1)
+
+    # Check if the device was found before proceeding
+    if [ -z "$ARGON_DEVICE_PATH" ]; then
+      echo "❌ ERROR: Could not find the Argon ONE input device."
+      echo "Please ensure the argononed.service is running and try again."
+    else
+      echo "✅ Found device: $ARGON_DEVICE_PATH"
+
+      # Create the systemd service file using the found path
+      cat <<EOT | sudo tee /etc/systemd/system/ir-keymap.service
     [Unit]
-    Description=Load custom IR keymap
-    After=multi-user.target
+    Description=Load custom IR keymap for Argon ONE
+    After=argononed.service
+    Requires=argononed.service
 
     [Service]
     Type=oneshot
     RemainAfterExit=yes
-    ExecStart=/usr/bin/ir-keytable -c -p nec -w /etc/rc_keymaps/argon.toml
+    ExecStart=/usr/bin/ir-keytable -c -p all -w /etc/rc_keymaps/argon.toml -s rc0 -d ${ARGON_DEVICE_PATH}
 
     [Install]
     WantedBy=multi-user.target
     EOT
-    sudo systemctl enable --now ir-keymap.service
+      echo "✅ Successfully created /etc/systemd/system/ir-keymap.service"
+			sudo systemctl daemon-reload
+      sudo systemctl enable --now ir-keymap.service
+    fi
     ```
 
-6.  **Test the Input Device:**
-    Verify the system is receiving keyboard events from the IR remote.
+5.  **Verify the Key Mappings with `evtest`:**
+    Finally, verify the system is receiving the correct keyboard events.
 
     ```bash
     sudo pacman -S --noconfirm evtest
     sudo evtest
     ```
 
-    Select the `gpio_ir_recv` device. When you press buttons on the remote, you should see the corresponding key events.
-    Type `CTRL-C` when you are finished testing.
+    From the list of devices, select the one corresponding to your Argon ONE case (e.g., `platform-fde40000.i2c-event-if00`). When you press buttons on the remote, you should now see the correctly mapped key events (e.g., `KEY_UP`, `KEY_DOWN`). Press Ctrl+C when finished.
 
 ---
 
@@ -1522,7 +1534,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
       IS_AUTO_ENABLED="true"
     fi
 
-    # Check for the presense of the Diretta License Key File
+    # Check for the presence of the Diretta License Key File
     if ! ls /opt/diretta-alsa-target/ | grep -qv '^diretta'; then
       LICENSE_LIMITED="true"
     fi
@@ -1694,7 +1706,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
 7.  **Install Avahi and Python Dependencies on the Diretta Host:**
 
-    **Note:** OPTIONAL - If you have more than one Diretta Host on your network, please make sure that they have unique names. You can use a command like the following to rename this one befor proceeding:
+    **Note:** OPTIONAL - If you have more than one Diretta Host on your network, please make sure that they have unique names. You can use a command like the following to rename this one before proceeding:
 
     ```bash
     # Optionally rename the Diretta Host if this is your second build on the same network
