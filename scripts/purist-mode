@@ -1,9 +1,8 @@
 #!/bin/bash
 #
 # purist-mode: A script to optimize the system for critical listening by minimizing
-#              background processes.
-#
-# This script will invoke 'sudo' internally for commands requiring elevation.
+#              background processes. This script will invoke 'sudo' internally for
+#              commands requiring elevation.
 #
 
 # --- Configuration ---
@@ -16,19 +15,17 @@ BACKUP_FILE="${NSSWITCH_CONF}.purist-bak"
 activate_mode() {
     echo "🚀 Activating Purist Mode..."
 
-    # Stop services
+    # Stop non-essential services (chronyd for time sync)
+    echo "  -> Stopping time synchronization service (chronyd)..."
     sudo systemctl stop chronyd &>/dev/null
-
-    # Manage Argon ONE fan/service
-    echo "  -> Ensuring Argon One daemon is stopped..."
-    sudo systemctl stop argononed.service &>/dev/null
-    echo "  -> Setting Argon ONE fan to 0 RPM..."
-    sudo /usr/bin/i2cset -y 1 0x1a 0 &>/dev/null
 
     # Create backup file before making changes
     sudo cp "$NSSWITCH_CONF" "$BACKUP_FILE"
+
     # Modify config files and network state
+    echo "  -> Disabling DNS lookups..."
     sudo sed -i -E 's/^(hosts:).*/\1 files myhostname/' "$NSSWITCH_CONF"
+    echo "  -> Dropping default gateway..."
     sudo ip route del default &>/dev/null
 
     echo ""
@@ -48,8 +45,7 @@ revert_mode() {
     # Restore network and DNS configuration.
     sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
 
-    # If no default route exists (likely interactive use), restart networking to restore it.
-    # If a route exists (likely boot service), this step is skipped as it's redundant.
+    # If no default route exists, restart networking.
     if ! ip route | grep -q default; then
         sudo systemctl restart systemd-networkd &>/dev/null
     fi
@@ -57,9 +53,6 @@ revert_mode() {
     # Always restart services when this script is called.
     echo "  -> Restarting services..."
     sudo systemctl start chronyd &>/dev/null
-    if sudo systemctl -q is-enabled argononed.service; then
-         sudo systemctl start argononed.service &>/dev/null
-    fi
 
     echo ""
     echo "✅ Purist Mode DISABLED. System is in standard operation mode."
@@ -76,7 +69,7 @@ fi
 
 # Check for `sudo` availability
 if ! command -v sudo &> /dev/null; then
-    echo "Error: 'sudo' command not found. This script requires sudo to run."
+    echo "Error: 'sudo' command not found. This script requires sudo to run." >&2
     exit 1
 fi
 
@@ -99,4 +92,3 @@ else
 fi
 
 exit 0
-
