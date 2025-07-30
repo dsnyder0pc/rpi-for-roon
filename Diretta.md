@@ -798,6 +798,7 @@ fi
 ### Step 3: Install the Argon One Package
 ```bash
 yay -S argonone-c-git
+sudo pacman -S --noconfirm --needed i2c-tools
 ```
 
 ### Step 4: Create a Service to Initialize the Case
