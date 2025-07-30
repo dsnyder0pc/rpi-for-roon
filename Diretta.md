@@ -811,7 +811,7 @@ After=sysinit.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/i2cset -y 1 0x1a 0
+ExecStart=/usr/bin/i2cset -y 1 0x1a 0xff
 
 [Install]
 WantedBy=multi-user.target
