@@ -1646,7 +1646,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-restart-target'
     ```
 
-6.  **Install Python via pyenv** (feel free to skip this step if you did this already to get the IR Remote working)
+6.  **Install Python via pyenv** on the **Diretta Host** (feel free to skip this step if you did this already to get the IR Remote working)
     Install `pyenv` and the latest stable version of Python.
     ```bash
     # Install build dependencies
@@ -1692,7 +1692,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
     **Note:** It's normal for the `Installing Python-3.13.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
-7.  **Install Avahi and Python Dependencies:**
+7.  **Install Avahi and Python Dependencies on the Diretta Host:**
 
     **Note:** OPTIONAL - If you have more than one Diretta Host on your network, please make sure that they have unique names. You can use a command like the following to rename this one befor proceeding:
 
