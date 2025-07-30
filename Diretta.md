@@ -799,6 +799,8 @@ fi
 ### Step 3: Install the Argon One Package and I2C Tools
 ```bash
 yay -S argonone-c-git
+```
+```bash
 sudo pacman -S --noconfirm --needed i2c-tools
 ```
 
