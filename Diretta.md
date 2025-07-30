@@ -807,8 +807,7 @@ This service will run the `i2cset` command at boot to safely switch the case int
 cat <<'EOT' | sudo tee /etc/systemd/system/argon-case-init.service
 [Unit]
 Description=Set Argon ONE Case to Software Control Mode
-DefaultDependencies=no
-After=local-fs.target
+After=sysinit.target
 
 [Service]
 Type=oneshot
