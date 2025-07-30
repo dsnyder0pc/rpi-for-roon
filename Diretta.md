@@ -632,7 +632,9 @@ RemainAfterExit=yes
 WantedBy=local-fs.target
 EOT
 sudo systemctl daemon-reload
-sudo systemctl enable boot-repair.service
+sudo systemctl --now enable boot-repair.service
+sleep 5
+journalctl -b -u boot-repair.service
 ```
 
 #### 7.3. Verification After a Clean Reboot
@@ -654,7 +656,6 @@ Jun 27 10:17:55 diretta-host systemd[1]: Finished Check and repair /boot filesys
 If you see `-- No entries --`, try this:
 ```bash
 sudo systemctl restart boot-repair.service
-journalctl -b -u boot-repair.service
 ```
 
 ---
