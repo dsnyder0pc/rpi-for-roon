@@ -833,7 +833,7 @@ sleep 1
 pgrep -x argononed > /run/argononed.pid
 EOT
 
-sudo chmod +x /usr/local/sbin/argononed-wrapper.sh
+sudo chmod -v +x /usr/local/sbin/argononed-wrapper.sh
 ```
 
 ### Step 6: Create the Final `systemd` Override
@@ -1560,7 +1560,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     EOT
 
     # Make the new scripts executable
-    sudo chmod +x /usr/local/bin/pm-*
+    sudo chmod -v +x /usr/local/bin/pm-*
     ```
 
 4.  **Grant Sudo Permissions:**
