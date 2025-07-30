@@ -1,4 +1,4 @@
-# Building a Dedicated Diretta Link with Audiolinux on Raspberry Pi
+# Building a Dedicated Diretta Link with AudioLinux on Raspberry Pi
 
 This guide provides comprehensive, step-by-step instructions for configuring two Raspberry Pi devices as a dedicated Diretta Host and Diretta Target. This setup uses a direct, point-to-point Ethernet connection between the two devices for the ultimate in network isolation and audio performance.
 
@@ -36,11 +36,11 @@ This project evolves Roon's recommended two-box setup into an ultimate, three-ti
 2.  **Tier 2: Diretta Host**: The first Raspberry Pi in our build acts as the **Diretta Host**. It connects to your main network, receives the audio stream from the Roon Core, and then prepares to forward it using a specialized protocol.
 3.  **Tier 3: Diretta Target**: The second Raspberry Pi, the **Diretta Target**, connects *only* to the Host Pi via a short Ethernet cable, creating a point-to-point, galvanically isolated link. It receives the audio from the Host and connects to your DAC or DDC via USB.
 
-### What Diretta and Audiolinux Bring to the Table
+### What Diretta and AudioLinux Bring to the Table
 
 This design's superiority comes from two key software components running on the Raspberry Pi devices:
 
-* **Audiolinux**: This is a purpose-built, real-time operating system designed specifically for audiophile use. Unlike a general-purpose OS, it's optimized to minimize processor latencies and system "jitter," providing a stable, low-noise foundation for our endpoint.
+* **AudioLinux**: This is a purpose-built, real-time operating system designed specifically for audiophile use. Unlike a general-purpose OS, it's optimized to minimize processor latencies and system "jitter," providing a stable, low-noise foundation for our endpoint.
 * **Diretta**: This groundbreaking protocol is the secret sauce that solves the root problem. It recognizes that fluctuations in the endpoint's processing load generate low-frequency electrical noise that can evade a DAC's internal filtering (as defined by its Power Supply Rejection Ratio, or PSRR) and subtly degrade its analog performance. To combat this, Diretta employs its "Host-Target" model, where the Host sends data in a continuous, synchronized stream of small, evenly spaced packets. This "averages" the processing load on the Target device, stabilizing its current draw and minimizing the generation of this pernicious electrical noise.
 
 The combination of the physical galvanic isolation from the point-to-point Ethernet link and the processing noise elimination from the Diretta protocol creates a profoundly clean signal path to your DAC—one that can leapfrog solutions costing many thousands of dollars.
@@ -57,7 +57,7 @@ Now, let's get started.
 
 If you are located in the US, expect to pay around $289 (plus tax and shipping) to complete the basic build, limited to 44.1 kHz playback (for evaluation), plus another €100 to enable hi-res playback (prices subject to change):
 - Hardware ($220)
-- One year Audiolinux subscription ($69)
+- One year AudioLinux subscription ($69)
 - Diretta Target license (€100)
 
 ## Table of Contents
@@ -132,7 +132,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 #### Software & Licensing Costs
 
-* **Audiolinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$139** (prices subject to change). However, it's fine to get started with a one year subscription, currently **$69**. Both options allow for installation on multiple devices within the same location.
+* **AudioLinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$139** (prices subject to change). However, it's fine to get started with a one year subscription, currently **$69**. Both options allow for installation on multiple devices within the same location.
 * **Diretta Target:** A license is required for the Diretta Target device and currently costs **€100**.
     * You may evaluate the Diretta Target using 44.1 kHz streams for an extended period of time. Therefore, I recommend using Roon's **Sample rate conversion** feature under **MUSE** DSP settings to convert all content to 44.1 kHz during your evaluation period. Once you are satisfied, purchase the Diretta Target license to remove the restriction. Leave sample rate conversion settings engaged until you receive the second email from the Diretta team indicating that your hardware has been activated.
     * **CRITICAL:** This license is locked to the specific hardware of the Raspberry Pi it is purchased for. It is essential that you perform the final licensing step on the exact hardware you intend to use permanently.
@@ -142,10 +142,10 @@ A complete bill of materials is provided below. While other parts can be substit
 
 ### 2. Initial Image Preparation
 
-1.  **Purchase and Download:** Obtain the Audiolinux image from the [official website](https://www.audio-linux.com/). You will receive a link to download the `.img.gz` file via email typically within 24 hours of purchase.
+1.  **Purchase and Download:** Obtain the AudioLinux image from the [official website](https://www.audio-linux.com/). You will receive a link to download the `.img.gz` file via email typically within 24 hours of purchase.
 2.  **Flash the Image:** Use your preferred imaging tool (e.g., [balenaEtcher](https://etcher.balena.io/) or
-[Raspberry Pi Imager](https://www.raspberrypi.com/software/)) to write the downloaded Audiolinux image to **both** microSD cards.
-    > **Note:** The Audiolinux image is a direct disk dump, not a compressed installer. As a result, the image file is quite large, and the flashing process can be unusually long. Expect it to take up to 15 minutes per card, depending on the speed of your microSD card and reader.
+[Raspberry Pi Imager](https://www.raspberrypi.com/software/)) to write the downloaded AudioLinux image to **both** microSD cards.
+    > **Note:** The AudioLinux image is a direct disk dump, not a compressed installer. As a result, the image file is quite large, and the flashing process can be unusually long. Expect it to take up to 15 minutes per card, depending on the speed of your microSD card and reader.
 
 ---
 
@@ -292,12 +292,12 @@ sudo pacman -Syu --noconfirm linux-firmware
 
 #### 4.4. Run System and Menu Updates
 
-Use the Audiolinux menu system to perform all updates.
+Use the AudioLinux menu system to perform all updates.
 
 1.  Run `menu` in the terminal.
 2.  Select **INSTALL/UPDATE menu**.
 3.  On the next screen, select **UPDATE system** and let the process complete.
-4.  After the system update finishes, select **Update menu** from the same screen to get the latest version of the Audiolinux scripts.
+4.  After the system update finishes, select **Update menu** from the same screen to get the latest version of the AudioLinux scripts.
 5.  Exit the menu system to get back to the terminal.
 
 ---
@@ -767,12 +767,12 @@ Your dedicated Diretta link is now fully configured for pristine, isolated audio
 ---
 
 ## 10. Appendix 1: Argon ONE Fan Control
-If you decided to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
+If you decided to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However AudioLinux is based on Arch Linux, so you'll have to follow these steps instead.
 
 If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on both computers.
 
 ### Step 1: Skip the `argon1.sh` script in the manual
-The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work on Audiolinux since the script assumes a Debian-based O/S, so skip this step and follow the steps below instead.
+The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work on AudioLinux since the script assumes a Debian-based O/S, so skip this step and follow the steps below instead.
 
 ### Step 2: Configure your system:
 This enables the I2C interface and the necessary overlay for the case.
@@ -1322,7 +1322,7 @@ For example:
 ```text
 [audiolinux@diretta-target ~]$ purist-mode
 This script requires sudo privileges. You may be prompted for a password.
-(Note: The default sudo password for Audiolinux is 'audiolinux0')
+(Note: The default sudo password for AudioLinux is 'audiolinux0')
 [sudo] password for root:
 🚀 Activating Purist Mode...
   -> Stopping time synchronization service (chronyd)...
@@ -1391,7 +1391,7 @@ sudo systemctl enable purist-mode-auto.service
 ---
 
 ### Step 3: Install a wrapper around the `menu` command
-Many functions in the Audiolinux require Internet access. To keep things working as expected, add a wrapper around the `menu` command that disables Purist mode while you are using the menu, enabling it again when you exit to the terminal.
+Many functions in the AudioLinux require Internet access. To keep things working as expected, add a wrapper around the `menu` command that disables Purist mode while you are using the menu, enabling it again when you exit to the terminal.
 
 ```bash
 if grep -q menu_wrapper ~/.bashrc; then
@@ -1401,7 +1401,7 @@ else
   echo "Add a wrapper around the menu command"
   cat <<'EOT' | tee -a ~/.bashrc
 
-# Custom wrapper for the Audiolinux menu to manage Purist Mode
+# Custom wrapper for the AudioLinux menu to manage Purist Mode
 menu_wrapper() {
   local was_active=false
   # Check the initial state of Purist Mode by looking for the backup file.
@@ -1412,7 +1412,7 @@ menu_wrapper() {
   # If Purist Mode was active, temporarily revert it for the menu.
   if [ "$was_active" = true ]; then
     echo "Checking credentials to manage Purist Mode..."
-    echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
+    echo "(Note: The default sudo password for AudioLinux is 'audiolinux0')"
     sudo -v
 
     echo "Temporarily disabling Purist Mode to run menu..."
