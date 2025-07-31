@@ -870,7 +870,7 @@ This guide provides instructions for installing and configuring an IR remote to 
   * **Part 1** covers the hardware-specific setup. You will choose **one** of the two appendices depending on whether you are using the Flirc USB receiver or the Argon One case's built-in receiver.
   * **Part 2** covers the software setup for the `roon-ir-remote` control script, which is identical for both hardware options.
 
-**Note:** You will _only_ perform these steps on the **Diretta Host**. The **Target** should not be used for relaying IR remote control commands to Roon Server.
+**Note:** You will _only_ perform these steps on the Diretta Host. The Target should not be used for relaying IR remote control commands to Roon Server.
 
 ---
 
@@ -904,100 +904,97 @@ This guide provides instructions for installing and configuring an IR remote to 
 
 #### **Option 2: Argon One IR Remote Setup**
 
-**CRITICAL:** You must not add the generic `dtoverlay=gpio-ir` overlay to your `/boot/config.txt` file. It will conflict with the `argonone` overlay and cause system instability.
+1.  **Enable the IR Receiver Hardware:**
+    You must enable the hardware overlay for the Argon One case's IR receiver.
 
-The procedure is to install the `ir-keytable` tools and map the signals from the input device created by the `argononed` daemon.
+      * This command will safely add the required hardware overlay to your `/boot/config.txt` file, first checking to ensure it isn't added more than once.
+        ```bash
+        BOOT_CONFIG="/boot/config.txt"
+        IR_CONFIG="dtoverlay=gpio-ir,gpio_pin=23"
 
-1.  **Install IR Tools**
+        # Add IR remote overlay if it's not already there
+        if ! grep -q -F "$IR_CONFIG" "$BOOT_CONFIG"; then
+          echo "Enabling Argon One IR Receiver..."
+          echo "$IR_CONFIG" | sudo tee -a "$BOOT_CONFIG" > /dev/null
+        else
+          echo "Argon One IR Receiver already enabled."
+        fi
+        ```
+      * A reboot is required for the hardware change to take effect.
+        ```bash
+        sudo sync && sudo reboot
+        ```
+
+2.  **Install IR Tools and Enable Protocols:**
+    Install `ir-keytable`
     ```bash
     sudo pacman -S --noconfirm v4l-utils
     ```
 
-2.  **Test the Remote and Capture Scancodes:**
-    This command will automatically find the Argon ONE's input device and start a test. Press each button on your remote you wish to use and note its scancode (a small hexidecimal number) from the output. Press `Ctrl+C` when done.
-
+3.  **Capture Button Scancodes:**
+     Enable all kernel protocols so it can decode signals from your remote.Run the test tool to see the unique scancode for each remote button.
     ```bash
-    # Find the persistent path for the Argon ONE case's IR input device
-    ARGON_DEVICE_PATH=$(find /dev/input/by-path -name '*-event-if00' | head -n 1)
-
-    # Check if the device was found before proceeding
-    if [ -z "$ARGON_DEVICE_PATH" ]; then
-      echo "❌ ERROR: Could not find the Argon ONE input device."
-      echo "Please ensure the argononed.service is running and try again."
-    else
-      echo "✅ Found device: $ARGON_DEVICE_PATH"
-      echo "--- Starting test. Press buttons on your remote. Press Ctrl+C to exit. ---"
-      sudo ir-keytable -t -d "$ARGON_DEVICE_PATH"
-    fi
+    sudo ir-keytable -p all
+    sudo ir-keytable -t
     ```
 
-3.  **Create the Keymap File:**
-    This file maps the scancodes to standard key names. Use the scancodes you captured in the previous step. The scample scancodes below are for the [Argon IR Remote](https://argon40.com/products/argon-remote).
+    Press each button you want to use and note its scancode from the `MSC_SCAN` event output (e.g., `value ca`). Press `Ctrl+C` when done.
 
+4.  **Create the Keymap File:**
+    This file maps the scancodes to standard key names.
+
+      * Create a new keymap file:
+        ```bash
+        cat <<'EOT' | sudo tee /etc/rc_keymaps/argon.toml
+        # /etc/rc_keymaps/argon.toml
+        [[protocols]]
+        name = "argon_remote"
+        protocol = "nec"
+        [protocols.scancodes]
+        0xca = "KEY_UP"
+        0xd2 = "KEY_DOWN"
+        0x99 = "KEY_LEFT"
+        0xc1 = "KEY_RIGHT"
+        0xce = "KEY_ENTER"
+        0x90 = "KEY_ESC"
+        0x80 = "KEY_VOLUMEUP"
+        0x81 = "KEY_VOLUMEDOWN"
+        0xcb = "KEY_MUTE"
+        EOT
+        ```
+      * If the scan codes in the example file above don't match the ones you recorded, edit the file (`sudo nano /etc/rc_keymaps/argon.toml`) and change them to match.
+
+5.  **Create a `systemd` Service to Load the Keymap:**
+    This service will load your keymap automatically on boot.
+
+    Create a new service file and enable the service:
     ```bash
-    cat <<'EOT' | sudo tee /etc/rc_keymaps/argon.toml
-    # /etc/rc_keymaps/argon.toml
-    [[protocols]]
-    name = "argon_remote"
-    protocol = "nec"
-    [protocols.scancodes]
-    0xca = "KEY_UP"
-    0xd2 = "KEY_DOWN"
-    0x99 = "KEY_LEFT"
-    0xc1 = "KEY_RIGHT"
-    0xce = "KEY_ENTER"
-    0x90 = "KEY_ESC"
-    0x80 = "KEY_VOLUMEUP"
-    0x81 = "KEY_VOLUMEDOWN"
-    0xcb = "KEY_MUTE"
-    EOT
-    ```
-    **Note:** If the scan codes in the example file above don't match the ones you recorded, edit the file (`sudo nano /etc/rc_keymaps/argon.toml`) and change them to match.
-
-4.  **Create and Enable the Keymap Service:**
-    This script will automatically find the device path again and create a `systemd` service to load your keymap on boot.
-
-    ```bash
-    # Find the persistent path for the Argon ONE case's IR input device
-    ARGON_DEVICE_PATH=$(find /dev/input/by-path/ -name '*-event-if00' | head -n 1)
-
-    # Check if the device was found before proceeding
-    if [ -z "$ARGON_DEVICE_PATH" ]; then
-      echo "❌ ERROR: Could not find the Argon ONE input device."
-      echo "Please ensure the argononed.service is running and try again."
-    else
-      echo "✅ Found device: $ARGON_DEVICE_PATH"
-
-      # Create the systemd service file using the found path
-      cat <<EOT | sudo tee /etc/systemd/system/ir-keymap.service
+    cat <<'EOT' | sudo tee /etc/systemd/system/ir-keymap.service
     [Unit]
-    Description=Load custom IR keymap for Argon ONE
-    After=argononed.service
-    Requires=argononed.service
+    Description=Load custom IR keymap
+    After=multi-user.target
 
     [Service]
     Type=oneshot
     RemainAfterExit=yes
-    ExecStart=/usr/bin/ir-keytable -c -p all -w /etc/rc_keymaps/argon.toml -s rc0 -d ${ARGON_DEVICE_PATH}
+    ExecStart=/usr/bin/ir-keytable -c -p nec -w /etc/rc_keymaps/argon.toml
 
     [Install]
     WantedBy=multi-user.target
     EOT
-      echo "✅ Successfully created /etc/systemd/system/ir-keymap.service"
-			sudo systemctl daemon-reload
-      sudo systemctl enable --now ir-keymap.service
-    fi
+    sudo systemctl enable --now ir-keymap.service
     ```
 
-5.  **Verify the Key Mappings with `evtest`:**
-    Finally, verify the system is receiving the correct keyboard events.
+6.  **Test the Input Device:**
+    Verify the system is receiving keyboard events from the IR remote.
 
     ```bash
     sudo pacman -S --noconfirm evtest
     sudo evtest
     ```
 
-    From the list of devices, select the one corresponding to your Argon ONE case (e.g., `platform-fde40000.i2c-event-if00`). When you press buttons on the remote, you should now see the correctly mapped key events (e.g., `KEY_UP`, `KEY_DOWN`). Press Ctrl+C when finished.
+    Select the `gpio_ir_recv` device. When you press buttons on the remote, you should see the corresponding key events.
+    Type `CTRL-C` when you are finished testing.
 
 ---
 
