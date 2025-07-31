@@ -70,7 +70,7 @@ If you are located in the US, expect to pay around $289 (plus tax and shipping) 
 7.  [Clean the Boot Filesystem](#7-clean-the-boot-filesystem)
 8.  [Diretta Software Installation & Configuration](#8-diretta-software-installation--configuration)
 9.  [Final Steps & Roon Integration](#9-final-steps--roon-integration)
-10. [Appendix 1: Argon ONE Fan Control](#10-appendix-1-argon-one-fan-control)
+10. [Appendix 1: Optional Argon ONE Fan Control](#10-appendix-1-optional-argon-one-fan-control)
 11. [Appendix 2: Optional IR Remote Control](#11-appendix-2-optional-ir-remote-control)
 12. [Appendix 3: Optional Purist Mode](#12-appendix-3-optional-purist-mode)
 13. [Appendix 4: Optional Purist Mode Web UI](#13-appendix-4-optional-purist-mode-web-ui)
@@ -157,7 +157,7 @@ After flashing, you must configure each Raspberry Pi individually to avoid netwo
 >
 > **You must perform the initial boot and configuration for each device one at a time.**
 
-1.  Insert the microSD card into the **first** Raspberry Pi, connect it to your network, and power it on. **Note:** If you're using the Argon ONE case, you may hear audible noise from the fan. Don't worry. Once you've finished with Diretta setup, there are instructions in [Appendix 1](#10-appendix-1-argon-one-fan-control) for addressing the fan noise.
+1.  Insert the microSD card into the **first** Raspberry Pi, connect it to your network, and power it on. **Note:** If you're using the Argon ONE case, you may hear audible noise from the fan. Don't worry. Once you've finished with Diretta setup, there are instructions in [Appendix 1](#10-appendix-1-optional-argon-one-fan-control) for addressing the fan noise.
 2.  Complete **all of Section 3** for this first device.
 3.  Once the first device has rebooted with its new unique configuration, power it down.
 4.  Now, power on the **second** Raspberry Pi and repeat **all of Section 3** for it.
@@ -766,100 +766,119 @@ Your dedicated Diretta link is now fully configured for pristine, isolated audio
 
 ---
 
-## 10. Appendix 1: Argon ONE Fan Control
-This procedure installs the official Argon40 Python software, which provides stable fan control and correct power button functionality for a clean shutdown. This should be performed on any device using an Argon ONE case.
+## 10. Appendix 1: Optional Argon ONE Fan Control
+If you decided to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
 
-**Note:** If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on _both_ computers.
+If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on both computers.
 
 ### Step 1: Skip the `argon1.sh` script in the manual
-The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work on AudioLinux since the script assumes a Debian-based O/S, so skip this step and follow the steps below instead.
+The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work on Audiolinux since the script assumes a Debian-based O/S, so skip this step and follow the steps below instead.
 
 ### Step 2: Configure your system:
-This enables the I2C interface and the necessary overlay for the case.
+These commands will enable the I2C interface and add the specific `dtoverlay`
+for the Argon ONE case. The script first attempts to uncomment the `i2c_arm`
+parameter if it's commented out and then adds the `argonone` overlay if it's
+missing, preventing errors and duplicate entries.
 ```bash
 BOOT_CONFIG="/boot/config.txt"
 I2C_PARAM="dtparam=i2c_arm=on"
+ARGON_OVERLAY="dtoverlay=argonone"
 
 # --- Enable I2C by uncommenting the line if it exists ---
 if grep -q -F "#$I2C_PARAM" "$BOOT_CONFIG"; then
   echo "Enabling I2C parameter..."
   sudo sed -i -e "s/^#\($I2C_PARAM\)/\1/" "$BOOT_CONFIG"
 fi
+
+# --- Add the Argon One overlay if it's not already there ---
+if ! grep -q -F "$ARGON_OVERLAY" "$BOOT_CONFIG"; then
+  echo "Adding Argon One overlay..."
+  echo "$ARGON_OVERLAY" | sudo tee -a "$BOOT_CONFIG" > /dev/null
+else
+  echo "Argon One overlay already present."
+fi
 ```
 
-### Step 3: Install the necessary libraries for I2C, `systemd`, and GPIO communication.
+### Step 3: Configure `udev` permissions
 ```bash
-sudo pacman -S --noconfirm --needed python-systemd i2c-tools libgpiod
-```
-
-### Step 4: Download and Install the Official Argon40 Software
-These commands download all the essential files for the Argon ONE daemon directly from the official Argon40 server and install them to their correct system locations with some minor patching to change paths from Debian to Arch Linux.
-```bash
-### Step 3: Download and Install the Official Argon40 Software
-# These commands download all the essential files for the Argon ONE daemon directly
-# from the official Argon40 server and install them to their correct system locations.
-
-BASE_URL="https://download.argon40.com/scripts"
-INSTALL_DIR="/etc/argon"
-
-echo "--- Creating installation directory at ${INSTALL_DIR} ---"
-sudo mkdir -p "${INSTALL_DIR}"
-sudo mkdir -p "/lib/systemd/system-shutdown/"
-
-echo "--- Downloading and installing official Argon40 files... ---"
-
-# --- Download Main Daemon and All Helper Scripts to /etc/argon/ ---
-sudo curl -L -sS "${BASE_URL}/argononed.py" -o "${INSTALL_DIR}/argononed.py"
-sudo curl -L -sS "${BASE_URL}/argonsysinfo.py" -o "${INSTALL_DIR}/argonsysinfo.py"
-sudo curl -L -sS "${BASE_URL}/argonregister.py" -o "${INSTALL_DIR}/argonregister.py"
-sudo curl -L -sS "${BASE_URL}/argonpowerbutton-libgpiod.py" -o "${INSTALL_DIR}/argonpowerbutton.py"
-
-# --- Download User-facing Scripts and Service Files ---
-sudo curl -L -sS "${BASE_URL}/argonone-fanconfig.sh" -o /usr/bin/argonone-fanconfig
-sudo curl -L -sS "${BASE_URL}/argon-uninstall.sh" -o /usr/bin/argon-uninstall
-sudo curl -L -sS "${BASE_URL}/argononed.service" -o /etc/systemd/system/argononed.service
-sudo curl -L -sS "${BASE_URL}/argon-shutdown.sh" -o /lib/systemd/system-shutdown/argon-shutdown.sh
-
-# --- Patch the Uninstaller for Arch Linux Compatibility ---
-sudo sed -i 's|/lib/systemd/system/|/etc/systemd/system/|g' /usr/bin/argon-uninstall
-
-# --- Create the Custom Configuration File ---
-cat <<'EOT' | sudo tee /etc/argononed.conf
-#
-# Argon Fan Speed Configuration CPU
-#
-# Min Temp=Fan Speed
-55=0
-60=55
-65=100
+cat <<'EOT' | sudo tee /etc/udev/rules.d/99-i2c.rules
+KERNEL=="i2c-[0-9]*", MODE="0666"
 EOT
-
-# --- Set Correct Permissions ---
-sudo chmod 755 ${INSTALL_DIR}/*
-sudo chmod 755 /usr/bin/argonone-fanconfig
-sudo chmod 755 /usr/bin/argon-uninstall
-sudo chmod 755 /lib/systemd/system-shutdown/argon-shutdown.sh
-sudo chmod 644 /etc/systemd/system/argononed.service
-sudo chmod 666 /etc/argononed.conf
-
-# --- Create Convenient Symbolic Links ---
-sudo ln -sf /usr/bin/argonone-fanconfig /usr/bin/argonone-config
-sudo ln -sf /usr/bin/argon-uninstall /usr/bin/argonone-uninstall
-
-# --- Verify Installed Files ---
-echo "--- Verifying installed files... ---"
-ls -lL /etc/argon/ /usr/bin/argonone-config /usr/bin/argonone-uninstall /etc/systemd/system/argononed.service /lib/systemd/system-shutdown/argon-shutdown.sh /etc/argononed.conf
 ```
 
-### Step 5: Enable and start the Service
+### Step 4: Install the Argon One Package
 ```bash
+yay -S argonone-c-git
+```
+
+### Step 5: Switch Argon ONE case from hardware to software control
+```bash
+sudo pacman -S --noconfirm --needed i2c-tools
+```
+
+```bash
+# Create a systemd override file to switch the case to software mode on boot
+sudo mkdir -pv /etc/systemd/system/argononed.service.d
+printf '%s\n' \
+  '[Service]' \
+  'ExecStartPre=/usr/bin/i2cset -y 1 0x1a 0' \
+  | sudo tee /etc/systemd/system/argononed.service.d/software-mode.conf > /dev/null
+```
+
+### Step 6: Enable the Service
+```bash
+# Reload the systemd manager to read the new configuration
 sudo systemctl daemon-reload
-sudo systemctl enable --now argononed.service
+
+# Enable the service to start on boot
+sudo systemctl enable argononed.service
+```
+
+### Step 7: Reboot
+Finally, reboot your Raspberry Pi for all changes to take effect (Target first, then Host):
+```bash
 sudo sync && sudo reboot
 ```
 
-### Verify and Configure
-After the reboot, the official daemon will be running. The power button will now trigger a clean shutdown. To configure fan speeds, use the command: `argonone-config`
+Now, the fan will be controlled by the daemon, and the power button will have full functionality.
+
+### Step 8: Verify the service
+```bash
+systemctl status argononed.service
+journalctl -u argononed.service -b
+```
+
+### Step 9: Review Fan Mode and Settings:
+To see the current configuration values, run the following command:
+```bash
+sudo argonone-cli --decode
+```
+
+To adjust those values, you must create a config file. Use these values to start:
+```bash
+cat <<'EOT' | sudo tee /etc/argononed.conf
+[Schedule]
+temp0=55
+fan0=0
+temp1=60
+fan1=50
+temp2=65
+fan2=100
+
+[Setting]
+hysteresis=3
+EOT
+```
+
+Restart the service to pick up the new configuration values:
+```bash
+sudo systemctl restart argononed.service
+echo ""
+echo "Updated fan values:"
+sudo argonone-cli --decode
+```
+
+Now, feel free to adjust the values as needed, following the steps above.
 
 ---
 
