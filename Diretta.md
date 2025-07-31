@@ -782,20 +782,11 @@ missing, preventing errors and duplicate entries.
 ```bash
 BOOT_CONFIG="/boot/config.txt"
 I2C_PARAM="dtparam=i2c_arm=on"
-ARGON_OVERLAY="dtoverlay=argonone"
 
 # --- Enable I2C by uncommenting the line if it exists ---
 if grep -q -F "#$I2C_PARAM" "$BOOT_CONFIG"; then
   echo "Enabling I2C parameter..."
   sudo sed -i -e "s/^#\($I2C_PARAM\)/\1/" "$BOOT_CONFIG"
-fi
-
-# --- Add the Argon One overlay if it's not already there ---
-if ! grep -q -F "$ARGON_OVERLAY" "$BOOT_CONFIG"; then
-  echo "Adding Argon One overlay..."
-  echo "$ARGON_OVERLAY" | sudo tee -a "$BOOT_CONFIG" > /dev/null
-else
-  echo "Argon One overlay already present."
 fi
 ```
 
@@ -932,9 +923,9 @@ This guide provides instructions for installing and configuring an IR remote to 
         IR_CONFIG="dtoverlay=gpio-ir,gpio_pin=23"
 
         # Add IR remote overlay if it's not already there
-        if ! grep -q -F "$IR_CONFIG" "$BOOT_CONFIG"; then
+        if ! sed 's/#.*//' $BOOT_CONFIG | grep -q -F "$IR_CONFIG"; then
           echo "Enabling Argon One IR Receiver..."
-          echo "$IR_CONFIG" | sudo tee -a "$BOOT_CONFIG" > /dev/null
+          sudo sed -i "/# Uncomment this to enable infrared communication./a $IR_CONFIG" /boot/config.txt
         else
           echo "Argon One IR Receiver already enabled."
         fi
