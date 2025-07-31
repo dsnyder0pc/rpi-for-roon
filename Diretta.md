@@ -779,20 +779,11 @@ This enables the I2C interface and the necessary overlay for the case.
 ```bash
 BOOT_CONFIG="/boot/config.txt"
 I2C_PARAM="dtparam=i2c_arm=on"
-ARGON_OVERLAY="dtoverlay=argonone"
 
 # --- Enable I2C by uncommenting the line if it exists ---
 if grep -q -F "#$I2C_PARAM" "$BOOT_CONFIG"; then
   echo "Enabling I2C parameter..."
   sudo sed -i -e "s/^#\($I2C_PARAM\)/\1/" "$BOOT_CONFIG"
-fi
-
-# --- Add the Argon One overlay if it's not already there ---
-if ! grep -q -F "$ARGON_OVERLAY" "$BOOT_CONFIG"; then
-  echo "Adding Argon One overlay..."
-  echo "$ARGON_OVERLAY" | sudo tee -a "$BOOT_CONFIG" > /dev/null
-else
-  echo "Argon One overlay already present."
 fi
 ```
 
@@ -804,6 +795,10 @@ sudo pacman -S --noconfirm --needed python-systemd i2c-tools libgpiod
 ### Step 4: Download and Install the Official Argon40 Software
 These commands download all the essential files for the Argon ONE daemon directly from the official Argon40 server and install them to their correct system locations with some minor patching to change paths from Debian to Arch Linux.
 ```bash
+### Step 3: Download and Install the Official Argon40 Software
+# These commands download all the essential files for the Argon ONE daemon directly
+# from the official Argon40 server and install them to their correct system locations.
+
 BASE_URL="https://download.argon40.com/scripts"
 INSTALL_DIR="/etc/argon"
 
@@ -824,6 +819,9 @@ sudo curl -L -sS "${BASE_URL}/argonone-fanconfig.sh" -o /usr/bin/argonone-fancon
 sudo curl -L -sS "${BASE_URL}/argon-uninstall.sh" -o /usr/bin/argon-uninstall
 sudo curl -L -sS "${BASE_URL}/argononed.service" -o /etc/systemd/system/argononed.service
 sudo curl -L -sS "${BASE_URL}/argon-shutdown.sh" -o /lib/systemd/system-shutdown/argon-shutdown.sh
+
+# --- Patch the Uninstaller for Arch Linux Compatibility ---
+sudo sed -i 's|/lib/systemd/system/|/etc/systemd/system/|g' /usr/bin/argon-uninstall
 
 # --- Create the Custom Configuration File ---
 cat <<'EOT' | sudo tee /etc/argononed.conf
@@ -905,8 +903,6 @@ This guide provides instructions for installing and configuring an IR remote to 
 ---
 
 #### **Option 2: Argon One IR Remote Setup**
-
-If you have completed the Argon ONE setup in Appendix 1, the hardware is already configured. The `dtoverlay=argonone` in `/boot/config.txt` also enables the IR receiver.
 
 **CRITICAL:** You must not add the generic `dtoverlay=gpio-ir` overlay to your `/boot/config.txt` file. It will conflict with the `argonone` overlay and cause system instability.
 
