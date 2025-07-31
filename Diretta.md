@@ -204,7 +204,7 @@ sudo hostnamectl set-hostname diretta-target
 
 **At this point, shutdown the device. Repeat the [above steps](#3-core-system-configuration-perform-on-both-devices) for the second Raspberry Pi.**
 ```bash
-sudo sync; sudo poweroff
+sudo sync && sudo poweroff
 ```
 
 ---
@@ -399,7 +399,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
 
     Finally, power-off the Host:
     ```bash
-    sudo sync; sudo poweroff
+    sudo sync && sudo poweroff
     ```
 
 #### 5.2. Pre-configure the Diretta Target
@@ -445,7 +445,7 @@ fi
 
 1.  Once you have verified the files, perform a clean shutdown of **both** devices:
     ```bash
-    sudo sync; sudo poweroff
+    sudo sync && sudo poweroff
     ```
 2.  Disconnect both devices from your main LAN switch/router.
 3.  Connect the **onboard Ethernet port** of the Diretta Host directly to the **onboard Ethernet port** of the Diretta Target using a single Ethernet cable.
@@ -767,9 +767,9 @@ Your dedicated Diretta link is now fully configured for pristine, isolated audio
 ---
 
 ## 10. Appendix 1: Argon ONE Fan Control
-If you decided to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However AudioLinux is based on Arch Linux, so you'll have to follow these steps instead.
+This procedure installs the official Argon40 Python software, which provides stable fan control and correct power button functionality for a clean shutdown. This should be performed on any device using an Argon ONE case.
 
-If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on both computers.
+**Note:** If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on _both_ computers.
 
 ### Step 1: Skip the `argon1.sh` script in the manual
 The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work on AudioLinux since the script assumes a Debian-based O/S, so skip this step and follow the steps below instead.
@@ -796,113 +796,72 @@ else
 fi
 ```
 
-### Step 3: Install the Argon One Package and I2C Tools
+### Step 3: Install the necessary libraries for I2C, `systemd`, and GPIO communication.
 ```bash
-yay -S argonone-c-git
-```
-```bash
-sudo pacman -S --noconfirm --needed i2c-tools
+sudo pacman -S --noconfirm --needed python-systemd i2c-tools libgpiod
 ```
 
-### Step 4: Create a Service to Initialize the Case
-This service will run the `i2cset` command at boot to safely switch the case into software-control mode without conflicting with the main daemon.
+### Step 4: Download and Install the Official Argon40 Software
+These commands download all the essential files for the Argon ONE daemon directly from the official Argon40 server and install them to their correct system locations with some minor patching to change paths from Debian to Arch Linux.
 ```bash
-cat <<'EOT' | sudo tee /etc/systemd/system/argon-case-init.service
-[Unit]
-Description=Set Argon ONE Case to Software Control Mode
-After=sysinit.target
+BASE_URL="https://download.argon40.com/scripts"
+INSTALL_DIR="/etc/argon"
 
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/i2cset -y 1 0x1a 0
+echo "--- Creating installation directory at ${INSTALL_DIR} ---"
+sudo mkdir -p "${INSTALL_DIR}"
+sudo mkdir -p "/lib/systemd/system-shutdown/"
 
-[Install]
-WantedBy=multi-user.target
+echo "--- Downloading and installing official Argon40 files... ---"
+
+# --- Download Main Daemon and All Helper Scripts to /etc/argon/ ---
+sudo curl -L -sS "${BASE_URL}/argononed.py" -o "${INSTALL_DIR}/argononed.py"
+sudo curl -L -sS "${BASE_URL}/argonsysinfo.py" -o "${INSTALL_DIR}/argonsysinfo.py"
+sudo curl -L -sS "${BASE_URL}/argonregister.py" -o "${INSTALL_DIR}/argonregister.py"
+sudo curl -L -sS "${BASE_URL}/argonpowerbutton-libgpiod.py" -o "${INSTALL_DIR}/argonpowerbutton.py"
+
+# --- Download User-facing Scripts and Service Files ---
+sudo curl -L -sS "${BASE_URL}/argonone-fanconfig.sh" -o /usr/bin/argonone-fanconfig
+sudo curl -L -sS "${BASE_URL}/argon-uninstall.sh" -o /usr/bin/argon-uninstall
+sudo curl -L -sS "${BASE_URL}/argononed.service" -o /etc/systemd/system/argononed.service
+sudo curl -L -sS "${BASE_URL}/argon-shutdown.sh" -o /lib/systemd/system-shutdown/argon-shutdown.sh
+
+# --- Create the Custom Configuration File ---
+cat <<'EOT' | sudo tee /etc/argononed.conf
+#
+# Argon Fan Speed Configuration CPU
+#
+# Min Temp=Fan Speed
+55=0
+60=55
+65=100
 EOT
+
+# --- Set Correct Permissions ---
+sudo chmod 755 ${INSTALL_DIR}/*
+sudo chmod 755 /usr/bin/argonone-fanconfig
+sudo chmod 755 /usr/bin/argon-uninstall
+sudo chmod 755 /lib/systemd/system-shutdown/argon-shutdown.sh
+sudo chmod 644 /etc/systemd/system/argononed.service
+sudo chmod 666 /etc/argononed.conf
+
+# --- Create Convenient Symbolic Links ---
+sudo ln -sf /usr/bin/argonone-fanconfig /usr/bin/argonone-config
+sudo ln -sf /usr/bin/argon-uninstall /usr/bin/argonone-uninstall
+
+# --- Verify Installed Files ---
+echo "--- Verifying installed files... ---"
+ls -lL /etc/argon/ /usr/bin/argonone-config /usr/bin/argonone-uninstall /etc/systemd/system/argononed.service /lib/systemd/system-shutdown/argon-shutdown.sh /etc/argononed.conf
 ```
 
-### Step 5: Create a Wrapper Script for the Daemon
-The argononed daemon has a bug where it fails to signal its startup correctly to systemd. This wrapper script fixes that issue.
-```bash
-cat <<'EOT' | sudo tee /usr/local/sbin/argononed-wrapper.sh
-#!/bin/sh
-# Launch the real daemon in the background
-/usr/sbin/argononed
-
-# Give the daemon a moment to fork
-sleep 1
-
-# Find the PID of the forked process and write it to the file for systemd
-pgrep -x argononed > /run/argononed.pid
-EOT
-
-sudo chmod -v +x /usr/local/sbin/argononed-wrapper.sh
-```
-
-### Step 6: Create the Final `systemd` Override
-```bash
-sudo mkdir -p /etc/systemd/system/argononed.service.d
-cat <<'EOT' | sudo tee /etc/systemd/system/argononed.service.d/override.conf
-[Unit]
-Requires=argon-case-init.service
-After=argon-case-init.service
-
-[Service]
-Type=forking
-PIDFile=/run/argononed.pid
-ExecStart=
-ExecStart=/usr/local/sbin/argononed-wrapper.sh
-EOT
-```
-
-### Step 7: Enable the Services and Reboot
+### Step 5: Enable and start the Service
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable argon-case-init.service
-sudo systemctl enable argononed.service
-sudo sync && sudo reboot
+sudo systemctl enable --now argononed.service
+sudo sync && sudo sudo reboot
 ```
 
-Now, the fan will be controlled by the daemon, and the power button will have full functionality.
-
-### Step 8: Verify the service
-```bash
-systemctl status argononed.service
-journalctl -u argononed.service -b
-```
-
-### Step 9: Review Fan Mode and Settings:
-To see the current configuration values, run the following command:
-```bash
-sudo argonone-cli --decode
-```
-
-To adjust those values, you must create a config file. Use these values to start:
-```bash
-cat <<'EOT' | sudo tee /etc/argononed.conf
-[Schedule]
-temp0=55
-fan0=0
-temp1=60
-fan1=50
-temp2=65
-fan2=100
-
-[Setting]
-hysteresis=3
-EOT
-```
-
-Restart the service to pick up the new configuration values:
-```bash
-sudo systemctl restart argononed.service
-echo ""
-echo "Updated fan values:"
-sleep 5
-sudo argonone-cli --decode
-```
-
-Now, feel free to adjust the values as needed, following the steps above.
+### Verify and Configure
+After the reboot, the official daemon will be running. The power button will now trigger a clean shutdown. To configure fan speeds, use the command: `argonone-config`
 
 ---
 
