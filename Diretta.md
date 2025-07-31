@@ -855,7 +855,7 @@ ls -lL /etc/argon/ /usr/bin/argonone-config /usr/bin/argonone-uninstall /etc/sys
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now argononed.service
-sudo sync && sudo sudo reboot
+sudo sync && sudo reboot
 ```
 
 ### Verify and Configure
