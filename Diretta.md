@@ -872,7 +872,7 @@ This guide provides instructions for installing and configuring an IR remote to 
   * **Part 1** covers the hardware-specific setup. You will choose **one** of the two appendices depending on whether you are using the Flirc USB receiver or the Argon One case's built-in receiver.
   * **Part 2** covers the software setup for the `roon-ir-remote` control script, which is identical for both hardware options.
 
-**Note:** You will _only_ perform these steps on the Diretta Host. The Target should not be used for relaying IR remote control commands to Roon Server.
+**Note:** You will _only_ perform these steps on the **Diretta Host**. The **Target** should not be used for relaying IR remote control commands to Roon Server.
 
 ---
 
@@ -912,20 +912,17 @@ If you have completed the Argon ONE setup in Appendix 1, the hardware is already
 
 The procedure is to install the `ir-keytable` tools and map the signals from the input device created by the `argononed` daemon.
 
-1.  **Install IR Tools and Enable Protocols:**
-    Install `ir-keytable` and enable all kernel protocols so it can decode signals from your remote.
-
+1.  **Install IR Tools**
     ```bash
     sudo pacman -S --noconfirm v4l-utils
     ```
 
 2.  **Test the Remote and Capture Scancodes:**
-    This command will automatically find the Argon ONE's input device and start a test.
+    This command will automatically find the Argon ONE's input device and start a test. Press each button on your remote you wish to use and note its scancode (a small hexidecimal number) from the output. Press `Ctrl+C` when done.
 
     ```bash
-    sudo ir-keytable -p all
     # Find the persistent path for the Argon ONE case's IR input device
-    ARGON_DEVICE_PATH=$(find /dev/input/by-path/ -name '*-event-if00' | head -n 1)
+    ARGON_DEVICE_PATH=$(find /dev/input/by-path -name '*-event-if00' | head -n 1)
 
     # Check if the device was found before proceeding
     if [ -z "$ARGON_DEVICE_PATH" ]; then
@@ -938,31 +935,28 @@ The procedure is to install the `ir-keytable` tools and map the signals from the
     fi
     ```
 
-    Press each button you want to use and note its scancode from the `MSC_SCAN` event output (e.g., `value ca`). Press `Ctrl+C` when done.
-
 3.  **Create the Keymap File:**
-    This file maps the scancodes to standard key names. Use the scancodes you captured in the previous step.
+    This file maps the scancodes to standard key names. Use the scancodes you captured in the previous step. The scample scancodes below are for the [Argon IR Remote](https://argon40.com/products/argon-remote).
 
-      * Create a new keymap file:
-        ```bash
-        cat <<'EOT' | sudo tee /etc/rc_keymaps/argon.toml
-        # /etc/rc_keymaps/argon.toml
-        [[protocols]]
-        name = "argon_remote"
-        protocol = "nec"
-        [protocols.scancodes]
-        0xca = "KEY_UP"
-        0xd2 = "KEY_DOWN"
-        0x99 = "KEY_LEFT"
-        0xc1 = "KEY_RIGHT"
-        0xce = "KEY_ENTER"
-        0x90 = "KEY_ESC"
-        0x80 = "KEY_VOLUMEUP"
-        0x81 = "KEY_VOLUMEDOWN"
-        0xcb = "KEY_MUTE"
-        EOT
-        ```
-      * If the scan codes in the example file above don't match the ones you recorded, edit the file (`sudo nano /etc/rc_keymaps/argon.toml`) and change them to match.
+    ```bash
+    cat <<'EOT' | sudo tee /etc/rc_keymaps/argon.toml
+    # /etc/rc_keymaps/argon.toml
+    [[protocols]]
+    name = "argon_remote"
+    protocol = "nec"
+    [protocols.scancodes]
+    0xca = "KEY_UP"
+    0xd2 = "KEY_DOWN"
+    0x99 = "KEY_LEFT"
+    0xc1 = "KEY_RIGHT"
+    0xce = "KEY_ENTER"
+    0x90 = "KEY_ESC"
+    0x80 = "KEY_VOLUMEUP"
+    0x81 = "KEY_VOLUMEDOWN"
+    0xcb = "KEY_MUTE"
+    EOT
+    ```
+    **Note:** If the scan codes in the example file above don't match the ones you recorded, edit the file (`sudo nano /etc/rc_keymaps/argon.toml`) and change them to match.
 
 4.  **Create and Enable the Keymap Service:**
     This script will automatically find the device path again and create a `systemd` service to load your keymap on boot.
