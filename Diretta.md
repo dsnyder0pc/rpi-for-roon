@@ -866,6 +866,7 @@ Restart the service to pick up the new configuration values:
 sudo systemctl restart argononed.service
 echo ""
 echo "Updated fan values:"
+sleep 5
 sudo argonone-cli --decode
 ```
 
