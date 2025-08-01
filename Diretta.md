@@ -804,7 +804,7 @@ yay -S argonone-c-git
 
 ### Step 5: Switch Argon ONE case from hardware to software control
 ```bash
-sudo pacman -S --noconfirm --needed i2c-tools
+sudo pacman -S --noconfirm --needed i2c-tools libgpiod
 ```
 
 ```bash
