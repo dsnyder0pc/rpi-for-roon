@@ -23,6 +23,7 @@ IMAGE_FILE="$1"
       sudo losetup -d "${LOOP_DEVICE}"
     fi
   }
+
   trap cleanup EXIT
 
   echo "--- Modifying image ---"
@@ -32,6 +33,48 @@ IMAGE_FILE="$1"
   sudo mkdir -p "${MOUNT_POINT}"
   sudo mount "${ROOT_PARTITION}" "${MOUNT_POINT}"
 
+  # Inject the self-expanding service for Arch Linux
+  echo "Installing one-shot resize service..."
+  # Create the script file
+  sudo tee "${MOUNT_POINT}/usr/local/sbin/resize-fs-once.sh" > /dev/null <<'EOF'
+#!/bin/bash
+fdisk /dev/mmcblk0 <<END
+d
+2
+n
+p
+2
+
+
+N
+w
+END
+partprobe /dev/mmcblk0
+resize2fs /dev/mmcblk0p2
+systemctl disable resize-fs-once.service
+rm /etc/systemd/system/resize-fs-once.service
+rm /usr/local/sbin/resize-fs-once.sh
+rm -f /etc/rc.local
+EOF
+
+  # Create the service file
+  sudo tee "${MOUNT_POINT}/etc/systemd/system/resize-fs-once.service" > /dev/null <<'EOF'
+[Unit]
+Description=Resize Root Filesystem Once
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/resize-fs-once.sh
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  # Make the script executable
+  sudo chmod +x "${MOUNT_POINT}/usr/local/sbin/resize-fs-once.sh"
+
+  # Enable the service by creating the symlink
+  sudo ln -s /etc/systemd/system/resize-fs-once.service "${MOUNT_POINT}/etc/systemd/system/multi-user.target.wants/resize-fs-once.service"
+
+  # Remove the machine-id to generalize the image
   if [ -f "${MOUNT_POINT}/etc/machine-id" ]; then
     echo "Removing existing machine-id..."
     sudo rm "${MOUNT_POINT}/etc/machine-id"
@@ -45,12 +88,11 @@ IMAGE_FILE="$1"
       sudo mv -v "${dl}" "${IMAGE_FILE%.img}".lic
     fi
   fi
-  # The subshell will now exit, and the trap will run automatically
-) # All mounts and loop devices from phase 1 are now cleaned up.
+) # The subshell now exits, and its trap automatically cleans up mounts/loops.
 
 
 # --- PHASE 2: Shrink the fully prepared and unmounted image ---
 echo "--- Shrinking image ---"
 sudo pishrink.sh "${IMAGE_FILE}"
 
-echo "Image is now prepared and ready to be flashed."
+echo "Image is now prepared and ready to be compressed."
