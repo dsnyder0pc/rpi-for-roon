@@ -1,0 +1,87 @@
+#!/bin/bash
+set -e
+
+# --- Configuration and Defaults ---
+DEFAULT_IMAGE_FILE="${HOME}/img/audiolinux_pi4-pi5_450.img.xz"
+IMAGE_FILE="${1:-$DEFAULT_IMAGE_FILE}"
+
+# --- Helper functions for color output ---
+red_text() { tput setaf 1; echo -e "$1"; tput sgr0; }
+green_text() { tput setaf 2; echo -e "$1"; tput sgr0; }
+yellow_text() { tput setaf 3; echo -e "$1"; tput sgr0; }
+
+# --- Script Start ---
+echo "--- AudioLinux Flashing Script ---"
+
+# 1. Validate the input image file
+if [ ! -f "$IMAGE_FILE" ]; then
+    red_text "Error: Image file not found at:\n${IMAGE_FILE}"
+    exit 1
+fi
+echo "Source Image: ${IMAGE_FILE}"
+
+# 2. Detect and select the target device
+mapfile -t devices < <(lsblk -d -o NAME,SIZE,TRAN,VENDOR | grep -E 'mmc|sd|usb' | awk '{printf "/dev/%s (%s %s)\n", $1, $4, $2}')
+if [ ${#devices[@]} -eq 0 ]; then
+    red_text "Error: No suitable microSD card readers found."
+    exit 1
+fi
+
+yellow_text "\nPlease select the target microSD card device:"
+select device_choice in "${devices[@]}"; do
+    if [ -n "$device_choice" ]; then
+        TARGET_DEVICE=$(echo "$device_choice" | awk '{print $1}')
+        break
+    else
+        red_text "Invalid selection. Please try again."
+    fi
+done
+
+echo "Target Device: ${TARGET_DEVICE}"
+
+# 3. Unmount the target device if it's mounted
+MOUNTED_PARTS=$(lsblk -no MOUNTPOINT "${TARGET_DEVICE}" | grep -v '^$' || true)
+if [ -n "$MOUNTED_PARTS" ]; then
+    yellow_text "Device is mounted. Attempting to unmount..."
+    if ! sudo umount "${TARGET_DEVICE}"*; then
+        red_text "Error: Failed to unmount the device. Please unmount it manually."
+        exit 1
+    fi
+    green_text "Device unmounted successfully."
+fi
+
+# 4. Final safety confirmation before writing
+red_text "\n!!! WARNING !!!"
+red_text "This will completely ERASE the device at ${TARGET_DEVICE}."
+red_text "All data on it will be lost forever."
+read -p "Are you absolutely sure you want to continue? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborting."
+    exit 1
+fi
+
+# 5. Build and execute the final flash command
+green_text "\nStarting flash process..."
+DD_CMD="sudo dd of=${TARGET_DEVICE} bs=4M status=progress oflag=sync"
+
+case "$IMAGE_FILE" in
+    *.xz)
+        xz -dc "$IMAGE_FILE" | ${DD_CMD}
+        ;;
+    *.gz)
+        gunzip -c "$IMAGE_FILE" | ${DD_CMD}
+        ;;
+    *.bz2)
+        bunzip2 -c "$IMAGE_FILE" | ${DD_CMD}
+        ;;
+    *.img)
+        ${DD_CMD} < "$IMAGE_FILE"
+        ;;
+    *)
+        red_text "Error: Unrecognized image file extension. Supported extensions are .img, .xz, .gz, .bz2"
+        exit 1
+        ;;
+esac
+
+green_text "\nFlashing complete! It is now safe to remove the microSD card."
