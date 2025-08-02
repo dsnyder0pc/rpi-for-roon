@@ -76,7 +76,6 @@ fi
 # Sudo prompt logic for interactive sessions
 if [ "$EUID" -ne 0 ]; then
     echo "This script requires sudo privileges. You may be prompted for a password."
-    echo "(Note: The default sudo password for Audiolinux is 'audiolinux0')"
     sudo -v || exit 1
 fi
 

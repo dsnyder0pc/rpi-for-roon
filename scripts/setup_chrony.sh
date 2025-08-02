@@ -30,7 +30,7 @@ echo "--- Installing chrony ---"
 # 3. Install chrony using pacman
 #    -Sy: Syncs repositories and installs the package. Does NOT upgrade the system.
 #    --noconfirm: Skips all confirmation prompts.
-pacman -Sy --noconfirm chrony
+pacman -Sy --noconfirm --needed chrony
 if [ $? -ne 0 ]; then
     echo "Error: Failed to install chrony. Aborting."
     exit 1
@@ -38,7 +38,7 @@ fi
 
 echo "--- Configuring chrony ---"
 # 4. Back up the original configuration file if it exists
-if [ -f /etc/chrony.conf ]; then
+if [ -f /etc/chrony.conf ] && [ ! -f /etc/chrony.conf.bak ]; then
   echo "Backing up existing /etc/chrony.conf to /etc/chrony.conf.bak"
   mv /etc/chrony.conf /etc/chrony.conf.bak
 fi

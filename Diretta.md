@@ -162,8 +162,7 @@ After flashing, you must configure each Raspberry Pi individually to avoid netwo
 3.  Once the first device has rebooted with its new unique configuration, power it down.
 4.  Now, power on the **second** Raspberry Pi and repeat **all of Section 3** for it.
 
-The default SSH user is `audiolinux` with password `audiolinux`.
-The default sudo/root password is `audiolinux0`.
+Please refer to the receipt from your Audiolinux purchase for the default SSH user and sudo/root passwords. Make a note of them as you will use them many times throughout this process.
 
 You'll use the SSH client on your local computer to login to the RPi computers throughout this process. This client requires you to have a way to find the IP address of the RPi computers, which may change from one reboot to the next. The easiest way to get this information is from your home network router's web UI or app, but you can optionally install the [fing](https://www.fing.com/app/) app on your smartphone or tablet.
 
@@ -171,18 +170,16 @@ Once you have the IP address of one of your RPi computers, use the SSH client on
 ```bash
 read -p "Enter the address of your RPi and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
-echo '// Reminder: the password is audiolinux'
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 ```
 
 #### 3.1. Regenerate the Machine ID
 
-The `machine-id` is a unique identifier for the OS installation. It **must** be different for each device. When asked for the root password below, enter `audiolinux0`
+The `machine-id` is a unique identifier for the OS installation. It **must** be different for each device.
 
 ```bash
 echo ""
 echo "Old Machine ID: $(cat /etc/machine-id)"
-echo "Enter the root password (audiolinux0) to regenerate the machine ID..."
 sudo rm /etc/machine-id
 sudo systemd-machine-id-setup
 echo "New Machine ID: $(cat /etc/machine-id)"
@@ -220,7 +217,6 @@ proceed one-at-a-time otherwise. **Note**: your router will likely assign them d
 ```bash
 read -p "Enter the (new) address of your RPi and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
-echo '// Reminder: the password is audiolinux'
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 ```
 
@@ -229,7 +225,6 @@ ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 The system clock has to be accurate before we can install updates. The Raspberry Pi has no NVRAM battery, so the clock must be set each time it boots. This is typically done by connecting to a network service. This script will make sure that the clock is set and stays correct during the operation of the computer.
 
 ```bash
-echo '// Reminder: the root password is audiolinux0'
 sudo id
 curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_chrony.sh | sudo bash
 sleep 5
@@ -458,7 +453,6 @@ Upon booting, they will automatically use the new network configurations. **Note
 ```bash
 read -p "Enter the final address of your Diretta Host and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
-echo '// Reminder: the password is audiolinux'
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 ```
 
@@ -589,10 +583,8 @@ While you can use passwords over the proxied connection, the most secure and con
     The `ssh-copy-id` command automatically appends your public key to the `~/.ssh/authorized_keys` file on the remote machine. Because `ProxyJump` is already configured, this will work seamlessly for the Target.
     ```bash
     echo ""
-    echo "You will be prompted for the audiolinux password here."
     ssh-copy-id diretta-host
     echo ""
-    echo "You will be prompted for the password twice here (for the proxy and the target)."
     ssh-copy-id diretta-target
     ```
 
@@ -1279,7 +1271,6 @@ For example:
 ```text
 [audiolinux@diretta-target ~]$ purist-mode
 This script requires sudo privileges. You may be prompted for a password.
-(Note: The default sudo password for AudioLinux is 'audiolinux0')
 [sudo] password for root:
 🚀 Activating Purist Mode...
   -> Stopping time synchronization service (chronyd)...
@@ -1369,7 +1360,6 @@ menu_wrapper() {
   # If Purist Mode was active, temporarily revert it for the menu.
   if [ "$was_active" = true ]; then
     echo "Checking credentials to manage Purist Mode..."
-    echo "(Note: The default sudo password for AudioLinux is 'audiolinux0')"
     sudo -v
 
     echo "Temporarily disabling Purist Mode to run menu..."
