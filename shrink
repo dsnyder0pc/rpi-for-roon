@@ -1,0 +1,56 @@
+#!/bin/bash
+set -e # Exit immediately if a command exits with a non-zero status
+
+if [ -z "$1" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+  >&2 echo "Usage: $(basename "$0") Image"
+  exit 1
+fi
+
+IMAGE_FILE="$1"
+
+# --- PHASE 1: Modify the image inside a self-contained subshell ---
+(
+  MOUNT_POINT="/mnt/image_root"
+  LOOP_DEVICE=""
+
+  # This cleanup function is local to the subshell
+  cleanup() {
+    echo "--- Cleaning up modification phase ---"
+    if mountpoint -q "${MOUNT_POINT}"; then
+      sudo umount "${MOUNT_POINT}"
+    fi
+    if [ -n "${LOOP_DEVICE}" ]; then
+      sudo losetup -d "${LOOP_DEVICE}"
+    fi
+  }
+  trap cleanup EXIT
+
+  echo "--- Modifying image ---"
+  LOOP_DEVICE=$(sudo losetup -fP --show "${IMAGE_FILE}")
+  ROOT_PARTITION="${LOOP_DEVICE}p2"
+
+  sudo mkdir -p "${MOUNT_POINT}"
+  sudo mount "${ROOT_PARTITION}" "${MOUNT_POINT}"
+
+  if [ -f "${MOUNT_POINT}/etc/machine-id" ]; then
+    echo "Removing existing machine-id..."
+    sudo rm "${MOUNT_POINT}/etc/machine-id"
+    sudo touch "${MOUNT_POINT}/etc/machine-id"
+  fi
+
+  if [ -d "${MOUNT_POINT}/opt/diretta-alsa-target" ]; then
+    dl=$(find "${MOUNT_POINT}/opt/diretta-alsa-target" ! -name 'diretta*')
+    if [ -n "${dl}" ]; then
+      echo "- Diretta License File Found."
+      sudo mv -v "${dl}" ~/img/"${IMAGE_FILE%.img}".lic
+    fi
+  fi
+  # The subshell will now exit, and the trap will run automatically
+) # All mounts and loop devices from phase 1 are now cleaned up.
+
+
+# --- PHASE 2: Shrink the fully prepared and unmounted image ---
+echo "--- Shrinking image ---"
+sudo pishrink.sh "${IMAGE_FILE}"
+
+echo "Image is now prepared and ready to be flashed."
