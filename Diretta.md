@@ -1455,7 +1455,7 @@ This appendix provides instructions for installing a simple web-based applicatio
 > **CRITICAL WARNING: Perform these steps carefully.**
 > This setup involves creating a new user and modifying security settings. Follow the instructions precisely to ensure the system remains secure and functional.
 
-The setup is divided into two parts: first, we configure the **Diretta Target** to securely accept commands, and second, we install the web application on the **Diretta Host**.
+The setup is divided into two parts: first, we configure the **Diretta Target** to securely accept commands, and second, we install the web application on the **Diretta Host**. However, pay attention because we swap between hosts frequently.
 
 ---
 
@@ -1673,7 +1673,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     sudo hostnamectl set-hostname diretta-host2
     ```
 
-    This step installs the Avahi daemon and uses a `requirements.txt` file to install Flask into a dedicated virtual environment.
+    This step runs on the **Diretta Host**. It installs the Avahi daemon and uses a `requirements.txt` file to install Flask into a dedicated virtual environment.
     ```bash
     # Install Avahi for .local name resolution
     sudo pacman -Syu --noconfirm
@@ -1713,13 +1713,13 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ```
 
 8.  **Install the Flask App:**
-    Download the Python script directly from GitHub into the application directory.
+    Download the Python script directly from GitHub into the application directory on the **Diretta Host**.
     ```bash
     curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py -o ~/purist-mode-webui/app.py
     ```
 
 9.  **Test the Flask App Interactively:**
-    Now, run the app from the command line to ensure it starts correctly.
+    Now, run the app from the command line on the **Diretta Host** to ensure it starts correctly.
     ```bash
     cd ~/purist-mode-webui
     pyenv activate purist-webui
@@ -1728,7 +1728,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     You should see output indicating the Flask server has started on port **8080**. From another device, access `http://diretta-host.local:8080`. If it works, return to the SSH terminal and press `Ctrl+C` to stop the server.
 
 10. **Create the `systemd` Service:**
-    This service will run the web app automatically on boot, using the correct Python executable from our `pyenv` virtual environment.
+    This service will run the web app automatically the **Diretta Host**, using the correct Python executable from our `pyenv` virtual environment.
     ```bash
     cat <<EOT | sudo tee /etc/systemd/system/purist-webui.service
     [Unit]
