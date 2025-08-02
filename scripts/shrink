@@ -6,6 +6,19 @@ if [ -z "$1" ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
   exit 1
 fi
 
+# --- Dependency Check for pishrink.sh ---
+if ! command -v pishrink.sh &> /dev/null; then
+  echo "pishrink.sh not found. Attempting to install..."
+  PISHRINK_URL="https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh"
+  # Download the script and pipe it to the 'install' command
+  if curl -sL "${PISHRINK_URL}" | sudo install /dev/stdin /usr/local/bin/pishrink.sh; then
+    echo "pishrink.sh installed successfully to /usr/local/bin."
+  else
+    echo "Failed to install pishrink.sh. Please install it manually." >&2
+    exit 1
+  fi
+fi
+
 IMAGE_FILE="$1"
 
 # --- PHASE 1: Modify the image inside a self-contained subshell ---
