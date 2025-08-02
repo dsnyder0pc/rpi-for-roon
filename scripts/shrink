@@ -19,7 +19,40 @@ if ! command -v pishrink.sh &> /dev/null; then
   fi
 fi
 
-IMAGE_FILE="$1"
+INPUT_FILE="$1"
+# This will be the .img file we operate on
+WORK_FILE=""
+
+# --- PHASE 1: Prepare Input File ---
+echo "--- Checking input file type ---"
+case "$INPUT_FILE" in
+  *.xz)
+    echo "XZ compressed image detected. Decompressing..."
+    xz -dk "$INPUT_FILE"
+    WORK_FILE="${INPUT_FILE%.xz}"
+    ;;
+  *.gz)
+    echo "Gzip compressed image detected. Decompressing..."
+    gunzip -k "$INPUT_FILE"
+    WORK_FILE="${INPUT_FILE%.gz}"
+    ;;
+  *.bz2)
+    echo "Bzip2 compressed image detected. Decompressing..."
+    bunzip2 -k "$INPUT_FILE"
+    WORK_FILE="${INPUT_FILE%.bz2}"
+    ;;
+  *.img)
+    echo "Uncompressed image detected."
+    WORK_FILE="$INPUT_FILE"
+    ;;
+  *)
+    echo "Error: Unrecognized file type: $INPUT_FILE" >&2
+    exit 1
+    ;;
+esac
+
+echo "Working on: ${WORK_FILE}"
+
 
 # --- PHASE 1: Modify the image inside a self-contained subshell ---
 (
@@ -40,7 +73,7 @@ IMAGE_FILE="$1"
   trap cleanup EXIT
 
   echo "--- Modifying image ---"
-  LOOP_DEVICE=$(sudo losetup -fP --show "${IMAGE_FILE}")
+  LOOP_DEVICE=$(sudo losetup -fP --show "${WORK_FILE}")
   ROOT_PARTITION="${LOOP_DEVICE}p2"
 
   sudo mkdir -p "${MOUNT_POINT}"
@@ -98,7 +131,7 @@ EOF
     dl=$(find "${MOUNT_POINT}/opt/diretta-alsa-target" ! -name 'diretta*')
     if [ -n "${dl}" ]; then
       echo "- Diretta License File Found."
-      sudo mv -v "${dl}" "${IMAGE_FILE%.img}".lic
+      sudo mv -v "${dl}" "${WORK_FILE%.img}".lic
     fi
   fi
 ) # The subshell now exits, and its trap automatically cleans up mounts/loops.
@@ -106,6 +139,6 @@ EOF
 
 # --- PHASE 2: Shrink the fully prepared and unmounted image ---
 echo "--- Shrinking image ---"
-sudo pishrink.sh "${IMAGE_FILE}"
+sudo pishrink.sh "${WORK_FILE}"
 
 echo "Image is now prepared and ready to be compressed."
