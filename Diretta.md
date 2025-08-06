@@ -117,7 +117,6 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [Argon ONE V2 Aluminum Case for Raspberry Pi 4](https://www.amazon.com/Argon-Raspberry-Aluminum-Heatsink-Supports/dp/B07WP8WC3V/) (instead of the Flirc case)
 * 1 x [Argon ONE V3 Raspberry Pi 5 Case](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (instead of the Flirc case)
 * 1 x [Argon IR Remote](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (to add remote control capabilities to the Diretta Host)
-* 1 x [FLIRC USB Universal Remote Control Receiver](https://flirc.tv/products/flirc-usb-receiver?variant=43513067569384) (needed if you will put your Diretta Host in the Flirc case and want to use the Argon IR Remote to control Roon)
 * 1 x [AudioQuest Forest Ethernet Cable 0.75 M](https://www.amazon.com/AudioQuest-RJ-Forest-Ethernet-0-75m/dp/B0073H82U8/) (arrows pointing away from Diretta Host and towards the Diretta Target)
 * 1 x [iFi LAN iSilencer](https://www.amazon.com/iFi-LAN-iSilencer-Electrical-Ethernet/dp/B0BV72SW8V/) (LAN filtering for the Diretta Target)
 * 1 x [iFi Audio iPower Elite](https://www.amazon.com/gp/product/B08S622SM7/) (to provide clean power to the Diretta Target)
@@ -134,7 +133,7 @@ A complete bill of materials is provided below. While other parts can be substit
 #### Software & Licensing Costs
 
 * **AudioLinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$139** (prices subject to change). However, it's fine to get started with a one year subscription, currently **$69**. Both options allow for installation on multiple devices within the same location.
-* **Diretta Target:** A license is required for the Diretta Target device and currently costs **€100**.
+* **Diretta Target:** A license is required for high-res playback (greater than 44.1 kHz PCM) via the Diretta Target device and currently costs **€100**.
     * You may evaluate the Diretta Target using 44.1 kHz streams for an extended period of time. Therefore, I recommend using Roon's **Sample rate conversion** feature under **MUSE** DSP settings to convert all content to 44.1 kHz during your evaluation period. Once you are satisfied, purchase the Diretta Target license to remove the restriction. Leave sample rate conversion settings engaged until you receive the second email from the Diretta team indicating that your hardware has been activated.
     * **CRITICAL:** This license is locked to the specific hardware of the Raspberry Pi it is purchased for. It is essential that you perform the final licensing step on the exact hardware you intend to use permanently.
     * Diretta may offer a one-time replacement license for hardware failure within the first two years (please verify terms at time of purchase). If you change the hardware for any other reason, a new license must be purchased.
