@@ -121,7 +121,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [AudioQuest Forest Ethernet Cable 0.75 M](https://www.amazon.com/AudioQuest-RJ-Forest-Ethernet-0-75m/dp/B0073H82U8/) (arrows pointing away from Diretta Host and towards the Diretta Target)
 * 1 x [iFi LAN iSilencer](https://www.amazon.com/iFi-LAN-iSilencer-Electrical-Ethernet/dp/B0BV72SW8V/) (LAN filtering for the Diretta Target)
 * 1 x [iFi Audio iPower Elite](https://www.amazon.com/gp/product/B08S622SM7/) (to provide clean power to the Diretta Target)
-* 1 x [DC 5.5mm x 2.1mm to UsB C Adapter](https://www.amazon.com/Zibee-USB-Female-Charging-Extension/dp/B0DSG7KNLJ/) (needed to adapt the plug on the iPower Elite to the Diretta Target's USB C power input)
+* 1 x [DC 5.5mm x 2.1mm to UsB C Adapter](https://www.amazon.com/AWADUO-Female-Adapter-Extension-Charge/dp/B09H7GSQXZ/?th=1) (needed to adapt the plug on the iPower Elite to the Diretta Target's USB C power input)
 
 **Required Audio Component:**
 * 1 x USB DAC or DDC
