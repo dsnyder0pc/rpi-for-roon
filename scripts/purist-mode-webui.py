@@ -206,7 +206,7 @@ REMOTE_APP_TEMPLATE = """
 
 # --- MUSIC PLAYING TEMPLATE ---
 MUSIC_PLAYING_TEMPLATE = """
-<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center" hx-get="/status" hx-trigger="every 5s" hx-swap="innerHTML">
+<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center" hx-get="/status" hx-trigger="every 5s" hx-swap="outerHTML">
     <div class="flex items-center justify-center mb-4">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"></path>
@@ -215,31 +215,41 @@ MUSIC_PLAYING_TEMPLATE = """
     </div>
     <h2 class="text-xl font-bold text-white mb-2">Shhhh... Music in Progress</h2>
     <p class="text-gray-400">The control panel is paused to ensure an uninterrupted performance.
-    <br>It will automatically reappear after the music has finished.</p>
+    <br>It will automatically reappear up to a minute after the music has finished.</p>
 </div>
 """
 
 # --- BACKEND LOGIC (Helper Functions) ---
 
 def is_music_playing():
-    """Checks if music is actively playing."""
+    """Checks if music is actively playing by inspecting the local Diretta Host log."""
     try:
-        cmd = ["journalctl", "-u", "diretta_alsa_target.service", "--no-pager", "-n", "20", "-g", "info rcv"]
+        # Check the local diretta_alsa.service log on the Host
+        cmd = ["journalctl", "-u", "diretta_alsa.service", "--no-pager", "-n", "20", "-g", "info rcv"]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-        if result.returncode != 0 or not result.stdout: return False
+
+        if result.returncode != 0 or not result.stdout:
+            return False
+
         last_line = result.stdout.strip().split('\n')[-1]
         log_time_str = ' '.join(last_line.split()[:3])
         log_time = datetime.strptime(log_time_str, "%b %d %H:%M:%S").replace(year=datetime.now().year)
-        if log_time > datetime.now() and log_time.month == 12 and datetime.now().month == 1:
-            log_time = log_time.replace(year=datetime.now().year - 1)
-        delta = datetime.now() - log_time
+
+        now = datetime.now()
+        # Handle year-end case: if log is Dec and now is Jan, log was last year.
+        if log_time > now and log_time.month == 12 and now.month == 1:
+            log_time = log_time.replace(year=now.year - 1)
+
+        delta = now - log_time
         if 0 <= delta.total_seconds() < PLAYBACK_THRESHOLD_SECONDS:
-            app.logger.info(f"Playback detected. Last log entry was {delta.total_seconds():.2f}s ago.")
+            app.logger.info(f"Playback detected on Host. Last log entry was {delta.total_seconds():.2f}s ago.")
             return True
+
     except Exception as e:
-        app.logger.error(f"Error checking playback status: {e}")
+        app.logger.error(f"Error checking playback status on Host: {e}")
         return False
-    app.logger.info("No recent playback detected.")
+
+    app.logger.info("No recent playback detected on Host.")
     return False
 
 def run_remote_command(command):
