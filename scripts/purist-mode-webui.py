@@ -119,7 +119,7 @@ STATUS_PANEL_TEMPLATE = """
                 <h2 class="font-semibold text-lg text-white">Roon IR Remote Zone</h2>
                 <p class="text-sm text-gray-400">Current Zone: <strong class="text-blue-300">{{ roon_zone }}</strong></p>
             </div>
-            <button hx-get="/api/roon_zone/edit" hx-target="#roon-zone-section" hx-swap="innerHTML"
+            <button hx-get="/api/roon_zone/edit" hx-target="#roon-zone-section" hx-swap="outerHTML"
                     class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-blue-600 hover:bg-blue-500 text-white">
                 <span class="btn-text">Edit</span>
                 <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
@@ -303,7 +303,7 @@ def set_roon_zone():
         with open(ROON_CONFIG_PATH, 'w') as f:
             json.dump(config, f, indent=2)
 
-        subprocess.run(['sudo', 'systemctl', 'restart', 'roon-ir-remote.service'], check=True)
+        subprocess.run(['/usr/local/bin/restart-roon-ir'], check=True)
         app.logger.info(f"Roon zone updated to '{new_zone_name}' and service restarted.")
 
     except Exception as e:
@@ -360,7 +360,7 @@ def restart_target():
     run_remote_command("/usr/local/bin/pm-restart-target")
 
     # Restart local Roon Bridge service on the Host (New line)
-    subprocess.run(['sudo', 'systemctl', 'restart', 'roonbridge.service'], check=True)
+    subprocess.run(['/usr/local/bin/restart-roonbridge'], check=True)
     app.logger.info("Roon Bridge service on Host restarted.")
 
     now = datetime.now().strftime("%H:%M:%S")
