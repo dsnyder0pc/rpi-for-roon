@@ -146,7 +146,7 @@ STATUS_PANEL_TEMPLATE = """
 </div>
 """
 
-# Template for editing the Roon Zone (Reverted to original, simple version)
+# Template for editing the Roon Zone
 ROON_EDIT_TEMPLATE = """
 <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
     <h2 class="font-semibold text-lg text-white mb-4">Edit Roon IR Remote Zone</h2>
@@ -300,7 +300,7 @@ def set_roon_zone():
         with open(ROON_CONFIG_PATH, 'w') as f:
             json.dump(config, f, indent=2)
 
-        subprocess.run(['/usr/local/bin/restart-roon-ir'], check=True)
+        subprocess.run(['sudo', 'systemctl', 'restart', 'roon-ir-remote.service'], check=True)
         app.logger.info(f"Roon zone updated to '{new_zone_name}' and service restarted.")
 
     except Exception as e:
@@ -357,7 +357,7 @@ def restart_target():
     run_remote_command("/usr/local/bin/pm-restart-target")
 
     # Restart local Roon Bridge service on the Host (New line)
-    subprocess.run(['/usr/local/bin/restart-roonbridge'], check=True)
+    subprocess.run(['sudo', 'systemctl', 'restart', 'roonbridge.service'], check=True)
     app.logger.info("Roon Bridge service on Host restarted.")
 
     now = datetime.now().strftime("%H:%M:%S")
