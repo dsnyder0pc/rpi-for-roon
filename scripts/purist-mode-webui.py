@@ -148,7 +148,7 @@ STATUS_PANEL_TEMPLATE = """
 
 # Template for editing the Roon Zone
 ROON_EDIT_TEMPLATE = """
-<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
+<div id="roon-zone-section" class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
     <h2 class="font-semibold text-lg text-white mb-4">Edit Roon IR Remote Zone</h2>
     <div class="flex items-center space-x-4">
         <input type="text" name="zone_name" value="{{ roon_zone }}"
@@ -164,6 +164,9 @@ ROON_EDIT_TEMPLATE = """
             <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
         </button>
     </div>
+</div>
+
+<div id="control-panel" hx-swap-oob="true" hx-trigger="">
 </div>
 """
 
