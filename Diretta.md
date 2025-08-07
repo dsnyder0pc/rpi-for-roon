@@ -687,7 +687,7 @@ sudo systemctl restart boot-repair.service
         Please type the card number (0,1,2...) you want to use:
         ?0
         ```
-    * Choose **4) License**. The system will run for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license. This requires the internet access we configured in step 5.
+    * Choose **4) License**. The system will play hi-res (greater than 44.1 kHz PCM audio) for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license for hi-res support. This requires the internet access we configured in step 5.
 
 
 7.  **Minimize disk I/O on the Diretta Target:** (optional but recommended for optimal performance)
