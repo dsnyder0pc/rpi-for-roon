@@ -1227,7 +1227,7 @@ set-roon-zone
 Follow the prompts to enter the new name for your Roon Zone. You may have to enter the root password to make the changes take effect.
 
 **Note: A Better Way to Set the Zone**
-While this script works perfectly, if you enable **Puris Mode** via the steps in [Appendix 3](#12-appendix-3-optional-purist-mode) and [Appendix 4](#13-appendix-4-optional-purist-mode-web-ui), you may find it more convenient to use the the AnCaolas Link System Control web application. The web UI provides a user-friendly way to view and edit the zone name from your phone or browser without needing to use SSH or the command line.
+While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, which is detailed in [Appendix 4](#13-appendix-4-optional-purist-mode-web-ui). The web UI provides a user-friendly way to view and edit the zone name from your phone or browser.
 
 ### **Step 8: Profit! 📈**
 
@@ -1711,7 +1711,21 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py -o ~/purist-mode-webui/app.py
     ```
 
-9.  **Test the Flask App Interactively:**
+9. **Grant Port-Binding Capability**
+    We need to give the Python exutable permission to bind to port 80 on the Diretta Host for our web app to start.
+    ```bash
+    # Install the package that provides the 'setcap' command
+    sudo pacman -S --noconfirm --needed libcap
+
+    # Find the real path to the Python executable, resolving all symbolic links
+    PYTHON_EXEC=$(readlink -f /home/audiolinux/.pyenv/versions/purist-webui/bin/python)
+
+    # Grant the port-binding capability directly to the final Python executable
+    echo "Applying capability to the real file: ${PYTHON_EXEC}"
+    sudo setcap 'cap_net_bind_service=+ep' "$PYTHON_EXEC"
+    ```
+
+10  **Test the Flask App Interactively:**
     Now, run the app from the command line on the **Diretta Host** to ensure it starts correctly.
     ```bash
     cd ~/purist-mode-webui
@@ -1720,18 +1734,21 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ```
     You should see output indicating the Flask server has started on port **8080**. From another device, access `http://diretta-host.local:8080`. If it works, return to the SSH terminal and press `Ctrl+C` to stop the server.
 
-10. **Grant Sudo Permissions on the Host:**
+11. **Grant Sudo Permissions on the Host:**
     This step is critical for allowing the web application to restart the necessary Roon-related services without a password.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/webui-restarts
-    # Allows the webui (running as audiolinux) to restart required services
-    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roon-ir-remote.service
-    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roonbridge.service
+    # For the audiolinux user, do not require a TTY or authentication for NOPASSWD commands.
+    # This is necessary for the web application service to run sudo.
+    Defaults:audiolinux !requiretty, !authenticate
+
+    # Allow the webui (running as audiolinux) to restart required services
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roon-ir-remote.service, /usr/bin/systemctl restart roonbridge.service
     EOT
     sudo chmod 0440 /etc/sudoers.d/webui-restarts
     ```
 
-11. **Create the `systemd` Service:**
+12. **Create the `systemd` Service:**
     This service will run the web app automatically the **Diretta Host**, using the correct Python executable from our `pyenv` virtual environment.
     ```bash
     cat <<EOT | sudo tee /etc/systemd/system/purist-webui.service
@@ -1748,22 +1765,18 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     Restart=on-failure
     RestartSec=5
 
-    # Grant the capability to bind to a privileged port
-    CapabilityBoundingSet=CAP_NET_BIND_SERVICE
-    AmbientCapabilities=CAP_NET_BIND_SERVICE
-
     [Install]
     WantedBy=multi-user.target
     EOT
     ```
 
-12. **Enable and Start the Web App:**
+13. **Enable and Start the Web App:**
     ```bash
     sudo systemctl daemon-reload
     sudo systemctl enable --now purist-webui.service
     ```
 
-13. **Watch the logs for a bit:**
+14. **Watch the logs for a bit:**
     ```bash
     sudo journalctl -b -u purist-webui.service -f
     ```
