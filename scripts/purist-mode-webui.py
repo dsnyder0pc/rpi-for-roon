@@ -372,4 +372,4 @@ if __name__ == "__main__":
     debug_mode = is_interactive
 
     app.logger.info(f"Starting Flask server. Interactive: {is_interactive}, Port: {port}, Debug: {debug_mode}")
-    app.run(host="0.0.0.0", port=port, debug_mode)
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
