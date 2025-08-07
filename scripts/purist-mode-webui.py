@@ -119,7 +119,7 @@ STATUS_PANEL_TEMPLATE = """
                 <h2 class="font-semibold text-lg text-white">Roon IR Remote Zone</h2>
                 <p class="text-sm text-gray-400">Current Zone: <strong class="text-blue-300">{{ roon_zone }}</strong></p>
             </div>
-            <button hx-get="/api/roon_zone/edit" hx-target="#roon-zone-section" hx-swap="outerHTML"
+            <button hx-get="/api/roon_zone/edit" hx-target="#roon-zone-section" hx-swap="innerHTML"
                     class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-blue-600 hover:bg-blue-500 text-white">
                 <span class="btn-text">Edit</span>
                 <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
@@ -146,9 +146,9 @@ STATUS_PANEL_TEMPLATE = """
 </div>
 """
 
-# Template for editing the Roon Zone
+# Template for editing the Roon Zone (Reverted to original, simple version)
 ROON_EDIT_TEMPLATE = """
-<div id="roon-zone-section" class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
+<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
     <h2 class="font-semibold text-lg text-white mb-4">Edit Roon IR Remote Zone</h2>
     <div class="flex items-center space-x-4">
         <input type="text" name="zone_name" value="{{ roon_zone }}"
@@ -164,9 +164,6 @@ ROON_EDIT_TEMPLATE = """
             <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
         </button>
     </div>
-</div>
-
-<div id="control-panel" hx-swap-oob="true" hx-trigger="">
 </div>
 """
 
@@ -375,4 +372,4 @@ if __name__ == "__main__":
     debug_mode = is_interactive
 
     app.logger.info(f"Starting Flask server. Interactive: {is_interactive}, Port: {port}, Debug: {debug_mode}")
-    app.run(host="0.0.0.0", port=port, debug=debug_mode)
+    app.run(host="0.0.0.0", port=port, debug_mode)
