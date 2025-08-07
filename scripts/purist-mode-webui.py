@@ -31,7 +31,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # --- HTML & CSS TEMPLATES ---
 
 # --- BASE TEMPLATE (Used by all pages) ---
-# --- BASE TEMPLATE (Used by all pages) ---
 BASE_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en" class="bg-gray-900 text-gray-200">
@@ -41,33 +40,30 @@ BASE_TEMPLATE = """
     <title>AnCaolas Link Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style type="text/tailwindcss">
+        body { font-family: 'Inter', sans-serif; }
+        .btn-spinner {
+            border-top-color: transparent;
+            border-right-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .htmx-request .btn-spinner { display: inline-block; }
+        .htmx-request .btn-text { opacity: 0; }
+        .htmx-request button { cursor: not-allowed; }
+        .nav-link {
+            @apply px-4 py-2 text-gray-300 rounded-md border border-gray-600 hover:bg-green-600 hover:border-green-500 hover:text-white transition-colors;
+        }
+        .nav-link.active {
+            @apply bg-blue-600 text-white border-blue-500;
+        }
+        .flash-message {
+            @apply p-4 mb-4 text-sm text-green-400 bg-green-800/50 rounded-lg;
+        }
+    </style>
 </head>
-        <style type="text/tailwindcss">
-            body { font-family: 'Inter', sans-serif; }
-            .btn-spinner {
-                border-top-color: transparent;
-                border-right-color: transparent;
-                animation: spin 0.6s linear infinite;
-            }
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-            .htmx-request .btn-spinner { display: inline-block; }
-            .htmx-request .btn-text { opacity: 0; }
-            .htmx-request button { cursor: not-allowed; }
-            .nav-link {
-                /* Changed hover:bg-blue-600 to hover:bg-green-600 */
-                /* Changed hover:border-blue-500 to hover:border-green-500 */
-                @apply px-4 py-2 text-gray-300 rounded-md border border-gray-600 hover:bg-green-600 hover:border-green-500 hover:text-white transition-colors;
-            }
-            .nav-link.active {
-                /* Active state remains blue */
-                @apply bg-blue-600 text-white border-blue-500;
-            }
-            .flash-message {
-                @apply p-4 mb-4 text-sm text-green-400 bg-green-800/50 rounded-lg;
-            }
-        </style>
 <body class="antialiased">
     <div class="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
         <div class="text-center mb-6">
