@@ -1227,7 +1227,7 @@ set-roon-zone
 Follow the prompts to enter the new name for your Roon Zone. You may have to enter the root password to make the changes take effect.
 
 **Note: A Better Way to Set the Zone**
-While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, which is detailed in [Appendix 4](#13-appendix-4-optional-purist-mode-web-ui). The web UI provides a user-friendly way to view and edit the zone name from your phone or browser.
+While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, detailed in [Appendix 4](#13-appendix-4-optional-purist-mode-web-ui). The web UI provides a dedicated page for viewing and editing the zone name from your phone or browser.
 
 ### **Step 8: Profit! 📈**
 
@@ -1787,26 +1787,19 @@ Type CTRL-C once you're satisfied that things are working as expected.
 
 ### **Access the Web UI**
 
-You're all set! Open a web browser on your phone, tablet, or computer connected to the same network as the Diretta Host. Navigate to:
+You're all set! Open a web browser on your phone, tablet, or computer connected to the same network as the Diretta Host. Navigate to the main landing page:
 
 [http://diretta-host.local](http://diretta-host.local)
 
 ---
 > **A Note on Browser Security Warnings**
-> When you first visit http://diretta-host.local, your browser (especially Google Chrome) will likely display a security warning similar to the one below, stating that the connection is not secure.
->
-> **This is expected and safe to bypass in this specific context.**
->
-> The warning appears because the connection uses standard HTTP instead of encrypted HTTPS. This was an intentional design choice to minimize all non-essential processing overhead on the Diretta Host, ensuring maximum resources are available for audio tasks.
->
-> Because the web application runs exclusively on your private home network and does not handle any passwords or sensitive financial information, it is safe to proceed. You can confidently click "Continue to site" to access the control panel.
+> When you first visit http://diretta-host.local, your browser will likely display a security warning stating that the connection is not secure. This is expected and safe to bypass. The warning appears because the connection uses standard `HTTP` instead of encrypted `HTTPS`, an intentional choice to minimize processing overhead on the audio device. Because the app runs only on your private home network and handles no sensitive data, you can confidently click "Continue to site."
 ---
 
-You should now see the control panel and its various sections:
+From the landing page, a navigation bar at the top will guide you to the different control panels:
 
-* Purist Mode: These controls allow you to toggle Purist Mode on the Diretta Target and enable or disable its automatic activation on boot.
+* **Home:** The main landing page with links to the different applications.
 
-* Roon IR Remote Zone: If you have completed the optional IR remote setup in Appendix 2, an additional panel will appear. This allows you to view and edit the name of the Roon zone that your remote will control. Clicking Edit will allow you to enter a new name, and Save will update the configuration and automatically restart the necessary service. This panel will not be visible if the IR remote has not been configured.
+* **Purist Mode App:** This page contains the controls for toggling Purist Mode and its auto-start behavior on the Diretta Target. It automatically refreshes every 30 seconds to show the current status. It also contains the "Restart Services" button for use after a Diretta license activation.
 
-* License Activation: If your Diretta Target is running in trial mode, a Restart Services button will appear. This button should be used after you receive the second email from the Diretta team confirming that your license has been activated. Pressing it will correctly restart the Diretta service on the Target and the Roon Bridge service on the Host, ensuring that Roon recognizes the fully licensed device.
-
+* **IR Remote App:** If you have completed the IR remote setup (Appendix 2), this link will appear. This page provides a simple form to view and update the Roon Zone name your remote will control. This page does not auto-refresh, so you can take as long as you need to make your edits.
