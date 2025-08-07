@@ -1226,6 +1226,9 @@ set-roon-zone
 ```
 Follow the prompts to enter the new name for your Roon Zone. You may have to enter the root password to make the changes take effect.
 
+**Note: A Better Way to Set the Zone**
+While this script works perfectly, if you enable **Puris Mode** via the steps in [Appendix 3](#12-appendix-3-optional-purist-mode) and [Appendix 4](#13-appendix-4-optional-purist-mode-web-ui), you may find it more convenient to use the the AnCaolas Link System Control web application. The web UI provides a user-friendly way to view and edit the zone name from your phone or browser without needing to use SSH or the command line.
+
 ### **Step 8: Profit! 📈**
 
 Your IR remote should now control Roon. Enjoy!
@@ -1440,7 +1443,7 @@ You have full interactive control over the system at any time.
 
 ## 13. Appendix 4: Optional Purist Mode Web UI
 
-This appendix provides instructions for installing a simple web-based application on the **Diretta Host**. This application provides an easy-to-use interface, accessible from a phone or tablet, to control Purist Mode on the **Diretta Target** without needing to use the command line.
+This appendix provides instructions for installing a simple web-based application on the Diretta Host. This application provides an easy-to-use interface, accessible from a phone or tablet, to manage key features of your Diretta system, including Purist Mode on the Target and Roon IR Remote integration settings on the Host.
 
 > **CRITICAL WARNING: Perform these steps carefully.**
 > This setup involves creating a new user and modifying security settings. Follow the instructions precisely to ensure the system remains secure and functional.
@@ -1526,7 +1529,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     ```
 
 4.  **Grant Sudo Permissions:**
-    This step allows the `purist-app` user to run our three new scripts with root privileges and without needing an interactive terminal.
+    This step allows the `purist-app` user to run our four new scripts with root privileges and without needing an interactive terminal.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/purist-app
     # Tell sudo not to require a TTY for the purist-app user
@@ -1717,7 +1720,18 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ```
     You should see output indicating the Flask server has started on port **8080**. From another device, access `http://diretta-host.local:8080`. If it works, return to the SSH terminal and press `Ctrl+C` to stop the server.
 
-10. **Create the `systemd` Service:**
+10. **Grant Sudo Permissions on the Host:**
+    This step is critical for allowing the web application to restart the necessary Roon-related services without a password.
+    ```bash
+    cat <<'EOT' | sudo tee /etc/sudoers.d/webui-restarts
+    # Allows the webui (running as audiolinux) to restart required services
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roon-ir-remote.service
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roonbridge.service
+    EOT
+    sudo chmod 0440 /etc/sudoers.d/webui-restarts
+    ```
+
+11. **Create the `systemd` Service:**
     This service will run the web app automatically the **Diretta Host**, using the correct Python executable from our `pyenv` virtual environment.
     ```bash
     cat <<EOT | sudo tee /etc/systemd/system/purist-webui.service
@@ -1743,13 +1757,13 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     EOT
     ```
 
-11. **Enable and Start the Web App:**
+12. **Enable and Start the Web App:**
     ```bash
     sudo systemctl daemon-reload
     sudo systemctl enable --now purist-webui.service
     ```
 
-12. **Watch the logs for a bit:**
+13. **Watch the logs for a bit:**
     ```bash
     sudo journalctl -b -u purist-webui.service -f
     ```
@@ -1764,7 +1778,22 @@ You're all set! Open a web browser on your phone, tablet, or computer connected 
 
 [http://diretta-host.local](http://diretta-host.local)
 
-You may see a browser warning about the connection not being secure. This is expected since we are intentionally not using TLS encryption to reduce resource usage. This is safe as long as you are at home on your personal network.
+---
+> **A Note on Browser Security Warnings**
+> When you first visit http://diretta-host.local, your browser (especially Google Chrome) will likely display a security warning similar to the one below, stating that the connection is not secure.
+>
+> **This is expected and safe to bypass in this specific context.**
+>
+> The warning appears because the connection uses standard HTTP instead of encrypted HTTPS. This was an intentional design choice to minimize all non-essential processing overhead on the Diretta Host, ensuring maximum resources are available for audio tasks.
+>
+> Because the web application runs exclusively on your private home network and does not handle any passwords or sensitive financial information, it is safe to proceed. You can confidently click "Continue to site" to access the control panel.
+---
 
-You should now see the control panel, allowing you to easily manage Purist Mode. If you have not activated your Diretta Target license yet, the web UI will also include a buttion for restarting the Dirtta Target service. Use this button after you receive the second email from the Direta team confirming that they have activated a license for your hardware.
+You should now see the control panel and its various sections:
+
+* Purist Mode: These controls allow you to toggle Purist Mode on the Diretta Target and enable or disable its automatic activation on boot.
+
+* Roon IR Remote Zone: If you have completed the optional IR remote setup in Appendix 2, an additional panel will appear. This allows you to view and edit the name of the Roon zone that your remote will control. Clicking Edit will allow you to enter a new name, and Save will update the configuration and automatically restart the necessary service. This panel will not be visible if the IR remote has not been configured.
+
+* License Activation: If your Diretta Target is running in trial mode, a Restart Services button will appear. This button should be used after you receive the second email from the Diretta team confirming that your license has been activated. Pressing it will correctly restart the Diretta service on the Target and the Roon Bridge service on the Host, ensuring that Roon recognizes the fully licensed device.
 

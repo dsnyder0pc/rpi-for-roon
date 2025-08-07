@@ -8,7 +8,7 @@ import subprocess
 import json
 import logging
 import sys
-from flask import Flask, render_template_string, jsonify
+from flask import Flask, render_template_string, jsonify, request
 from datetime import datetime, timedelta
 
 # --- Configuration ---
@@ -17,6 +17,9 @@ REMOTE_HOST = "diretta-target"
 SSH_KEY_PATH = os.path.expanduser("~/.ssh/purist_app_key")
 # The number of seconds of inactivity before we assume music is no longer playing.
 PLAYBACK_THRESHOLD_SECONDS = 15
+# --- Roon Zone Configuration ---
+ROON_CONFIG_PATH = os.path.expanduser('~/roon-ir-remote/app_info.json')
+
 
 app = Flask(__name__)
 
@@ -72,64 +75,101 @@ HTML_TEMPLATE = """
 
 # This is the partial template that htmx will swap into the page.
 STATUS_PANEL_TEMPLATE = """
-<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-6">
-    <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
-        <div>
-            <h2 class="font-semibold text-lg text-white">Purist Mode</h2>
-            {% if status.purist_mode_active %}
-                <p class="text-sm text-green-400">ACTIVE - Optimized for critical listening.</p>
-            {% else %}
-                <p class="text-sm text-yellow-400">DISABLED - System in standard mode.</p>
-            {% endif %}
+<div class="space-y-6">
+    <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-6">
+        <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
+            <div>
+                <h2 class="font-semibold text-lg text-white">Purist Mode</h2>
+                {% if status.purist_mode_active %}
+                    <p class="text-sm text-green-400">ACTIVE - Optimized for critical listening.</p>
+                {% else %}
+                    <p class="text-sm text-yellow-400">DISABLED - System in standard mode.</p>
+                {% endif %}
+            </div>
+            <button hx-post="/toggle-mode" hx-target="#control-panel" hx-swap="innerHTML"
+                    class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
+                        {% if status.purist_mode_active %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
+                <span class="btn-text">{% if status.purist_mode_active %}Disable{% else %}Enable{% endif %}</span>
+                <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
+            </button>
         </div>
-        <button hx-post="/toggle-mode" hx-target="#control-panel" hx-swap="innerHTML"
-                class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
-                       {% if status.purist_mode_active %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
-            <span class="btn-text">{% if status.purist_mode_active %}Disable{% else %}Enable{% endif %}</span>
-            <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
-        </button>
+
+        <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
+            <div>
+                <h2 class="font-semibold text-lg text-white">Activate on Boot</h2>
+                {% if status.auto_start_enabled %}
+                    <p class="text-sm text-green-400">ENABLED - Will activate 60s after boot.</p>
+                {% else %}
+                    <p class="text-sm text-yellow-400">DISABLED - System will remain in standard mode.</p>
+                {% endif %}
+            </div>
+            <button hx-post="/toggle-auto" hx-target="#control-panel" hx-swap="innerHTML"
+                    class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
+                        {% if status.auto_start_enabled %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
+                <span class="btn-text">{% if status.auto_start_enabled %}Disable{% else %}Enable{% endif %}</span>
+                <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
+            </button>
+        </div>
     </div>
 
-    <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
-        <div>
-            <h2 class="font-semibold text-lg text-white">Activate on Boot</h2>
-            {% if status.auto_start_enabled %}
-                <p class="text-sm text-green-400">ENABLED - Will activate 60s after boot.</p>
-            {% else %}
-                <p class="text-sm text-yellow-400">DISABLED - System will remain in standard mode.</p>
-            {% endif %}
+    {% if roon_is_configured %}
+    <div id="roon-zone-section" class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="font-semibold text-lg text-white">Roon IR Remote Zone</h2>
+                <p class="text-sm text-gray-400">Current Zone: <strong class="text-blue-300">{{ roon_zone }}</strong></p>
+            </div>
+            <button hx-get="/api/roon_zone/edit" hx-target="#roon-zone-section" hx-swap="innerHTML"
+                    class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-blue-600 hover:bg-blue-500 text-white">
+                <span class="btn-text">Edit</span>
+                <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
+            </button>
         </div>
-        <button hx-post="/toggle-auto" hx-target="#control-panel" hx-swap="innerHTML"
-                class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
-                       {% if status.auto_start_enabled %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
-            <span class="btn-text">{% if status.auto_start_enabled %}Disable{% else %}Enable{% endif %}</span>
-            <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
-        </button>
     </div>
-</div>
-
-{% if status.license_needs_activation %}
-<div class="mt-8 bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
-    <div class="flex items-center justify-between">
-        <div>
-            <h2 class="font-semibold text-lg text-white">License Activation</h2>
-            <p class="text-sm text-yellow-400">Trial license detected. Restart after activation.</p>
+    {% endif %}
+    {% if status.license_needs_activation %}
+    <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="font-semibold text-lg text-white">License Activation</h2>
+                <p class="text-sm text-yellow-400">Trial license detected. Restart after activation.</p>
+            </div>
+            <button hx-post="/restart-target" hx-target="#restart-message" hx-swap="innerHTML"
+                    class="relative inline-flex items-center justify-center w-40 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-blue-600 hover:bg-blue-500 text-white">
+                <span class="btn-text">Restart Services</span>
+                <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
+            </button>
         </div>
-        <button hx-post="/restart-target" hx-target="#restart-message" hx-swap="innerHTML"
-                class="relative inline-flex items-center justify-center w-40 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-blue-600 hover:bg-blue-500 text-white">
-            <span class="btn-text">Restart Diretta</span>
-            <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
-        </button>
+        <div id="restart-message" class="mt-4 text-center text-green-400 h-5"></div>
     </div>
-    <div id="restart-message" class="mt-4 text-center text-green-400 h-5">
-        </div>
+    {% endif %}
 </div>
-{% endif %}
 """
 
-# Template to display when music is playing. It polls to auto-restore the UI.
+# Template for editing the Roon Zone
+ROON_EDIT_TEMPLATE = """
+<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
+    <h2 class="font-semibold text-lg text-white mb-4">Edit Roon IR Remote Zone</h2>
+    <div class="flex items-center space-x-4">
+        <input type="text" name="zone_name" value="{{ roon_zone }}"
+               class="flex-grow bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button hx-post="/api/roon_zone" hx-include="[name='zone_name']" hx-target="#control-panel" hx-swap="innerHTML"
+                class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-green-600 hover:bg-green-500 text-white">
+            <span class="btn-text">Save</span>
+            <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
+        </button>
+        <button hx-get="/status" hx-target="#control-panel" hx-swap="innerHTML"
+                class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-gray-600 hover:bg-gray-500 text-white">
+            <span class="btn-text">Cancel</span>
+            <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
+        </button>
+    </div>
+</div>
+"""
+
+# Template to display when music is playing.
 MUSIC_PLAYING_TEMPLATE = """
-<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center">
+<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center" hx-get="/status" hx-trigger="every 5s" hx-swap="innerHTML">
     <div class="flex items-center justify-center mb-4">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"></path>
@@ -154,37 +194,27 @@ def is_music_playing():
         # Use journalctl to get the last log line containing "info rcv"
         cmd = [
             "journalctl",
-            "-u", "diretta_alsa.service",
+            "-u", "diretta_alsa_target.service",
             "--no-pager",
-            "-n", "20", # Check the last 20 lines for a recent entry
-            "-g", "info rcv" # Grep for the relevant line
+            "-n", "20",
+            "-g", "info rcv"
         ]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
 
         if result.returncode != 0 or not result.stdout:
-            # Command failed or returned no lines
             return False
 
-        # Get the very last log line from the output
         last_line = result.stdout.strip().split('\n')[-1]
-
-        # Extract timestamp (e.g., "Jul 26 08:49:32")
         log_time_str = ' '.join(last_line.split()[:3])
-
-        # Parse the timestamp, which lacks a year.
         log_time = datetime.strptime(log_time_str, "%b %d %H:%M:%S")
         now = datetime.now()
-
-        # Assume the log entry is from the current year.
         log_time = log_time.replace(year=now.year)
 
-        # Handle year-end case: if log is Dec and now is Jan, log was last year.
-        if log_time > now:
+        if log_time > now and log_time.month == 12 and now.month == 1:
             log_time = log_time.replace(year=now.year - 1)
 
-        # Check if the log entry is recent.
         delta = now - log_time
-        if delta.total_seconds() < PLAYBACK_THRESHOLD_SECONDS:
+        if delta.total_seconds() < PLAYBACK_THRESHOLD_SECONDS and delta.total_seconds() >= 0:
             app.logger.info(f"Playback detected. Last log entry was {delta.total_seconds():.2f}s ago.")
             return True
 
@@ -222,7 +252,7 @@ def run_remote_command(command):
         app.logger.error(f"An unexpected SSH error occurred: {e}")
         return None
 
-def get_status():
+def get_status_from_target():
     """Gets the current status from the Diretta Target."""
     raw_status = run_remote_command("/usr/local/bin/pm-get-status")
     if not raw_status:
@@ -234,6 +264,52 @@ def get_status():
         app.logger.error(f"Failed to decode JSON status from remote host. Received: {raw_status}")
         return None
 
+# --- Roon Zone Endpoints ---
+def get_roon_zone_from_host():
+    """Gets the current Roon zone name from the local config file."""
+    if not os.path.exists(ROON_CONFIG_PATH):
+        return "Not Configured"
+    try:
+        with open(ROON_CONFIG_PATH, 'r') as f:
+            config = json.load(f)
+        return config.get('roon', {}).get('zone', {}).get('name', 'Not Set')
+    except (json.JSONDecodeError, KeyError):
+        return "Error Reading Config"
+
+@app.route("/api/roon_zone/edit")
+def edit_roon_zone():
+    """Returns the HTML form to edit the Roon zone."""
+    current_zone = get_roon_zone_from_host()
+    return render_template_string(ROON_EDIT_TEMPLATE, roon_zone=current_zone)
+
+@app.route("/api/roon_zone", methods=["POST"])
+def set_roon_zone():
+    """Sets the new Roon zone name and restarts the service."""
+    new_zone_name = request.form.get('zone_name')
+    if not new_zone_name:
+        return '<div class="p-8 text-center text-red-400">Error: No zone name provided.</div>'
+
+    if not os.path.exists(ROON_CONFIG_PATH):
+        return '<div class="p-8 text-center text-red-400">Error: Roon IR Remote config file not found.</div>'
+    try:
+        with open(ROON_CONFIG_PATH, 'r') as f:
+            config = json.load(f)
+
+        config['roon']['zone']['name'] = new_zone_name
+
+        with open(ROON_CONFIG_PATH, 'w') as f:
+            json.dump(config, f, indent=2)
+
+        subprocess.run(['sudo', 'systemctl', 'restart', 'roon-ir-remote.service'], check=True)
+        app.logger.info(f"Roon zone updated to '{new_zone_name}' and service restarted.")
+
+    except Exception as e:
+        app.logger.error(f"Failed to update Roon zone: {e}")
+        return f'<div class="p-8 text-center text-red-400">An error occurred: {e}</div>'
+
+    return status()
+
+
 @app.route("/")
 def index():
     """Serves the main page."""
@@ -243,19 +319,23 @@ def index():
 def status():
     """
     Serves the status panel, intended for HTMX updates.
-    First checks for active playback before making remote calls.
     """
     if is_music_playing():
-        # If music is playing, show the "shhhh" message and keep polling.
         return render_template_string(MUSIC_PLAYING_TEMPLATE)
 
-    # If no music, proceed to get status from the Target.
-    current_status = get_status()
-    if current_status is None:
-        return '<div class="p-8 text-center text-red-400">Error: Could not connect to Diretta Target. Please check the connection and try again.</div>'
+    target_status = get_status_from_target()
+    if target_status is None:
+        return '<div class="p-8 text-center text-red-400">Error: Could not connect to Diretta Target.</div>'
 
-    # Render the full control panel, which will re-enable polling.
-    return render_template_string(STATUS_PANEL_TEMPLATE, status=current_status)
+    roon_is_configured = os.path.exists(ROON_CONFIG_PATH)
+    roon_zone = ""
+    if roon_is_configured:
+        roon_zone = get_roon_zone_from_host()
+
+    return render_template_string(STATUS_PANEL_TEMPLATE,
+                                  status=target_status,
+                                  roon_is_configured=roon_is_configured,
+                                  roon_zone=roon_zone)
 
 
 @app.route("/toggle-mode", methods=["POST"])
@@ -272,12 +352,17 @@ def toggle_auto():
 
 @app.route("/restart-target", methods=["POST"])
 def restart_target():
-    """Restarts the Diretta service on the Target."""
+    """Restarts the Diretta service on the Target and Roon Bridge on the Host."""
+    # Restart remote service on the Target
     run_remote_command("/usr/local/bin/pm-restart-target")
+
+    # Restart local Roon Bridge service on the Host (New line)
+    subprocess.run(['sudo', 'systemctl', 'restart', 'roonbridge.service'], check=True)
+    app.logger.info("Roon Bridge service on Host restarted.")
+
     now = datetime.now().strftime("%H:%M:%S")
-    # Return a confirmation message that will trigger a status refresh after a delay.
     return f"""
-    <span>Restart command sent at {now}. Page will refresh shortly.</span>
+    <span>Restart commands sent at {now}. Page will refresh shortly.</span>
     <div hx-trigger="load delay:3s" hx-get="/status" hx-target="#control-panel"></div>
     """
 
