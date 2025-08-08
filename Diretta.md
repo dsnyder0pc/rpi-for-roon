@@ -55,8 +55,8 @@ Now, let's get started.
 
 ---
 
-If you are located in the US, expect to pay around $289 (plus tax and shipping) to complete the basic build, limited to 44.1 kHz playback (for evaluation), plus another €100 to enable hi-res playback (prices subject to change):
-- Hardware ($220)
+If you are located in the US, expect to pay around $295 (plus tax and shipping) to complete the basic build, limited to 44.1 kHz playback (for evaluation), plus another €100 to enable hi-res playback (prices subject to change):
+- Hardware ($225)
 - One year AudioLinux subscription ($69)
 - Diretta Target license (€100)
 
