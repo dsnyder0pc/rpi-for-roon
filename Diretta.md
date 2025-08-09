@@ -195,11 +195,13 @@ echo "New Machine ID: $(cat /etc/machine-id)"
 
 Set a clear hostname for each device to easily identify them. **Note:** If this is not your first build using these instructions and you already have a Diretta Host/Target pair on your network, consider selecting a different name for this new Diretta Host, like `diretta-host2`, just for this part. Doing so will make it easier to access the two independently later.
 
+**On your FIRST device (the future Diretta Host):**
 ```bash
 # On the Diretta Host
 sudo hostnamectl set-hostname diretta-host
 ```
 
+**On your SECOND device (the future Diretta Target):**
 ```bash
 # On the Diretta Target
 sudo hostnamectl set-hostname diretta-target
