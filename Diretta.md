@@ -170,9 +170,13 @@ You'll use the SSH client on your local computer to login to the RPi computers t
 
 Once you have the IP address of one of your RPi computers, use the SSH client on your local computer to login using this process. Make note of the example `ssh` command since you'll use commands similar to this throughout this guide.
 ```bash
+cmd=$(cat <<'EOT'
 read -p "Enter the address of your RPi and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
+EOT
+)
+bash -c "$cmd"
 ```
 
 #### 3.1. Regenerate the Machine ID
@@ -217,9 +221,13 @@ convenient to connect both of them to your home network at the same time for the
 proceed one-at-a-time otherwise. **Note**: your router will likely assign them different IP addresses from the one you used to login initially. Be sure to use the new IP address with your SSH commands. Here's a reminder:
 
 ```bash
+cmd=$(cat <<'EOT'
 read -p "Enter the (new) address of your RPi and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
+EOT
+)
+bash -c "$cmd"
 ```
 
 #### 4.1. Install "Chrony" to update the system clock
@@ -236,6 +244,7 @@ chronyc sources
 #### 4.2. Set your Timezone
 
 ```bash
+cmd=$(cat <<'EOT'
 clear
 echo "Welcome to the interactive timezone setup."
 echo "You will first select a region, then a specific timezone."
@@ -276,6 +285,9 @@ echo "✅ Timezone has been set."
 echo
 echo "Current system time and timezone:"
 timedatectl status
+EOT
+)
+bash -c "$cmd"
 ```
 
 #### 4.3. Workaround for Pacman Update Issue
@@ -453,9 +465,13 @@ fi
 Upon booting, they will automatically use the new network configurations. **Note:** the IP address of your Diretta Host will likely have changed because it is now connected to your home network via the USB-to-Ethernet adapter. You'll have to return to your router's web UI or the Fing app to find the new address, which should be stable at this point.
 
 ```bash
+cmd=$(cat <<'EOT'
 read -p "Enter the final address of your Diretta Host and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
+EOT
+)
+bash -c "$cmd"
 ```
 
 You should now be able to ping the Target from the Host:
@@ -491,6 +507,7 @@ The `ProxyJump` directive in your local SSH configuration is the standard and re
 
 1.  Run this command on your local computer (not on the Raspberry Pi). It will prompt you for the Diretta Host's IP address and then print the exact configuration block you need.
 ```bash
+cmd=$(cat <<'EOT'
 clear
 # --- Interactive SSH Alias Setup Script ---
 
@@ -529,6 +546,9 @@ EOT
 
   echo "✅ SSH configuration for 'diretta-host' and 'diretta-target' has been added."
 fi
+EOT
+)
+bash -c "$cmd"
 ```
 
 2.  **Verify the Connection:**
@@ -1115,15 +1135,19 @@ cd
 Configure the script with your Roon details. **Note:** The `event_mapping` codes must match the key names you defined in your hardware setup (`KEY_ENTER`, `KEY_VOLUMEUP`, etc.).
 
 ```bash
+cmd=$(cat <<'EOT'
 echo "Please enter the following configuration details:"
 read -p "Enter your email address: " MY_EMAIL_ADDRESS
 echo ""
 echo "Enter the name of your Roon zone."
 echo "IMPORTANT: This must match the zone name in the Roon app exactly (case-sensitive)."
 read -p "Enter your Roon Zone name: " MY_ROON_ZONE
+EOT
+)
+bash -c "$cmd"
 
 # Create the configuration file
-cat <<EOT> roon-ir-remote/app_info.json
+cat <<EOD> roon-ir-remote/app_info.json
 {
   "roon": {
     "app_info": {
@@ -1150,7 +1174,10 @@ cat <<EOT> roon-ir-remote/app_info.json
     }
   }
 }
+EOD
 EOT
+)
+bash -c "$cmd"
 ```
 
 ---
