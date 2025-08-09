@@ -1,0 +1,108 @@
+#!/bin/bash
+#
+# create_golden_image_nopasswd.sh
+#
+# Interactively creates a golden image from an SD card (/dev/mmcblk0).
+# This version is designed to be run by a normal user with NOPASSWD
+# sudo privileges, as it calls sudo internally for specific commands.
+
+# --- Configuration ---
+set -e # Exit immediately if a command exits with a non-zero status.
+set -o pipefail # Exit if any command in a pipeline fails.
+
+DEVICE="/dev/mmcblk0"
+BLOCK_SIZE_DD="4M"
+BLOCK_SIZE_BYTES=$((4 * 1024 * 1024)) # 4MiB in bytes
+
+# --- Sanity Checks ---
+
+# Check if the device exists
+if [ ! -b "${DEVICE}" ]; then
+  echo "🚫 Error: Block device ${DEVICE} not found."
+  echo "Please ensure the microSD card is inserted correctly."
+  exit 1
+fi
+
+# --- User Interaction ---
+
+# 1. Prompt for Diretta Type (Host/Target)
+echo "Select the image type:"
+select IMG_TYPE in "Host" "Target"; do
+  if [ -n "${IMG_TYPE}" ]; then
+    IMG_TYPE=$(echo "${IMG_TYPE}" | tr '[:upper:]' '[:lower:]') # lowercase
+    break
+  else
+    echo "Invalid selection. Please enter 1 for Host or 2 for Target."
+  fi
+done
+
+# 2. Prompt for the process stage
+echo
+echo "Select the process stage:"
+options=("Step 9" "Appendix 1" "Appendix 2" "Appendix 3" "Appendix 4")
+select stage_choice in "${options[@]}"; do
+  if [ -n "${stage_choice}" ]; then
+    case $stage_choice in
+      "Step 9") IMG_STAGE="step9"; break;;
+      "Appendix 1") IMG_STAGE="apdx1"; break;;
+      "Appendix 2") IMG_STAGE="apdx2"; break;;
+      "Appendix 3") IMG_STAGE="apdx3"; break;;
+      "Appendix 4") IMG_STAGE="apdx4"; break;;
+      *) echo "Invalid selection. Please try again.";;
+    esac
+  else
+    echo "Invalid selection. Please try again."
+  fi
+done
+
+# --- Calculation and Execution ---
+
+# 1. Construct the final filename
+FILENAME="diretta-${IMG_TYPE}-${IMG_STAGE}-golden.img"
+
+echo
+echo "⚙️  Preparing to create image..."
+echo "================================="
+
+# 2. Get partition info using 'parted' for robustness
+echo -n "🔎 Reading partition table from ${DEVICE}... "
+PART_INFO=$(sudo parted -ms "${DEVICE}" unit B print | grep "^2:")
+END_BYTE=$(echo "${PART_INFO}" | cut -d':' -f3 | tr -d 'B')
+echo "Done."
+
+if ! [[ "${END_BYTE}" =~ ^[0-9]+$ ]]; then
+  echo "🚫 Error: Could not determine the end sector of the partition."
+  exit 1
+fi
+
+# 3. Calculate the total size and the 'count' for dd
+TOTAL_BYTES=$((END_BYTE + 1))
+# Use integer arithmetic for ceiling division: ceil(A/B) = (A+B-1)/B
+COUNT=$(((TOTAL_BYTES + BLOCK_SIZE_BYTES - 1) / BLOCK_SIZE_BYTES))
+
+# 4. Display parameters and ask for confirmation
+echo
+echo "Image Parameters:"
+echo "---------------------------------"
+echo "  Source Device : ${DEVICE}"
+echo "  Output File   : ${FILENAME}"
+echo "  Total Bytes   : ${TOTAL_BYTES}"
+echo "  Block Size    : ${BLOCK_SIZE_DD}"
+echo "  DD Count      : ${COUNT}"
+echo "---------------------------------"
+echo
+
+read -r -p "Do you want to proceed with these settings? (y/N) " confirm
+if [[ ! "$confirm" =~ ^[yY]([eE][sS])?$ ]]; then
+  echo "Aborted by user."
+  exit 0
+fi
+
+# 5. Execute the dd command
+echo
+echo "🚀 Starting image creation with dd... (This may take a few minutes)"
+sudo dd if="${DEVICE}" of="${FILENAME}" bs="${BLOCK_SIZE_DD}" count="${COUNT}" status=progress conv=fsync
+sudo chown "${LOGNAME}:${LOGNAME}" "${FILENAME}"
+
+echo
+echo "✅ Success! Image created: ${FILENAME}"
