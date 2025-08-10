@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.1
+# Diretta Target QA Check Script v1.3
 #
 
 # --- Colors and Formatting ---
 C_RESET='\033[0m'
 C_RED='\033[0;31m'
 C_GREEN='\033[0;32m'
-C_YELLOW='\033[0;33m'
+C_YELLOW='\033[1;33m'
 C_BLUE='\033[0;34m'
 C_BOLD='\033[1m'
 
@@ -87,7 +87,7 @@ check "USB DAC/DDC is configured and detected" "journalctl -b -u diretta_alsa_ta
 check_status "Diretta Target License Status" "ls /opt/diretta-alsa-target/ | grep -qv '^diretta'" "activated" "limited"
 
 # --- Optional Appendix Checks ---
-check_optional_section "[ -f /etc/systemd/system/argononed.service ]" "run_appendix1_checks" "Appendix 1 (Argon ONE Fan)"
+check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Appendix 1 (Argon ONE Fan)"
 check_optional_section "[ -f /usr/local/bin/purist-mode ]" "run_appendix3_checks" "Appendix 3 (Purist Mode)"
 check_optional_section "id purist-app" "run_appendix4_checks" "Appendix 4 (Web UI Backend)"
 

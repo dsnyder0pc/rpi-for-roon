@@ -74,6 +74,7 @@ If you are located in the US, expect to pay around $295 (plus tax and shipping) 
 11. [Appendix 2: Optional IR Remote Control](#11-appendix-2-optional-ir-remote-control)
 12. [Appendix 3: Optional Purist Mode](#12-appendix-3-optional-purist-mode)
 13. [Appendix 4: Optional Purist Mode Web UI](#13-appendix-4-optional-purist-mode-web-ui)
+14. [Appendix 5: System Health Checks](#14-appendix-5-system-health-check)
 
 ---
 
@@ -822,6 +823,13 @@ sudo systemctl restart boot-repair.service
 Your dedicated Diretta link is now fully configured for pristine, isolated audio playback.
 **Note:** The "Limited" zone for Diretta Target testing will disappear from Roon after six minutes of hi-res music playback. This is normal. At that point, you'll need to purchase a license for the Diretta Target. Cost is currently €100 and it can take up to 48 hours for activation to complete. You will receive two emails from the Diretta team. The first is your receipt; the second, your activation notification. Once you receive the activation email, restart your Target computer to pick up the activation.
 
+> ---
+> ### ✅ Checkpoint: Verify Your Core System
+>
+> Your core Diretta and Roon system should now be fully functional. To verify all services and connections, please proceed to [**Appendix 5**](#14-appendix-5-system-health-check) and run the universal **System Health Check** command on both the Host and the Target.
+>
+> ---
+
 ---
 
 ## 10. Appendix 1: Optional Argon ONE Fan Control
@@ -1303,6 +1311,13 @@ Follow the prompts to enter the new name for your Roon Zone. You may have to ent
 While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, detailed in [Appendix 4](#13-appendix-4-optional-purist-mode-web-ui). The web UI provides a dedicated page for viewing and editing the zone name from your phone or browser.
 
 ### **Step 8: Profit! 📈**
+
+> ---
+> ### ✅ Checkpoint: Verify Your IR Remote Setup
+>
+> Your IR Remote hardware and software should now be configured. To verify the setup, proceed to [**Appendix 5**](#14-appendix-5-system-health-check) and run the universal **System Health Check** command on the Diretta Host.
+>
+> ---
 
 Your IR remote should now control Roon. Enjoy!
 
@@ -1876,3 +1891,25 @@ From the landing page, a navigation bar at the top will guide you to the differe
 * **Purist Mode App:** This page contains the controls for toggling Purist Mode and its auto-start behavior on the Diretta Target. It automatically refreshes every 30 seconds to show the current status. It also contains the "Restart Services" button for use after a Diretta license activation.
 
 * **IR Remote App:** If you have completed the IR remote setup (Appendix 2), this link will appear. This page provides a simple form to view and update the Roon Zone name your remote will control. This page does not auto-refresh, so you can take as long as you need to make your edits.
+
+> ---
+> ### ✅ Checkpoint: Verify Your Web UI Setup
+>
+> The Purist Mode Web UI should now be operational. To verify all components of this complex feature, proceed to [**Appendix 5**](#14-appendix-5-system-health-check) and run the universal **System Health Check** command on both the Host and the Target.
+>
+> ---
+
+---
+
+## 14. Appendix 5: System Health Checks
+
+After completing major sections of this guide, it's a good idea to run a quick quality assurance (QA) check to verify that everything is configured correctly.
+
+We've created a smart script that automatically detects whether you are running it on the **Diretta Host** or the **Diretta Target** and performs the appropriate set of checks.
+
+**How to Run the Check**
+
+On either the Host or the Target, run the following single command. It will download and execute the QA script, providing a detailed report of your system's status.
+
+```bash
+curl -sSL [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh) | sudo bash

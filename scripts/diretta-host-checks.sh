@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.1
+# Diretta Host QA Check Script v1.2
 #
 
 # --- Colors and Formatting ---
 C_RESET='\033[0m'
 C_RED='\033[0;31m'
 C_GREEN='\033[0;32m'
-C_YELLOW='\033[0;33m'
+C_YELLOW='\033[1;33m'
 C_BLUE='\033[0;34m'
 C_BOLD='\033[1m'
 
@@ -40,7 +40,7 @@ run_appendix2_checks() {
     check "'roon-ir-remote' service is enabled" "systemctl is-enabled roon-ir-remote.service"
     check "'roon-ir-remote' service is active" "systemctl is-active roon-ir-remote.service"
     check "'set-roon-zone' script is up-to-date" "[ -x /usr/local/bin/set-roon-zone ] && [[ \$(md5sum /usr/local/bin/set-roon-zone | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone | md5sum | awk '{print \$1}') ]]"
-    if [ -f /etc/systemd/system/ir-keymap.service ]; then
+    if pacman -Q v4l-utils &>/dev/null; then
         check "/boot/config.txt enables Argon IR" "grep -q '^dtoverlay=gpio-ir,gpio_pin=23' /boot/config.txt"
         check "Argon IR keymap '/etc/rc_keymaps/argon.toml' exists" "[ -f /etc/rc_keymaps/argon.toml ]"
         check "'ir-keymap' service is enabled" "systemctl is-enabled ir-keymap.service"
@@ -105,7 +105,7 @@ check "'roonbridge' service is enabled" "systemctl is-enabled roonbridge.service
 check "'roonbridge' service is active" "systemctl is-active roonbridge.service"
 
 # --- Optional Appendix Checks ---
-check_optional_section "[ -f /etc/systemd/system/argononed.service ]" "run_appendix1_checks" "Appendix 1 (Argon ONE Fan)"
+check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Appendix 1 (Argon ONE Fan)"
 check_optional_section "[ -d /home/audiolinux/.pyenv ]" "header 'Appendices 2 & 4' 'Optional: Python Environment'; check 'pyenv is installed for user audiolinux' '[ -d /home/audiolinux/.pyenv ]'; check 'A python version is installed via pyenv' 'ls /home/audiolinux/.pyenv/versions | grep -q \"[0-9]\"'; check '.bashrc is configured for pyenv' 'grep -q \"pyenv init\" /home/audiolinux/.bashrc'" "Python Environment"
 check_optional_section "[ -d /home/audiolinux/roon-ir-remote ]" "run_appendix2_checks" "Appendix 2 (IR Remote)"
 check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix4_checks" "Appendix 4 (Web UI)"
