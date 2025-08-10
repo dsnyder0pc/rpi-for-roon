@@ -112,6 +112,7 @@ if [ -f /etc/systemd/system/argononed.service ]; then
     check "i2c udev rule exists" "[ -f /etc/udev/rules.d/99-i2c.rules ]"
     check "'argonone-c-git' package is installed" "pacman -Q argonone-c-git"
     check "'argononed' service is enabled" "systemctl is-enabled argononed.service"
+    check "Custom fan schedule '/etc/argononed.conf' exists" "[ -f /etc/argononed.conf ]"
     # Note: argononed may be inactive if Purist Mode is on, so we don't check for active state.
 fi
 
