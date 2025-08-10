@@ -75,11 +75,11 @@ check "IP forwarding is active in kernel" "[[ \$(cat /proc/sys/net/ipv4/ip_forwa
 check "iptables NAT rule file exists" "[ -f /etc/iptables/iptables.rules ]"
 check "'iptables' service is enabled" "systemctl is-enabled iptables.service"
 check "USB Ethernet udev rule exists" "[ -f /etc/udev/rules.d/99-ax88179a.rules ]"
-check "MOTD update script is installed" "[ -f /opt/scripts/update/update_motd.sh ] && [[ \$(md5sum /opt/scripts/update/update_motd.sh | cut -d' ' -f1) == 'd1a58085d7756f722881a70c3c847a96' ]]"
+check "MOTD update script is up-to-date" "[ -f /opt/scripts/update/update_motd.sh ] && [[ \$(md5sum /opt/scripts/update/update_motd.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh | md5sum | awk '{print \$1}') ]]"
 
 # --- Section 7: Boot Filesystem Clean ---
 header "Section 7" "Boot Filesystem Integrity"
-check "Boot repair script exists" "[ -x /usr/local/sbin/check-and-repair-boot.sh ]"
+check "Boot repair script is up-to-date" "[ -x /usr/local/sbin/check-and-repair-boot.sh ] && [[ \$(md5sum /usr/local/sbin/check-and-repair-boot.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh | md5sum | awk '{print \$1}') ]]"
 check "'boot-repair' service file exists" "[ -f /etc/systemd/system/boot-repair.service ]"
 check "'boot-repair' service is enabled" "systemctl is-enabled boot-repair.service"
 
@@ -121,7 +121,7 @@ if [ -d /home/audiolinux/.pyenv ]; then
         check "'roon-ir-remote' directory exists" "[ -d /home/audiolinux/roon-ir-remote ]"
         check "'roon-ir-remote' service is enabled" "systemctl is-enabled roon-ir-remote.service"
         check "'roon-ir-remote' service is active" "systemctl is-active roon-ir-remote.service"
-        check "'set-roon-zone' script is installed" "[ -x /usr/local/bin/set-roon-zone ]"
+        check "'set-roon-zone' script is up-to-date" "[ -x /usr/local/bin/set-roon-zone ] && [[ \$(md5sum /usr/local/bin/set-roon-zone | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone | md5sum | awk '{print \$1}') ]]"
     fi
 
     if [ -d /home/audiolinux/purist-mode-webui ]; then
