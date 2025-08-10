@@ -74,7 +74,7 @@ If you are located in the US, expect to pay around $295 (plus tax and shipping) 
 11. [Appendix 2: Optional IR Remote Control](#11-appendix-2-optional-ir-remote-control)
 12. [Appendix 3: Optional Purist Mode](#12-appendix-3-optional-purist-mode)
 13. [Appendix 4: Optional Purist Mode Web UI](#13-appendix-4-optional-purist-mode-web-ui)
-14. [Appendix 5: System Health Checks](#14-appendix-5-system-health-check)
+14. [Appendix 5: System Health Checks](#14-appendix-5-system-health-checks)
 
 ---
 
@@ -826,7 +826,7 @@ Your dedicated Diretta link is now fully configured for pristine, isolated audio
 > ---
 > ### ✅ Checkpoint: Verify Your Core System
 >
-> Your core Diretta and Roon system should now be fully functional. To verify all services and connections, please proceed to [**Appendix 5**](#14-appendix-5-system-health-check) and run the universal **System Health Check** command on both the Host and the Target.
+> Your core Diretta and Roon system should now be fully functional. To verify all services and connections, please proceed to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
@@ -1315,7 +1315,7 @@ While this script works perfectly, the recommended method for changing the Roon 
 > ---
 > ### ✅ Checkpoint: Verify Your IR Remote Setup
 >
-> Your IR Remote hardware and software should now be configured. To verify the setup, proceed to [**Appendix 5**](#14-appendix-5-system-health-check) and run the universal **System Health Check** command on the Diretta Host.
+> Your IR Remote hardware and software should now be configured. To verify the setup, proceed to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on the Diretta Host.
 >
 > ---
 
@@ -1895,7 +1895,7 @@ From the landing page, a navigation bar at the top will guide you to the differe
 > ---
 > ### ✅ Checkpoint: Verify Your Web UI Setup
 >
-> The Purist Mode Web UI should now be operational. To verify all components of this complex feature, proceed to [**Appendix 5**](#14-appendix-5-system-health-check) and run the universal **System Health Check** command on both the Host and the Target.
+> The Purist Mode Web UI should now be operational. To verify all components of this complex feature, proceed to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
