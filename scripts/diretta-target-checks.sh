@@ -6,7 +6,7 @@
 # instructions in the RPi for Roon guide. It should be run with sudo.
 #
 # Usage:
-# ssh diretta-target "curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/diretta-target-checks.sh | sudo bash"
+# curl -sSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/diretta-target-checks.sh | sudo bash
 
 # --- Colors and Formatting ---
 C_RESET='\033[0m'
