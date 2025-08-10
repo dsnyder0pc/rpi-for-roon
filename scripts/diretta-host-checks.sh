@@ -138,7 +138,7 @@ if [ -d /home/audiolinux/.pyenv ]; then
         check "Avahi is configured for USB LAN" "[ -f /etc/avahi/avahi-daemon.conf.d/interface-scoping.conf ]"
         check "Web UI SSH key exists" "[ -f /home/audiolinux/.ssh/purist_app_key ]"
         check "Web UI app file is up-to-date" "[ -f /home/audiolinux/purist-mode-webui/app.py ] && [[ \$(md5sum /home/audiolinux/purist-mode-webui/app.py | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py | md5sum | awk '{print \$1}') ]]"
-        check "Python has port binding capability" "getcap \$(readlink -f /home/audiolinux/.pyenv/versions/purist-webui/bin/python) | grep -q 'cap_net_bind_service+ep'"
+        check "Python has port binding capability" "getcap \$(readlink -f /home/audiolinux/.pyenv/versions/purist-webui/bin/python) | grep -q 'cap_net_bind_service.ep'"
         check "Web UI sudoers file exists" "[ -f /etc/sudoers.d/webui-restarts ]"
         check "'purist-webui' service is enabled" "systemctl is-enabled purist-webui.service"
         check "'purist-webui' service is active" "systemctl is-active purist-webui.service"
