@@ -1823,7 +1823,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     pyenv activate purist-webui
     python app.py
     ```
-    You should see output indicating the Flask server has started on port **8080**. From another device, access `http://diretta-host.local:8080`. If it works, return to the SSH terminal and press `Ctrl+C` to stop the server.
+    You should see output indicating the Flask server has started on port **8080**. From another device, access http://diretta-host.local:8080. If it works, return to the SSH terminal and press `Ctrl+C` to stop the server.
 
 11. **Grant Sudo Permissions on the Host:**
     This step is critical for allowing the web application to restart the necessary Roon-related services without a password.
