@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# ==============================================================================
+#         Remote System Preparation & Shutdown Script
+#
+# This script is designed to be run remotely via curl:
+#   curl -sSL <URL> | sudo bash
+#
+# It prepares a system for shipping by cleaning it and then powers off.
+# The bash history cleanup is performed as the final step before shutdown.
+# ==============================================================================
+
+# --- Configuration ---
+TARGET_USER="audiolinux"
+MIRRORLIST_PATH="/etc/pacman.d/mirrorlist"
+DEFAULT_MIRROR="http://mirror.archlinuxarm.org/\$arch/\$repo"
+CUSTOM_MIRROR="http://ca.us.mirror.archlinuxarm.org/\$arch/\$repo"
+
+# --- Script Start ---
+
+# The script is piped to `sudo bash`, so all commands run as root.
+if [[ $EUID -ne 0 ]]; then
+   echo "🛑 Error: This script must be run with root privileges. e.g., '... | sudo bash'"
+   exit 1
+fi
+
+echo "🚀 Starting remote system preparation..."
+echo "------------------------------------------------"
+
+# Step 1: Remove personal SSH public key
+SSH_KEYS_FILE="/home/$TARGET_USER/.ssh/authorized_keys"
+echo "🔐 Removing SSH public key for user '$TARGET_USER'..."
+if [ -f "$SSH_KEYS_FILE" ]; then
+    # The -v flag provides verbose output, confirming the removal
+    rm -fv "$SSH_KEYS_FILE"
+else
+    echo "   - No authorized_keys file found. Skipping."
+fi
+
+# ---
+
+# Step 2: Restore default pacman mirrorlist
+echo "🌐 Restoring default pacman mirrorlist..."
+if [ -f "$MIRRORLIST_PATH" ]; then
+    # Uncomment the default Geo-IP server
+    sed -i "s|^#Server = $DEFAULT_MIRROR|Server = $DEFAULT_MIRROR|" "$MIRRORLIST_PATH"
+    echo "   - Enabled default Geo-IP mirror."
+
+    # Comment out the custom California server
+    sed -i "s|^Server = $CUSTOM_MIRROR|# Server = $CUSTOM_MIRROR|" "$MIRRORLIST_PATH"
+    echo "   - Disabled custom California mirror."
+else
+    echo "   - ⚠️  Warning: Mirrorlist file not found at '$MIRRORLIST_PATH'."
+fi
+
+echo "------------------------------------------------"
+
+# Step 3: Clean up Bash history (final action before shutdown)
+echo "🧹 Cleaning up Bash history..."
+history -c
+if [ -f "/home/$TARGET_USER/.bash_history" ]; then
+    rm -f "/home/$TARGET_USER/.bash_history"
+    echo "   - Removed history file for user '$TARGET_USER'."
+fi
+# Since this is run via 'sudo bash', $HOME is /root
+if [ -f "$HOME/.bash_history" ]; then
+    rm -f "$HOME/.bash_history"
+    echo "   - Removed history file for user 'root'."
+fi
+export HISTSIZE=0
+echo "   - History cleared for this session."
+
+echo "------------------------------------------------"
+
+# Step 4: Sync disks and power off the system
+echo "✅ Preparation complete. System will power off in 3 seconds."
+sleep 3
+sync
+echo "🔌 Powering off now. Goodbye!"
+poweroff
