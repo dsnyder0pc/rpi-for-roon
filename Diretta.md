@@ -73,7 +73,7 @@ If you are located in the US, expect to pay around $295 (plus tax and shipping) 
 10. [Appendix 1: Optional Argon ONE Fan Control](#10-appendix-1-optional-argon-one-fan-control)
 11. [Appendix 2: Optional IR Remote Control](#11-appendix-2-optional-ir-remote-control)
 12. [Appendix 3: Optional Purist Mode](#12-appendix-3-optional-purist-mode)
-13. [Appendix 4: Optional Purist Mode Web UI](#13-appendix-4-optional-purist-mode-web-ui)
+13. [Appendix 4: Optional System Control Web UI](#13-appendix-4-optional-system-control-web-ui)
 14. [Appendix 5: System Health Checks](#14-appendix-5-system-health-checks)
 
 ---
@@ -388,7 +388,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     sudo systemctl enable iptables.service
     ```
 
-4.  **Driver selection for the Plugable USB to Ethernet Adapter**
+4.  **Configure the Plugable USB to Ethernet Adapter**
 
     The default USB driver does not support all of the features of the Plugable Ethernet adapter. To get reliable performance, we need to tell the kernel's device manager how to handle the device when it's plugged in:
     ```bash
@@ -655,7 +655,7 @@ If you are a Linux user and want your SSH key passphrase to persist across reboo
 
   * Reload your shell by opening a new terminal or running `source ~/.bashrc`.
 
-You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) without a password, securely authenticated by your SSH key.
+You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) without being prompted for a password, securely authenticated by your SSH key.
 
 ---
 
@@ -1308,7 +1308,7 @@ set-roon-zone
 Follow the prompts to enter the new name for your Roon Zone. You may have to enter the root password to make the changes take effect.
 
 **Note: A Better Way to Set the Zone**
-While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, detailed in [Appendix 4](#13-appendix-4-optional-purist-mode-web-ui). The web UI provides a dedicated page for viewing and editing the zone name from your phone or browser.
+While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, detailed in [Appendix 4](#13-appendix-4-optional-system-control-web-ui). The web UI provides a dedicated page for viewing and editing the zone name from your phone or browser.
 
 ### **Step 8: Profit! 📈**
 
@@ -1529,7 +1529,7 @@ You have full interactive control over the system at any time.
 
 ---
 
-## 13. Appendix 4: Optional Purist Mode Web UI
+## 13. Appendix 4: Optional System Control Web UI
 
 This appendix provides instructions for installing a simple web-based application on the Diretta Host. This application provides an easy-to-use interface, accessible from a phone or tablet, to manage key features of your Diretta system, including Purist Mode on the Target and Roon IR Remote integration settings on the Host.
 
@@ -1659,7 +1659,12 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ```
 
 4.  **Authorize the Key on the Target:**
-    Run this script on the Target to set up the key for the 'purist-app' user
+    ```bash
+    ssh diretta-target
+
+    ```
+
+    Once you are logged in to the Target, run this script to set up the key for the 'purist-app' user
     ```bash
     echo "--> Running setup script on the Target..."
     set -e
