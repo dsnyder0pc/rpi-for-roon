@@ -528,7 +528,6 @@ GLOBAL_SETTINGS=$(cat <<'EOF'
 # --- Recommended Global SSH Settings ---
 Host *
     AddKeysToAgent yes
-    UseKeychain yes
     IdentityFile ~/.ssh/id_ed25519
 
 EOF
