@@ -514,40 +514,69 @@ clear
 # --- Interactive SSH Alias Setup Script ---
 
 SSH_CONFIG_FILE="$HOME/.ssh/config"
+SSH_DIR="$HOME/.ssh"
 
-# Ensure the .ssh directory exists with the correct permissions
-mkdir -p "$HOME/.ssh"
-chmod 700 "$HOME/.ssh"
-
-# Ensure the config file exists
+# --- Ensure the .ssh directory and config file exist with correct permissions ---
+mkdir -p "$SSH_DIR"
+chmod 700 "$SSH_DIR"
 touch "$SSH_CONFIG_FILE"
 chmod 600 "$SSH_CONFIG_FILE"
 
-# Check if the 'diretta-host' alias already exists
+# --- Define the recommended global settings block ---
+GLOBAL_SETTINGS=$(cat <<'EOF'
+# --- Recommended Global SSH Settings ---
+Host *
+    AddKeysToAgent yes
+    UseKeychain yes
+    IdentityFile ~/.ssh/id_ed25519
+
+EOF
+)
+
+# --- Prepend global settings if they don't exist ---
+if ! grep -q "UseKeychain yes" "$SSH_CONFIG_FILE"; then
+  echo "✅ Adding recommended global SSH settings..."
+  # Use a temporary file to prepend the settings
+  echo "$GLOBAL_SETTINGS" | cat - "$SSH_CONFIG_FILE" > temp_ssh_config && mv temp_ssh_config "$SSH_CONFIG_FILE"
+else
+  echo "✅ Recommended global SSH settings already exist. No changes made."
+fi
+
+# --- Add Diretta-specific host configurations ---
 if grep -q "Host diretta-host" "$SSH_CONFIG_FILE"; then
   echo "✅ SSH configuration for 'diretta-host' already exists. No changes made."
 else
-  # Prompt for the IP address since the config is missing
   read -p "Enter the LAN IP address of your Diretta Host and press [Enter]: " Diretta_Host_IP
 
   # Append the new configuration using a heredoc for clarity
-  cat <<EOT >> "$SSH_CONFIG_FILE"
+  cat <<EOT_HOSTS >> "$SSH_CONFIG_FILE"
 
 # --- Diretta Configuration (added by script) ---
 Host diretta-host host
     HostName ${Diretta_Host_IP}
-    StrictHostKeyChecking accept-new
     User audiolinux
 
 Host diretta-target target
     HostName 172.20.0.2
-    StrictHostKeyChecking accept-new
     User audiolinux
     ProxyJump diretta-host
-EOT
+EOT_HOSTS
 
   echo "✅ SSH configuration for 'diretta-host' and 'diretta-target' has been added."
 fi
+
+# --- Clean up StrictHostKeyChecking from older versions of this guide ---
+# This is no longer needed with the recommended SSH key setup
+if command -v sed >/dev/null; then
+    sed -i.bak -e '/StrictHostKeyChecking/d' "$SSH_CONFIG_FILE"
+    # Remove empty lines that might be left over
+    sed -i.bak -e '/^$/N;/^\n$/D' "$SSH_CONFIG_FILE"
+    rm -f "${SSH_CONFIG_FILE}.bak"
+fi
+
+echo ""
+echo "--- Your ~/.ssh/config file now contains: ---"
+cat "$SSH_CONFIG_FILE"
 EOT
 )
 bash -c "$cmd"
@@ -568,49 +597,62 @@ Type `exit` to logout.
 ```bash
 ssh -o StrictHostKeyChecking=accept-new diretta-target
 ```
+**Note:** You are prompted once for the diretta-host (the jump box) and a second time for the diretta-target itself. The next section will replace this with seamless key-based authentication.
 
 **Note:** You can use `ssh host` and `ssh target` for short.
 
 #### 6.2. Recommended: Secure Authentication with SSH Keys
 
-While you can use passwords over the proxied connection, the most secure and convenient method is public key authentication. This uses a passphrase-protected SSH key managed by an agent (`ssh-agent`), eliminating the need to re-enter your password for every connection.
+While you can use passwords, the most secure and convenient method is public key authentication. Our SSH configuration automates most of the process. After a one-time setup, you will be able to log in to both the Host and Target securely without typing a password.
 
 **On your local computer:**
 
-1.  **Create an SSH Key (if you don't have one):**
-    It's best practice to use a modern algorithm like `ed25519`. When prompted, enter a strong, memorable passphrase.
+1.  **Create an SSH Key (if you don't already have one):**
+    It's best practice to use a modern algorithm like `ed25519`. When prompted, enter a strong, memorable **passphrase**. This is not your login password; it's a password that protects your private key file itself.
+
     ```bash
     ssh-keygen -t ed25519 -C "audiolinux"
     ```
 
-2.  **Set up `keychain` (for Linux users):**
-    `keychain` makes the `ssh-agent` persistent across logins. macOS handles this automatically.
+2.  **Copy Your Public Key to the Devices:**
+    These commands securely grant your key access to each device. The first command will prompt for the Diretta Host's password. Because that makes the connection to the Host passwordless, the second command will only prompt for the Diretta Target's password.
 
-    * **Install keychain (Ubuntu/Debian):**
-        ```bash
-        sudo apt update && sudo apt install keychain
-        ```
-    * **Configure your shell:** Add the following line to your `~/.bashrc` or `~/.profile` to start `keychain` when you open a terminal.
-        ```bash
-        eval `keychain --eval --quiet id_ed25519`
-        ```
-    * Reload your shell by opening a new terminal or running `source ~/.bashrc`.
-
-3.  **Add your key to the agent:**
-    You will be prompted for your key's passphrase one time.
-    ```bash
-    ssh-add ~/.ssh/id_ed25519
-    ```
-    *(macOS users may need to use `ssh-add -K ~/.ssh/id_ed25519` on older systems to store the passphrase in the system Keychain.)*
-
-4.  **Copy your Public Key to the Devices:**
-    The `ssh-copy-id` command automatically appends your public key to the `~/.ssh/authorized_keys` file on the remote machine. Because `ProxyJump` is already configured, this will work seamlessly for the Target.
     ```bash
     echo ""
     ssh-copy-id diretta-host
     echo ""
     ssh-copy-id diretta-target
     ```
+
+3.  **Log In Securely:**
+    You can now SSH to your devices. The first time you connect to each one, you will be prompted for the **passphrase** you created in Step 1.
+
+    ```bash
+    ssh diretta-host
+    ```
+
+      * **On macOS:** Thanks to the `UseKeychain yes` setting we added, your passphrase will be automatically and securely saved in the macOS Keychain. You will not be asked for it again.
+      * **On Linux:** Thanks to the `AddKeysToAgent yes` setting, your key will be added to the SSH agent for your current terminal session. You won't be prompted for the passphrase again until you reboot or start a new login session.
+
+-----
+
+### (Optional) For an Improved Linux Experience
+
+If you are a Linux user and want your SSH key passphrase to persist across reboots (similar to the macOS experience), installing `keychain` is highly recommended.
+
+  * **Install keychain (Ubuntu/Debian):**
+
+    ```bash
+    sudo apt update && sudo apt install keychain
+    ```
+
+  * **Configure your shell:** Add the following line to your `~/.bashrc` (or `~/.zshrc`, `~/.profile`, etc.) to start `keychain` when you open a terminal. It will prompt for your passphrase only once, the first time you open a terminal after a reboot.
+
+    ```bash
+    eval `keychain --eval --quiet id_ed25519`
+    ```
+
+  * Reload your shell by opening a new terminal or running `source ~/.bashrc`.
 
 You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) without a password, securely authenticated by your SSH key.
 
@@ -1598,7 +1640,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
     # Step A: Copy the public key to the Target's home directory
     echo "--> Copying public key to the Target..."
-    scp ~/.ssh/purist_app_key.pub diretta-target:
+    scp -o StrictHostKeyChecking=accept-new ~/.ssh/purist_app_key.pub diretta-target:
     ```
 
 4.  **Authorize the Key on the Target:**
