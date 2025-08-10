@@ -239,7 +239,7 @@ The system clock has to be accurate before we can install updates. The Raspberry
 
 ```bash
 sudo id
-curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_chrony.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_chrony.sh | sudo bash
 sleep 5
 chronyc sources
 ```
@@ -1916,4 +1916,4 @@ We've created a smart script that automatically detects whether you are running 
 On either the Host or the Target, run the following single command. It will download and execute the QA script, providing a detailed report of your system's status.
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh | sudo bash

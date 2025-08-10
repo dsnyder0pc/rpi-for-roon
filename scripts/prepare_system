@@ -4,7 +4,7 @@
 #         Remote System Preparation & Shutdown Script
 #
 # This script is designed to be run remotely via curl:
-#   curl -sSL <URL> | sudo bash
+#   curl -fsSL <URL> | sudo bash
 #
 # It prepares a system for shipping by cleaning it and then powers off.
 # The bash history cleanup is performed as the final step before shutdown.

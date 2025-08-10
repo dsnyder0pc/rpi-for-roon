@@ -13,10 +13,10 @@ HOSTNAME=$(hostname)
 # --- Main Logic ---
 if [[ "$HOSTNAME" == "diretta-host" ]]; then
     echo "Diretta Host detected. Running Host QA checks..."
-    curl -sSL "$HOST_SCRIPT_URL" | sudo bash
+    curl -fsSL "$HOST_SCRIPT_URL" | sudo bash
 elif [[ "$HOSTNAME" == "diretta-target" ]]; then
     echo "Diretta Target detected. Running Target QA checks..."
-    curl -sSL "$TARGET_SCRIPT_URL" | sudo bash
+    curl -fsSL "$TARGET_SCRIPT_URL" | sudo bash
 else
     echo "Error: Could not determine if this is a Diretta Host or Target."
     echo "Please ensure the hostname is set to 'diretta-host' or 'diretta-target'."
