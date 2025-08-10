@@ -34,6 +34,26 @@ check() {
     fi
 }
 
+# Prints a status message instead of a simple pass/fail.
+# $1: Description of the check.
+# $2: The command to execute for the check.
+# $3: The text to display on success (status 0).
+# $4: The text to display on failure (status non-zero).
+check_status() {
+    local description="$1"
+    local command_to_run="$2"
+    local pass_text="$3"
+    local fail_text="$4"
+
+    printf "  ${C_BLUE}*${C_RESET} %-68s" "$description"
+    if eval "$command_to_run" &>/dev/null; then
+        printf "[${C_GREEN}%s${C_RESET}]\n" "$pass_text"
+    else
+        printf "[${C_YELLOW}%s${C_RESET}]\n" "$fail_text"
+    fi
+}
+
+
 # Prints a section header.
 # $1: Section/Appendix number
 # $2: Section/Appendix title
@@ -82,7 +102,7 @@ check "Journald is set to volatile storage" "grep -q '^Storage=volatile' /etc/sy
 check "'diretta-alsa-target' is installed" "[ -d /opt/diretta-alsa-target ]"
 check "'diretta_alsa_target' service is enabled" "systemctl is-enabled diretta_alsa_target.service"
 check "'diretta_alsa_target' service is active" "systemctl is-active diretta_alsa_target.service"
-check "Diretta license appears to be activated" "ls /opt/diretta-alsa-target/ | grep -qv '^diretta'"
+check_status "Diretta Target License Status" "ls /opt/diretta-alsa-target/ | grep -qv '^diretta'" "activated" "limited"
 
 # --- Appendix 1: Optional Argon ONE Fan Control ---
 if [ -f /etc/systemd/system/argononed.service ]; then
