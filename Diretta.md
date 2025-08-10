@@ -534,7 +534,7 @@ EOF
 )
 
 # --- Prepend global settings if they don't exist ---
-if ! grep -q "UseKeychain yes" "$SSH_CONFIG_FILE"; then
+if ! grep -q "AddKeysToAgent yes" "$SSH_CONFIG_FILE"; then
   echo "✅ Adding recommended global SSH settings..."
   # Use a temporary file to prepend the settings
   echo "$GLOBAL_SETTINGS" | cat - "$SSH_CONFIG_FILE" > temp_ssh_config && mv temp_ssh_config "$SSH_CONFIG_FILE"
@@ -631,7 +631,6 @@ While you can use passwords, the most secure and convenient method is public key
     ssh diretta-host
     ```
 
-      * **On macOS:** Thanks to the `UseKeychain yes` setting we added, your passphrase will be automatically and securely saved in the macOS Keychain. You will not be asked for it again.
       * **On Linux:** Thanks to the `AddKeysToAgent yes` setting, your key will be added to the SSH agent for your current terminal session. You won't be prompted for the passphrase again until you reboot or start a new login session.
 
 -----
