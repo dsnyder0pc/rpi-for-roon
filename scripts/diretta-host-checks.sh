@@ -107,6 +107,7 @@ if [ -f /etc/systemd/system/argononed.service ]; then
     check "'argononed' service is enabled" "systemctl is-enabled argononed.service"
     check "'argononed' service is active" "systemctl is-active argononed.service"
     check "'argononed' software mode override exists" "[ -f /etc/systemd/system/argononed.service.d/software-mode.conf ]"
+    check "Custom fan schedule '/etc/argononed.conf' exists" "[ -f /etc/argononed.conf ]"
 fi
 
 # --- Appendix 2 & 4: Optional Python-based Apps (IR Remote / Web UI) ---
@@ -120,9 +121,15 @@ if [ -d /home/audiolinux/.pyenv ]; then
         header "Appendix 2" "Optional: IR Remote Control"
         check "'audiolinux' user is in 'input' group" "groups audiolinux | grep -q '\<input\>'"
         check "'roon-ir-remote' directory exists" "[ -d /home/audiolinux/roon-ir-remote ]"
+        check "Roon IR config 'app_info.json' exists" "[ -f /home/audiolinux/roon-ir-remote/app_info.json ]"
         check "'roon-ir-remote' service is enabled" "systemctl is-enabled roon-ir-remote.service"
         check "'roon-ir-remote' service is active" "systemctl is-active roon-ir-remote.service"
         check "'set-roon-zone' script is up-to-date" "[ -x /usr/local/bin/set-roon-zone ] && [[ \$(md5sum /usr/local/bin/set-roon-zone | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone | md5sum | awk '{print \$1}') ]]"
+        if [ -f /etc/systemd/system/ir-keymap.service ]; then
+            check "/boot/config.txt enables Argon IR" "grep -q '^dtoverlay=gpio-ir,gpio_pin=23' /boot/config.txt"
+            check "Argon IR keymap '/etc/rc_keymaps/argon.toml' exists" "[ -f /etc/rc_keymaps/argon.toml ]"
+            check "'ir-keymap' service is enabled" "systemctl is-enabled ir-keymap.service"
+        fi
     fi
 
     if [ -d /home/audiolinux/purist-mode-webui ]; then
@@ -130,6 +137,8 @@ if [ -d /home/audiolinux/.pyenv ]; then
         check "'avahi-daemon' service is enabled" "systemctl is-enabled avahi-daemon.service"
         check "Avahi is configured for USB LAN" "[ -f /etc/avahi/avahi-daemon.conf.d/interface-scoping.conf ]"
         check "Web UI SSH key exists" "[ -f /home/audiolinux/.ssh/purist_app_key ]"
+        check "Web UI app file is up-to-date" "[ -f /home/audiolinux/purist-mode-webui/app.py ] && [[ \$(md5sum /home/audiolinux/purist-mode-webui/app.py | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py | md5sum | awk '{print \$1}') ]]"
+        check "Python has port binding capability" "getcap \$(readlink -f /home/audiolinux/.pyenv/versions/purist-webui/bin/python) | grep -q 'cap_net_bind_service+ep'"
         check "Web UI sudoers file exists" "[ -f /etc/sudoers.d/webui-restarts ]"
         check "'purist-webui' service is enabled" "systemctl is-enabled purist-webui.service"
         check "'purist-webui' service is active" "systemctl is-active purist-webui.service"
