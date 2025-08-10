@@ -172,7 +172,7 @@ You'll use the SSH client on your local computer to login to the RPi computers t
 Once you have the IP address of one of your RPi computers, use the SSH client on your local computer to login using this process. Make note of the example `ssh` command since you'll use commands similar to this throughout this guide.
 ```bash
 cmd=$(cat <<'EOT'
-read -p "Enter the address of your RPi and hit [enter]: " RPi_IP_Address
+read -rp "Enter the address of your RPi and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 EOT
@@ -225,7 +225,7 @@ proceed one-at-a-time otherwise. **Note**: your router will likely assign them d
 
 ```bash
 cmd=$(cat <<'EOT'
-read -p "Enter the (new) address of your RPi and hit [enter]: " RPi_IP_Address
+read -rp "Enter the (new) address of your RPi and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 EOT
@@ -469,7 +469,7 @@ Upon booting, they will automatically use the new network configurations. **Note
 
 ```bash
 cmd=$(cat <<'EOT'
-read -p "Enter the final address of your Diretta Host and hit [enter]: " RPi_IP_Address
+read -rp "Enter the final address of your Diretta Host and hit [enter]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 EOT
@@ -546,7 +546,7 @@ fi
 if grep -q "Host diretta-host" "$SSH_CONFIG_FILE"; then
   echo "✅ SSH configuration for 'diretta-host' already exists. No changes made."
 else
-  read -p "Enter the LAN IP address of your Diretta Host and press [Enter]: " Diretta_Host_IP
+  read -rp "Enter the LAN IP address of your Diretta Host and press [Enter]: " Diretta_Host_IP
 
   # Append the new configuration using a heredoc for clarity
   cat <<EOT_HOSTS >> "$SSH_CONFIG_FILE"
@@ -1185,18 +1185,22 @@ cd
 Configure the script with your Roon details. **Note:** The `event_mapping` codes must match the key names you defined in your hardware setup (`KEY_ENTER`, `KEY_VOLUMEUP`, etc.).
 
 ```bash
-#!/bin/bash
+bash <<'EOF'
+# --- Start of Script ---
 
 # Get user input and store it in variables
 echo "Please enter the following configuration details:"
-read -p "Enter your email address: " MY_EMAIL_ADDRESS
+read -rp "Enter your email address: " MY_EMAIL_ADDRESS
 echo ""
 echo "Enter the name of your Roon zone."
 echo "IMPORTANT: This must match the zone name in the Roon app exactly (case-sensitive)."
-read -p "Enter your Roon Zone name: " MY_ROON_ZONE
+read -rp "Enter your Roon Zone name: " MY_ROON_ZONE
+
+# Ensure the target directory exists
+mkdir -p roon-ir-remote
 
 # Create the configuration file using a Here Document
-# The variables ${MY_EMAIL_ADDRESS} and ${MY_ROON_ZONE} will be correctly substituted
+# The variables will be correctly substituted
 cat <<EOD > roon-ir-remote/app_info.json
 {
   "roon": {
@@ -1226,7 +1230,11 @@ cat <<EOD > roon-ir-remote/app_info.json
 }
 EOD
 
-echo "Configuration file 'roon-ir-remote/app_info.json' created successfully."
+echo ""
+echo "✅ Configuration file 'roon-ir-remote/app_info.json' created successfully."
+
+# --- End of Script ---
+EOF
 ```
 
 ---
