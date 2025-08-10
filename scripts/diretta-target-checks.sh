@@ -102,6 +102,7 @@ check "Journald is set to volatile storage" "grep -q '^Storage=volatile' /etc/sy
 check "'diretta-alsa-target' is installed" "[ -d /opt/diretta-alsa-target ]"
 check "'diretta_alsa_target' service is enabled" "systemctl is-enabled diretta_alsa_target.service"
 check "'diretta_alsa_target' service is active" "systemctl is-active diretta_alsa_target.service"
+check "USB DAC/DDC is configured and detected" "journalctl -b -u diretta_alsa_target.service | grep -q 'DAC Name :'"
 check_status "Diretta Target License Status" "ls /opt/diretta-alsa-target/ | grep -qv '^diretta'" "activated" "limited"
 
 # --- Appendix 1: Optional Argon ONE Fan Control ---
