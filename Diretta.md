@@ -1899,7 +1899,6 @@ From the landing page, a navigation bar at the top will guide you to the differe
 >
 > ---
 
----
 
 ## 14. Appendix 5: System Health Checks
 
@@ -1912,4 +1911,4 @@ We've created a smart script that automatically detects whether you are running 
 On either the Host or the Target, run the following single command. It will download and execute the QA script, providing a detailed report of your system's status.
 
 ```bash
-curl -sSL [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh) | sudo bash
+curl -sSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh | sudo bash
