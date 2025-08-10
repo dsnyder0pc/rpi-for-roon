@@ -769,7 +769,7 @@ sudo systemctl restart boot-repair.service
     ```bash
     sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ```
-3.  Run `menu`.
+3.  Run `menu` if you exited back to the terminal after the previous step, otherwise go to the **Main menu**.
 4.  Select **AUDIO extra menu**.
 5.  Select **DIRETTA host installation/configuration**. You will see the following menu:
     ```text
