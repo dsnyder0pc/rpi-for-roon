@@ -1816,7 +1816,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     sudo setcap 'cap_net_bind_service=+ep' "$PYTHON_EXEC"
     ```
 
-10  **Test the Flask App Interactively:**
+10. **Test the Flask App Interactively:**
     Now, run the app from the command line on the **Diretta Host** to ensure it starts correctly.
     ```bash
     cd ~/purist-mode-webui
