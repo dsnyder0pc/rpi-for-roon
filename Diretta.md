@@ -1366,18 +1366,12 @@ For example:
 ```text
 [audiolinux@diretta-target ~]$ purist-mode
 This script requires sudo privileges. You may be prompted for a password.
-[sudo] password for root:
 🚀 Activating Purist Mode...
   -> Stopping time synchronization service (chronyd)...
-  -> Stopping Argon One daemon (argononed.service)...
   -> Disabling DNS lookups...
-     Backup of /etc/nsswitch.conf created.
-     DNS lookups disabled (set to local-only resolution).
   -> Dropping default gateway...
-     Default gateway removed.
 
 ✅ Purist Mode is ACTIVE.
-   To restore normal operation, run: purist-mode --revert
 ```
 
 Listen for a while to see if you prefer the sound (or peace of mind).
