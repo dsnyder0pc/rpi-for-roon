@@ -1188,10 +1188,7 @@ Configure the script with your Roon details. **Note:** The `event_mapping` codes
 bash <<'EOF'
 # --- Start of Script ---
 
-# Get user input and store it in variables
-echo "Please enter the following configuration details:"
-read -rp "Enter your email address: " MY_EMAIL_ADDRESS
-echo ""
+# Get Roon Zone and store it in a variable
 echo "Enter the name of your Roon zone."
 echo "IMPORTANT: This must match the zone name in the Roon app exactly (case-sensitive)."
 read -rp "Enter your Roon Zone name: " MY_ROON_ZONE
@@ -1209,7 +1206,7 @@ cat <<EOD > roon-ir-remote/app_info.json
       "display_name": "Roon IR Remote",
       "display_version": "1.0.0",
       "publisher": "smangels",
-      "email": "${MY_EMAIL_ADDRESS}",
+      "email": "github@mangelsen.se",
       "website": "https://github.com/smangels/roon-ir-remote"
     },
     "zone": {
