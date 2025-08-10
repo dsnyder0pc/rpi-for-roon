@@ -86,10 +86,11 @@ check "'boot-repair' service is enabled" "systemctl is-enabled boot-repair.servi
 # --- Section 8: Diretta & Journald ---
 header "Section 8" "Diretta Software & System Logging"
 check "Journald is set to volatile storage" "grep -q '^Storage=volatile' /etc/systemd/journald.conf"
-check "'diretta-host' is installed" "pacman -Q diretta-host"
-check "'diretta_host' service is enabled" "systemctl is-enabled diretta_host.service"
-check "'diretta_host' service is active" "systemctl is-active diretta_host.service"
-check "Diretta is configured for 'end0' interface" "grep -q 'ifname=end0' /etc/diretta/host.conf"
+check "'diretta-alsa-daemon' package is installed" "pacman -Q diretta-alsa-daemon"
+check "'diretta-alsa-dkms' package is installed" "pacman -Q diretta-alsa-dkms"
+check "'diretta_alsa' service is enabled" "systemctl is-enabled diretta_alsa.service"
+check "'diretta_alsa' service is active" "systemctl is-active diretta_alsa.service"
+check "Diretta is configured for 'end0' interface" "grep -q 'Interface=end0' /opt/diretta-alsa/setting.inf"
 
 # --- Section 9: Roon Integration ---
 header "Section 9" "Roon Integration"
