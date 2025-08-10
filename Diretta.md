@@ -1186,18 +1186,20 @@ Configure the script with your Roon details. **Note:** The `event_mapping` codes
 
 ```bash
 bash <<'EOF'
+bash <<'EOF'
 # --- Start of Script ---
 
 # Get Roon Zone and store it in a variable
 echo "Enter the name of your Roon zone."
 echo "IMPORTANT: This must match the zone name in the Roon app exactly (case-sensitive)."
-read -rp "Enter your Roon Zone name: " MY_ROON_ZONE
+# This line is the fix: < /dev/tty tells read to use the terminal
+read -rp "Enter your Roon Zone name: " MY_ROON_ZONE < /dev/tty
 
 # Ensure the target directory exists
 mkdir -p roon-ir-remote
 
 # Create the configuration file using a Here Document
-# The variables will be correctly substituted
+# The variable will now be correctly substituted
 cat <<EOD > roon-ir-remote/app_info.json
 {
   "roon": {
