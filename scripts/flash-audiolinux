@@ -2,7 +2,7 @@
 set -e
 
 # --- Configuration and Defaults ---
-DEFAULT_IMAGE_FILE="${HOME}/img/audiolinux_pi4-pi5_450.img.xz"
+DEFAULT_IMAGE_FILE="${HOME}/img/audiolinux_pi4-pi5_450.img.gz"
 IMAGE_FILE="${1:-$DEFAULT_IMAGE_FILE}"
 
 # --- Helper functions for color output ---

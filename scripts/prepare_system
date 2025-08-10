@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-#         Remote System Preparation & Shutdown Script
+#         Remote System Preparation & Shutdown Script (v2 - Corrected)
 #
 # This script is designed to be run remotely via curl:
 #   curl -fsSL <URL> | sudo bash
@@ -42,12 +42,12 @@ fi
 # Step 2: Restore default pacman mirrorlist
 echo "🌐 Restoring default pacman mirrorlist..."
 if [ -f "$MIRRORLIST_PATH" ]; then
+    # CORRECTED: Use '|' as the sed delimiter to avoid conflict with '/' in URLs.
     # Uncomment the default Geo-IP server
-    sed -i "s|^#Server = $DEFAULT_MIRROR|Server = $DEFAULT_MIRROR|" "$MIRRORLIST_PATH"
+    sed -i "s|# *Server = ${DEFAULT_MIRROR}|Server = ${DEFAULT_MIRROR}|" "$MIRRORLIST_PATH"
     echo "   - Enabled default Geo-IP mirror."
-
     # Comment out the custom California server
-    sed -i "s|^Server = $CUSTOM_MIRROR|# Server = $CUSTOM_MIRROR|" "$MIRRORLIST_PATH"
+    sed -i "s|^Server = ${CUSTOM_MIRROR}|# Server = ${CUSTOM_MIRROR}|" "$MIRRORLIST_PATH"
     echo "   - Disabled custom California mirror."
 else
     echo "   - ⚠️  Warning: Mirrorlist file not found at '$MIRRORLIST_PATH'."
@@ -57,19 +57,30 @@ echo "------------------------------------------------"
 
 # Step 3: Clean up Bash history (final action before shutdown)
 echo "🧹 Cleaning up Bash history..."
-history -c
-if [ -f "/home/$TARGET_USER/.bash_history" ]; then
-    rm -f "/home/$TARGET_USER/.bash_history"
-    echo "   - Removed history file for user '$TARGET_USER'."
-fi
-# Since this is run via 'sudo bash', $HOME is /root
-if [ -f "$HOME/.bash_history" ]; then
-    rm -f "$HOME/.bash_history"
-    echo "   - Removed history file for user 'root'."
-fi
-export HISTSIZE=0
-echo "   - History cleared for this session."
+# NOTE: This cannot clear history from other concurrently running user shells.
+# It only clears the history files on disk and for the current root session.
 
+# Clear history for the current (root) shell session in memory
+history -c
+
+# CORRECTED: Truncate history files instead of removing them. This is more
+# robust against race conditions where another shell might try to write to it.
+BASH_HISTORY_AUDIOLINUX="/home/$TARGET_USER/.bash_history"
+BASH_HISTORY_ROOT="$HOME/.bash_history" # $HOME is /root when run with sudo
+
+if [ -f "$BASH_HISTORY_AUDIOLINUX" ]; then
+    cat /dev/null > "$BASH_HISTORY_AUDIOLINUX"
+    echo "   - Cleared history file for user '$TARGET_USER'."
+fi
+
+if [ -f "$BASH_HISTORY_ROOT" ]; then
+    cat /dev/null > "$BASH_HISTORY_ROOT"
+    echo "   - Cleared history file for user 'root'."
+fi
+
+# Prevent this session from writing history on exit
+export HISTSIZE=0
+echo "   - History disabled for this session."
 echo "------------------------------------------------"
 
 # Step 4: Sync disks and power off the system
@@ -77,4 +88,3 @@ echo "✅ Preparation complete. System will power off in 3 seconds."
 sleep 3
 sync
 echo "🔌 Powering off now. Goodbye!"
-poweroff
