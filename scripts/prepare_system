@@ -47,7 +47,13 @@ fi
 
 echo "------------------------------------------------"
 
-# Step 3: Clean up root's Bash history
+# Step 3: Remote Roon Bridge Unique Identifier
+echo "🧹 Removing Roon Bridge ID..."
+rm -fv /var/roon/RoonBridge/Settings/unique_id
+
+echo "------------------------------------------------"
+
+# Step 4: Clean up root's Bash history
 echo "🧹 Cleaning up root user's Bash history..."
 history -c
 if [ -f "$HOME/.bash_history" ]; then
@@ -58,7 +64,7 @@ export HISTSIZE=0
 echo "   - History disabled for this session."
 echo "------------------------------------------------"
 
-# Step 4: Sync disks and power off the system
+# Step 5: Sync disks and power off the system
 echo "✅ Preparation complete. System will power off in 3 seconds."
 sleep 3
 sync
