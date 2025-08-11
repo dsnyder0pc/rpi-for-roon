@@ -1154,28 +1154,10 @@ Clone the script repository and fetch a patch to correctly handle keycodes by na
 cd
 # Clone the repo if it doesn't exist, otherwise update it
 if [ ! -d "roon-ir-remote" ]; then
-  git clone https://github.com/smangels/roon-ir-remote.git
+  git clone https://github.com/dsnyder0pc/roon-ir-remote.git
 else
   (cd roon-ir-remote && git pull)
 fi
-
-cd roon-ir-remote
-
-# Download the patch
-curl -L -o roon-ir-remote.patch https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/roon-ir-remote.patch
-
-PATCH_FILE="roon-ir-remote.patch"
-
-# Use `yes n` to automatically answer "no" to any interactive prompts.
-# We check the exit code of the patch command.
-if yes n | patch -p1 --dry-run --silent < "$PATCH_FILE" >/dev/null 2>&1; then
-  echo "✅ Patch has not been applied. Applying now..."
-  patch -p1 < "$PATCH_FILE"
-else
-  echo "⚠️ Patch has already been applied or conflicts exist. Skipping."
-fi
-
-cd
 ```
 
 ---
@@ -1206,10 +1188,10 @@ cat <<EOD > roon-ir-remote/app_info.json
     "app_info": {
       "extension_id": "com.smangels.roon-ir-remote",
       "display_name": "Roon IR Remote",
-      "display_version": "1.0.0",
-      "publisher": "smangels",
-      "email": "github@mangelsen.se",
-      "website": "https://github.com/smangels/roon-ir-remote"
+      "display_version": "1.1.0",
+      "publisher": "dsnyder",
+      "email": "dsnyder0cnn@gmail.com",
+      "website": "https://github.com/dsnyder0pc/roon-ir-remote"
     },
     "zone": {
       "name": "${MY_ROON_ZONE}"
