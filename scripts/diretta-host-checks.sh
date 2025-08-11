@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.2
+# Diretta Host QA Check Script v1.3
 #
 
 # --- Colors and Formatting ---
@@ -40,8 +40,9 @@ run_appendix2_checks() {
     check "'roon-ir-remote' service is enabled" "systemctl is-enabled roon-ir-remote.service"
     check "'roon-ir-remote' service is active" "systemctl is-active roon-ir-remote.service"
     check "'set-roon-zone' script is up-to-date" "[ -x /usr/local/bin/set-roon-zone ] && [[ \$(md5sum /usr/local/bin/set-roon-zone | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone | md5sum | awk '{print \$1}') ]]"
-    if pacman -Q v4l-utils &>/dev/null; then
-        check "/boot/config.txt enables Argon IR" "grep -q '^dtoverlay=gpio-ir,gpio_pin=23' /boot/config.txt"
+    # Only check for Argon IR specifics if the dtoverlay is active
+    if grep -q '^dtoverlay=gpio-ir,gpio_pin=23' /boot/config.txt; then
+        header "Appendix 2a" "Optional: Argon IR Receiver"
         check "Argon IR keymap '/etc/rc_keymaps/argon.toml' exists" "[ -f /etc/rc_keymaps/argon.toml ]"
         check "'ir-keymap' service is enabled" "systemctl is-enabled ir-keymap.service"
     fi
