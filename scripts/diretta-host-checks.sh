@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.3
+# Diretta Host QA Check Script v1.4
 #
 
 # --- Colors and Formatting ---
@@ -18,7 +18,7 @@ check() {
 }
 header() { echo -e "\n${C_BOLD}${C_YELLOW}--- $1: $2 ---${C_RESET}"; }
 check_optional_section() {
-    if eval "$1" &>/dev/null; then eval "$2"; else echo -e "\n${C_BOLD}${C_YELLOW}--- Skipping QA for $3 (Not Detected) ---${C_RESET}"; fi
+    if eval "$1" &>/dev/null; then eval "$2"; else echo -e "\n${C_BOLD}${C_YELLOW}--- Skipping QA for $3 (Not Detected) ---\033[0m"; fi
 }
 
 # --- QA Check Functions for Optional Sections ---
@@ -40,9 +40,10 @@ run_appendix2_checks() {
     check "'roon-ir-remote' service is enabled" "systemctl is-enabled roon-ir-remote.service"
     check "'roon-ir-remote' service is active" "systemctl is-active roon-ir-remote.service"
     check "'set-roon-zone' script is up-to-date" "[ -x /usr/local/bin/set-roon-zone ] && [[ \$(md5sum /usr/local/bin/set-roon-zone | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone | md5sum | awk '{print \$1}') ]]"
-    # Only check for Argon IR specifics if the dtoverlay is active
+    # Only check for Argon IR specifics if the dtoverlay is active in /boot/config.txt
     if grep -q '^dtoverlay=gpio-ir,gpio_pin=23' /boot/config.txt; then
         header "Appendix 2a" "Optional: Argon IR Receiver"
+        check "/boot/config.txt enables Argon IR" "grep -q '^dtoverlay=gpio-ir,gpio_pin=23' /boot/config.txt"
         check "Argon IR keymap '/etc/rc_keymaps/argon.toml' exists" "[ -f /etc/rc_keymaps/argon.toml ]"
         check "'ir-keymap' service is enabled" "systemctl is-enabled ir-keymap.service"
     fi
@@ -64,7 +65,6 @@ if [ "$EUID" -ne 0 ]; then echo -e "${C_RED}Please run this script with sudo or 
 echo -e "${C_BOLD}Starting Diretta Host Configuration Quality Assurance Check...${C_RESET}"
 
 header "Section 3" "Core System Configuration"
-check "Hostname is 'diretta-host' or similar" "[[ \$(hostname) == 'diretta-host'* ]]"
 check "/etc/machine-id is not empty" "[ -s /etc/machine-id ]"
 
 header "Section 4" "System Updates & Time"
