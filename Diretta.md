@@ -1168,7 +1168,6 @@ Configure the script with your Roon details. **Note:** The `event_mapping` codes
 
 ```bash
 bash <<'EOF'
-bash <<'EOF'
 # --- Start of Script ---
 
 # Get Roon Zone and store it in a variable
