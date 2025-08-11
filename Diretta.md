@@ -156,7 +156,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 After flashing, you must configure each Raspberry Pi individually to avoid network conflicts.
 
-For the best performance, this guide uses the more powerful Raspberry Pi 5 as the Diretta Target (the device connected to your DAC) and the Raspberry Pi 4 as the Diretta Host. You will configure the Host first.
+For the best performance, this guide uses the more powerful Raspberry Pi 5 as the Diretta Target (the device connected to your DAC) and the Raspberry Pi 4 as the Diretta Host. You will configure the Host first. While this is the optimal configuration, great results are possible using RPi4 computers for both. However, using RPi5 for both Host and Target could create problems due to the RPi5's more aggressive use of Energy Efficent Ethernet (EEE) on its onboard network interface. Two RPi5s could result in flapping on the point-to-point link. And, since the Diretta protocol does not support retransmits when packets are lost, you may experience audio dropouts with a RPi5 to RPi5 configuration.
 
 > **CRITICAL WARNING:** Because both devices are flashed from the exact same image, they will have identical `machine-id` values. If you power both devices on at the same time while connected to the same LAN, your DHCP server will likely assign them the same IP address, causing a network conflict.
 >
