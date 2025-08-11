@@ -99,9 +99,9 @@ The scripts and commands have been carefully written to be safe and to prevent e
 A complete bill of materials is provided below. While other parts can be substituted, using these specific components improves the chances of a successful build.
 
 **Core Components (from [pishop.us](https://www.pishop.us/) or similar supplier):**
-* 1 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/)
+* 1 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/) (for the Diretta Host)
 * 1 x [Flirc Raspberry Pi 4 Case](https://www.pishop.us/product/flirc-raspberry-pi-4-case/)
-* 1 x [Raspberry Pi 5/2GB](https://www.pishop.us/product/raspberry-pi-5-2gb/)
+* 1 x [Raspberry Pi 5/2GB](https://www.pishop.us/product/raspberry-pi-5-2gb/) (for the Diretta Target)
 * 1 x [Flirc Raspberry Pi 5 Case](https://www.pishop.us/product/flirc-raspberry-pi-5-case/)
 * 2 x [MicroSD Card Extreme Pro - 32 GB](https://www.pishop.us/product/microsd-card-extreme-pro-32-gb-class-10-blank/)
 * 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
@@ -155,6 +155,8 @@ A complete bill of materials is provided below. While other parts can be substit
 ### 3. Core System Configuration (Perform on Both Devices)
 
 After flashing, you must configure each Raspberry Pi individually to avoid network conflicts.
+
+For the best performance, this guide uses the more powerful Raspberry Pi 5 as the Diretta Target (the device connected to your DAC) and the Raspberry Pi 4 as the Diretta Host. You will configure the Host first.
 
 > **CRITICAL WARNING:** Because both devices are flashed from the exact same image, they will have identical `machine-id` values. If you power both devices on at the same time while connected to the same LAN, your DHCP server will likely assign them the same IP address, causing a network conflict.
 >
