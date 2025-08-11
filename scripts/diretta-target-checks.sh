@@ -45,10 +45,12 @@ run_appendix4_checks() {
     header "Appendix 4" "Optional: Purist Mode Web UI (Backend)"
     check "'purist-app' user exists" "id purist-app"
     check "'pm-get-status' script exists" "[ -x /usr/local/bin/pm-get-status ]"
+    check "'pm-get-license-url' script exists" "[ -x /usr/local/bin/pm-get-license-url ]"
     check "'pm-toggle-mode' script exists" "[ -x /usr/local/bin/pm-toggle-mode ]"
     check "'pm-toggle-auto' script exists" "[ -x /usr/local/bin/pm-toggle-auto ]"
     check "'pm-restart-target' script exists" "[ -x /usr/local/bin/pm-restart-target ]"
     check "Sudoers file for 'purist-app' exists" "[ -f /etc/sudoers.d/purist-app ]"
+    check "Sudoers allows 'pm-get-license-url'" "grep -q 'NOPASSWD: /usr/local/bin/pm-get-license-url' /etc/sudoers.d/purist-app"
     check "SSH authorized_keys for 'purist-app' exists" "[ -f /home/purist-app/.ssh/authorized_keys ]"
     check "SSH authorized_keys has security restrictions" "grep -q 'command=\"sudo' /home/purist-app/.ssh/authorized_keys"
 }
