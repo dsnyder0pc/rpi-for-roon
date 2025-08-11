@@ -47,9 +47,11 @@ fi
 
 echo "------------------------------------------------"
 
-# Step 3: Remote Roon Bridge Unique Identifier
+# Step 3: Remote Roon Unique Identifiers
 echo "🧹 Removing Roon Bridge ID..."
 rm -fv /var/roon/RoonBridge/Settings/unique_id
+echo "🧹 Removing RAAT Server ID..."
+rm -fv /var/roon/RAATServer/Settings/unique_id
 
 echo "------------------------------------------------"
 
