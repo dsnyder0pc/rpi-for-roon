@@ -125,6 +125,7 @@ PURIST_APP_TEMPLATE = """
 </div>
 """
 
+# --- UPDATED STATUS PANEL TEMPLATE ---
 STATUS_PANEL_TEMPLATE = """
 <div class="space-y-6">
     <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-6">
@@ -164,17 +165,27 @@ STATUS_PANEL_TEMPLATE = """
     </div>
 
     {% if status.license_needs_activation %}
-    <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
-        <div class="flex items-center justify-between">
-            <div>
-                <h2 class="font-semibold text-lg text-white">License Activation</h2>
-                <p class="text-sm text-yellow-400">Trial license detected. Restart after activation.</p>
+    <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-4">
+        <div>
+            <h2 class="font-semibold text-lg text-white">License Activation Required</h2>
+            <p class="text-sm text-yellow-400 mt-1">Hi-res playback is disabled. Please purchase and activate your license.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row items-start justify-between gap-6">
+            <div class="text-sm text-gray-300 flex-1">
+                <p class="mb-2"><strong>Step 1:</strong> Purchase license with this unique link.</p>
+                <a href="{{ status.activation_url }}" target="_blank" rel="noopener noreferrer"
+                   class="inline-block text-blue-400 hover:text-blue-300 underline break-all">
+                    {{ status.activation_url }}
+                </a>
             </div>
-            <button hx-post="/restart-target" hx-target="#restart-message" hx-swap="innerHTML"
-                    class="relative inline-flex items-center justify-center w-40 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-blue-600 hover:bg-blue-500 text-white">
-                <span class="btn-text">Restart Services</span>
-                <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
-            </button>
+            <div class="flex-shrink-0">
+                <p class="text-sm text-gray-300 mb-2"><strong>Step 2:</strong> After activating, restart.</p>
+                <button hx-post="/restart-target" hx-target="#restart-message" hx-swap="innerHTML"
+                        class="relative inline-flex items-center justify-center w-40 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-blue-600 hover:bg-blue-500 text-white">
+                    <span class="btn-text">Restart Services</span>
+                    <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
+                </button>
+            </div>
         </div>
         <div id="restart-message" class="mt-4 text-center text-green-400 h-5"></div>
     </div>
@@ -260,12 +271,21 @@ def run_remote_command(command):
         app.logger.error(f"Remote command failed: {e}")
         return None
 
+# --- UPDATED get_status_from_target FUNCTION ---
 def get_status_from_target():
     """Gets the current status from the Diretta Target."""
     raw_status = run_remote_command("/usr/local/bin/pm-get-status")
-    if not raw_status: return None
+    if not raw_status:
+        return None
     try:
-        return json.loads(raw_status)
+        status_data = json.loads(raw_status)
+        # If license needs activation, fetch the unique purchase URL
+        if status_data.get("license_needs_activation"):
+            license_url = run_remote_command("/usr/local/bin/pm-get-license-url")
+            status_data["activation_url"] = license_url or ""  # Ensure it's a string
+        else:
+            status_data["activation_url"] = ""
+        return status_data
     except json.JSONDecodeError:
         app.logger.error(f"Failed to decode JSON status from remote host. Received: {raw_status}")
         return None
