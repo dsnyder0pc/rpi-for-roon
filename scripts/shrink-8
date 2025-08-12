@@ -82,8 +82,8 @@ EOF
   fi
 
   # Remove the Roon IDs generalize the image
-  rm -fv "${MOUNT_POINT}/var/roon/RoonBridge/Settings/unique_id"
-  rm -fv "${MOUNT_POINT}/var/roon/RAATServer/Settings/unique_id"
+  sudo rm -fv "${MOUNT_POINT}/var/roon/RoonBridge/Settings/unique_id"
+  sudo rm -fv "${MOUNT_POINT}/var/roon/RAATServer/Settings/unique_id"
 
   if [ -d "${MOUNT_POINT}/opt/diretta-alsa-target" ]; then
     dl=$(find "${MOUNT_POINT}/opt/diretta-alsa-target" ! -name 'diretta*')
