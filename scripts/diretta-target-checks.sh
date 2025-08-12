@@ -78,9 +78,9 @@ check "P2P network file contains correct IP" "grep -q 'Address=172.20.0.2/24' /e
 check "P2P network file contains correct Gateway" "grep -q 'Gateway=172.20.0.1' /etc/systemd/network/end0.network"
 check "Old generic network file is removed" "! [ -f /etc/systemd/network/en.network ]"
 check "/etc/hosts contains 'diretta-host' entry" "grep -q '172.20.0.1.*diretta-host' /etc/hosts"
-check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
 
 header "Section 7" "Boot Filesystem Integrity"
+check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
 check "Boot repair script is up-to-date" "[ -x /usr/local/sbin/check-and-repair-boot.sh ] && [[ \$(md5sum /usr/local/sbin/check-and-repair-boot.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh | md5sum | awk '{print \$1}') ]]"
 check "'boot-repair' service file exists" "[ -f /etc/systemd/system/boot-repair.service ]"
 check "'boot-repair' service is enabled" "systemctl is-enabled boot-repair.service"
