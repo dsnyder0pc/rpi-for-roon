@@ -91,6 +91,7 @@ check "MOTD update script is up-to-date" "[ -f /opt/scripts/update/update_motd.s
 
 header "Section 7" "Boot Filesystem Integrity"
 check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
+check "MOTD service actively waits for an IP address" "[ -f /etc/systemd/system/update_motd.service.d/wait-for-ip.conf ] && grep -q 'while.*ip addr' /etc/systemd/system/update_motd.service.d/wait-for-ip.conf"
 check "Boot repair script is up-to-date" "[ -x /usr/local/sbin/check-and-repair-boot.sh ] && [[ \$(md5sum /usr/local/sbin/check-and-repair-boot.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh | md5sum | awk '{print \$1}') ]]"
 check "'boot-repair' service file exists" "[ -f /etc/systemd/system/boot-repair.service ]"
 check "'boot-repair' service is enabled" "systemctl is-enabled boot-repair.service"
