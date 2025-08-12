@@ -876,12 +876,18 @@ sudo pacman -S --noconfirm --needed i2c-tools libgpiod
 ```
 
 ```bash
-# Create a systemd override file to switch the case to software mode on boot
+# Create systemd overrides to switch the case to software mode on boot
 sudo mkdir -pv /etc/systemd/system/argononed.service.d
-printf '%s\n' \
-  '[Service]' \
-  'ExecStartPre=/usr/bin/i2cset -y 1 0x1a 0' \
-  | sudo tee /etc/systemd/system/argononed.service.d/software-mode.conf > /dev/null
+cat <<'EOT'| sudo tee /etc/systemd/system/argononed.service.d/software-mode.conf
+[Service]
+ExecStartPre=/usr/bin/i2cset -y 1 0x1a 0
+EOT
+
+cat <<'EOT'| sudo tee /etc/systemd/system/argononed.service.d/override.conf
+[Unit]
+Requires=dev-i2c-1.device
+After=dev-i2c-1.device
+EOT
 ```
 
 ### Step 6: Enable the Service
