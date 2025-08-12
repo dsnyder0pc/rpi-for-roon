@@ -1277,7 +1277,7 @@ python roon_remote.py
 
 The first time you run the script, you must **authorize the extension in Roon** by going to `Settings` -> `Extensions`.
 
-With music playing in your new Diretta Roon zone, point your IR remote control directly at the Diretta Host computer and press the Play/Pause button (may be the center button in the 5-way controller). Also try Next and Previous. If these are not working, check your terminal window for any error messages.  Once you are finished testing, type CTRL-C to exit.
+With music playing in your new Diretta Roon zone, point your IR remote control directly at the Diretta Host computer and press the Play/Pause button (may be the center button in the 5-way controller). Also try Next and Previous. If these are not working, check your terminal window for any error messages.  Once you are finished testing, type `CTRL-C` to exit.
 
 ---
 
@@ -1314,7 +1314,16 @@ sudo systemctl status roon-ir-remote.service
 
 ---
 
-### **Step 7: Install `set-roon-zone` script**
+### **Step 7: Watch the logs for a bit:**
+```bash
+journalctl -b -u purist-webui.service -f
+```
+
+Type `CTRL-C` once you're satisfied that things are working as expected.
+
+---
+
+### **Step 8: Install `set-roon-zone` script**
 Good to have a script that you can use to update the Roon zone name later if needed. Here's how to install it:
 ```bash
 curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone
@@ -1331,7 +1340,7 @@ Follow the prompts to enter the new name for your Roon Zone. You may have to ent
 **Note: A Better Way to Set the Zone**
 While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, detailed in [Appendix 4](#13-appendix-4-optional-system-control-web-ui). The web UI provides a dedicated page for viewing and editing the zone name from your phone or browser.
 
-### **Step 8: Profit! 📈**
+### **Step 9: Profit! 📈**
 
 > ---
 > ### ✅ Checkpoint: Verify Your IR Remote Setup
@@ -1931,13 +1940,13 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
 14. **Watch the logs for a bit:**
     ```bash
-    sudo journalctl -b -u purist-webui.service -f
+    journalctl -b -u purist-webui.service -f
     ```
 
 15. **Test the web UI with the final URL:**
     Open a browser to [http://diretta-host.local](http://diretta-host.local) and watch the logs for any errors.
 
-Type CTRL-C once you're satisfied that things are working as expected.
+Type `CTRL-C` once you're satisfied that things are working as expected.
 
 ---
 
