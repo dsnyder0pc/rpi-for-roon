@@ -33,7 +33,9 @@ run_appendix1_checks() {
     check "'argonone-c-git' package is installed" "pacman -Q argonone-c-git"
     check "'argononed' service is enabled" "systemctl is-enabled argononed.service"
     check "'argononed' service is active" "systemctl is-active argononed.service"
-    check "'argononed' software mode override exists" "[ -f /etc/systemd/system/argononed.service.d/software-mode.conf ]"
+    check "Software mode override uses 'active wait' loop" "grep -q 'while.*i2c-1' /etc/systemd/system/argononed.service.d/software-mode.conf"
+    check "Late-start override file exists" "[ -f /etc/systemd/system/argononed.service.d/override.conf ]"
+    check "Late-start override is set for 'multi-user.target'" "grep -q 'After=multi-user.target' /etc/systemd/system/argononed.service.d/override.conf"
     check "Custom fan schedule '/etc/argononed.conf' exists" "[ -f /etc/argononed.conf ]"
 }
 run_appendix3_checks() {
@@ -76,6 +78,7 @@ check "P2P network file contains correct IP" "grep -q 'Address=172.20.0.2/24' /e
 check "P2P network file contains correct Gateway" "grep -q 'Gateway=172.20.0.1' /etc/systemd/network/end0.network"
 check "Old generic network file is removed" "! [ -f /etc/systemd/network/en.network ]"
 check "/etc/hosts contains 'diretta-host' entry" "grep -q '172.20.0.1.*diretta-host' /etc/hosts"
+check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
 
 header "Section 7" "Boot Filesystem Integrity"
 check "Boot repair script is up-to-date" "[ -x /usr/local/sbin/check-and-repair-boot.sh ] && [[ \$(md5sum /usr/local/sbin/check-and-repair-boot.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh | md5sum | awk '{print \$1}') ]]"

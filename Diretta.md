@@ -67,7 +67,7 @@ If you are located in the US, expect to pay around $295 (plus tax and shipping) 
 4.  [System Updates (Perform on Both Devices)](#4-system-updates-perform-on-both-devices)
 5.  [Point-to-Point Network Configuration](#5-point-to-point-network-configuration)
 6.  [Convenient & Secure SSH Access](#6-convenient--secure-ssh-access)
-7.  [Clean the Boot Filesystem](#7-clean-the-boot-filesystem)
+7.  [Common System Optimizations](#7-common-system-optimizations)
 8.  [Diretta Software Installation & Configuration](#8-diretta-software-installation--configuration)
 9.  [Final Steps & Roon Integration](#9-final-steps--roon-integration)
 10. [Appendix 1: Optional Argon ONE Fan Control](#10-appendix-1-optional-argon-one-fan-control)
@@ -661,12 +661,19 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
 
 ---
 
-### 7. Clean the Boot Filesystem
+### 7. Common System Optimizations
 The default behavior for Arch Linux is to leave the /boot filesystem in an unclean state if the computer is not shutdown cleanly. This is usually safe, but I've found that it can create a race condition when bringing up our private network. That, and users are likely to unplug these devices without shutting them down first. To protect against these issues, we'll add a workaround script that keeps the /boot filesystem (which is only changed during software updates) clean.
 
 Please perform these steps on _both_ the Diretta Host and Target computers.
 
-#### 7.1. Create the Repair Script
+#### 7.1. Optimize Boot Time
+To prevent a long boot delay while the system waits for a network connection, we will disable the "wait-online" service.
+```bash
+# Disable the network wait service to prevent long boot delays
+sudo systemctl disable systemd-networkd-wait-online.service
+```
+
+#### 7.2. Create the Repair Script
 
 This script is safe to run both automatically at boot and manually on a live system.
 ```bash
@@ -675,7 +682,7 @@ sudo install -m 0755 check-and-repair-boot.sh /usr/local/sbin/
 rm check-and-repair-boot.sh
 ```
 
-#### 7.2. Create the `systemd` Service File and enable the service
+#### 7.3. Create the `systemd` Service File and enable the service
 ```bash
 cat <<'EOT' | sudo tee /etc/systemd/system/boot-repair.service
 [Unit]
@@ -698,7 +705,7 @@ sleep 5
 journalctl -b -u boot-repair.service
 ```
 
-#### 7.3. Verification After a Clean Reboot
+#### 7.4. Verification After a Clean Reboot
 Not critical, but to make sure this is working as expected, do a reboot test. **Note:** Reboot the Target  first, then the Host.
 ```bash
 sudo sync && sudo reboot

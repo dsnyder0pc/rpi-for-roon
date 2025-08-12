@@ -29,7 +29,9 @@ run_appendix1_checks() {
     check "'argonone-c-git' package is installed" "pacman -Q argonone-c-git"
     check "'argononed' service is enabled" "systemctl is-enabled argononed.service"
     check "'argononed' service is active" "systemctl is-active argononed.service"
-    check "'argononed' software mode override exists" "[ -f /etc/systemd/system/argononed.service.d/software-mode.conf ]"
+    check "Software mode override uses 'active wait' loop" "grep -q 'while.*i2c-1' /etc/systemd/system/argononed.service.d/software-mode.conf"
+    check "Late-start override file exists" "[ -f /etc/systemd/system/argononed.service.d/override.conf ]"
+    check "Late-start override is set for 'multi-user.target'" "grep -q 'After=multi-user.target' /etc/systemd/system/argononed.service.d/override.conf"
     check "Custom fan schedule '/etc/argononed.conf' exists" "[ -f /etc/argononed.conf ]"
 }
 run_appendix2_checks() {
@@ -86,6 +88,7 @@ check "iptables NAT rule file exists" "[ -f /etc/iptables/iptables.rules ]"
 check "'iptables' service is enabled" "systemctl is-enabled iptables.service"
 check "USB Ethernet udev rule exists" "[ -f /etc/udev/rules.d/99-ax88179a.rules ]"
 check "MOTD update script is up-to-date" "[ -f /opt/scripts/update/update_motd.sh ] && [[ \$(md5sum /opt/scripts/update/update_motd.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh | md5sum | awk '{print \$1}') ]]"
+check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
 
 header "Section 7" "Boot Filesystem Integrity"
 check "Boot repair script is up-to-date" "[ -x /usr/local/sbin/check-and-repair-boot.sh ] && [[ \$(md5sum /usr/local/sbin/check-and-repair-boot.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh | md5sum | awk '{print \$1}') ]]"
