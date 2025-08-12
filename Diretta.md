@@ -773,9 +773,8 @@ sudo systemctl restart boot-repair.service
     ```bash
     sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ```
-3.  Run `menu` if you exited back to the terminal after the previous step, otherwise go to the **Main menu**.
-4.  Select **AUDIO extra menu**.
-5.  Select **DIRETTA host installation/configuration**. You will see the following menu:
+3.  Select **AUDIO extra menu**.
+4.  Select **DIRETTA host installation/configuration**. You will see the following menu:
     ```text
     What do you want to do?
 
@@ -787,7 +786,7 @@ sudo systemctl restart boot-repair.service
 
     ?
     ```
-6.  You should perform these actions in sequence:
+5.  You should perform these actions in sequence:
     * Choose **1) Install/update** to install the software. *(Note: you may see `error: package 'lld' was not found. Don't worry, that will be corrected automatically by the installation)*
     * Choose **2) Enable/Disable Diretta daemon** and enable it.
     * Choose **3) Set Ethernet interface**. It is critical to select `end0`, the interface for the point-to-point link.
@@ -809,14 +808,16 @@ sudo systemctl restart boot-repair.service
     * Select **INSTALL/UPDATE Roonbridge**.
     * The installation will proceed. The installation may take a minute or two.
 
-2.  **Enable Roon Bridge (on the Host):**
+2.  Run `menu` if you exited back to the terminal after the previous step, otherwise go to the **Main menu**.
+
+3.  **Enable Roon Bridge (on the Host):**
     * Select **Audio menu** from the Main menu
     * Select **SHOW audio service**
     * If you don't see **roonbridge** under enabled services, select **ROONBRIDGE enable/disable**
 
-3.  **Reboot Both Devices:** For a clean start, `sudo sync && sudo reboot` both the Target and Host, in that order.
+4.  **Reboot Both Devices:** For a clean start, `sudo sync && sudo reboot` both the Target and Host, in that order.
 
-4.  **Configure Roon:**
+5.  **Configure Roon:**
     * Open Roon on your control device.
     * Go to `Settings` -> `Audio`.
     * Under the "Diretta" section, you should see your device. The name will be based on your DAC.
