@@ -788,6 +788,7 @@ sudo systemctl restart boot-repair.service
     sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ```
 3.  Select **AUDIO extra menu**.
+
 4.  Select **DIRETTA host installation/configuration**. You will see the following menu:
     ```text
     What do you want to do?
@@ -800,6 +801,7 @@ sudo systemctl restart boot-repair.service
 
     ?
     ```
+
 5.  You should perform these actions in sequence:
     * Choose **1) Install/update** to install the software. *(Note: you may see `error: package 'lld' was not found. Don't worry, that will be corrected automatically by the installation)*
     * Choose **2) Enable/Disable Diretta daemon** and enable it.
@@ -811,6 +813,16 @@ sudo systemctl restart boot-repair.service
         end0
         ```
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient.
+
+6.  Create an override to make the Diretta service auto-restart on failure
+    ```bash
+    sudo mkdir -p /etc/systemd/system/diretta_alsa.service.d
+    cat <<'EOT' | sudo tee /etc/systemd/system/diretta_alsa.service.d/restart.conf
+    [Service]
+    Restart=on-failure
+    RestartSec=5
+    EOT
+    ```
 
 ---
 

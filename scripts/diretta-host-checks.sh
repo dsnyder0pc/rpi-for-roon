@@ -103,6 +103,7 @@ check "'diretta-alsa-dkms' package is installed" "pacman -Q diretta-alsa-dkms"
 check "'diretta_alsa' service is enabled" "systemctl is-enabled diretta_alsa.service"
 check "'diretta_alsa' service is active" "systemctl is-active diretta_alsa.service"
 check "Diretta is configured for 'end0' interface" "grep -q 'Interface=end0' /opt/diretta-alsa/setting.inf"
+check "Diretta service is set to auto-restart" "[ -f /etc/systemd/system/diretta_alsa.service.d/restart.conf ] && grep -q 'Restart=on-failure' /etc/systemd/system/diretta_alsa.service.d/restart.conf"
 
 header "Section 9" "Roon Integration"
 check "'roonbridge' is installed" "pacman -Q roonbridge"
