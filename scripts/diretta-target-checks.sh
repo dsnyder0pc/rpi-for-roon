@@ -32,6 +32,8 @@ run_appendix1_checks() {
     check "i2c udev rule exists" "[ -f /etc/udev/rules.d/99-i2c.rules ]"
     check "'argonone-c-git' package is installed" "pacman -Q argonone-c-git"
     check "'argononed' service is enabled" "systemctl is-enabled argononed.service"
+    check "'argononed' service is active" "systemctl is-active argononed.service"
+    check "'argononed' software mode override exists" "[ -f /etc/systemd/system/argononed.service.d/software-mode.conf ]"
     check "Custom fan schedule '/etc/argononed.conf' exists" "[ -f /etc/argononed.conf ]"
 }
 run_appendix3_checks() {
