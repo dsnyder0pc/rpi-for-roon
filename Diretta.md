@@ -916,14 +916,7 @@ After=multi-user.target
 EOT
 ```
 
-### Step 6: Optimize Boot Time (Optional but Recommended)
-On some network configurations, the system may pause for up to two minutes during boot, waiting for a network connection to be fully established. We can disable this blocking "wait" service to ensure a consistently fast boot time.
-```bash
-# Disable the network wait service to prevent long boot delays
-sudo systemctl disable systemd-networkd-wait-online.service
-```
-
-### Step 7: Enable the Service
+### Step 6: Enable the Service
 ```bash
 # Reload the systemd manager to read the new configuration
 sudo systemctl daemon-reload
@@ -932,7 +925,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable argononed.service
 ```
 
-### Step 8: Reboot
+### Step 7: Reboot
 Finally, reboot your Raspberry Pi for all changes to take effect (Target first, then Host):
 ```bash
 sudo sync && sudo reboot
@@ -940,13 +933,13 @@ sudo sync && sudo reboot
 
 Now, the fan will be controlled by the daemon, and the power button will have full functionality.
 
-### Step 9: Verify the service
+### Step 8: Verify the service
 ```bash
 systemctl status argononed.service
 journalctl -u argononed.service -b
 ```
 
-### Step 10: Review Fan Mode and Settings:
+### Step 9: Review Fan Mode and Settings:
 To see the current configuration values, run the following command:
 ```bash
 sudo argonone-cli --decode
