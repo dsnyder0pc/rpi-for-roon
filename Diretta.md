@@ -1316,7 +1316,7 @@ sudo systemctl status roon-ir-remote.service
 
 ### **Step 7: Watch the logs for a bit:**
 ```bash
-journalctl -b -u purist-webui.service -f
+journalctl -b -u roon-ir-remote.service -f
 ```
 
 Type `CTRL-C` once you're satisfied that things are working as expected.
