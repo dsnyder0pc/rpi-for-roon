@@ -1582,12 +1582,11 @@ On the **Diretta Target**, we will create a new user with very limited permissio
 3.  **Create Secure Command Scripts:**
     We will create four small, dedicated scripts that are the *only* actions the web app is allowed to perform. This is a critical security step.
     ```bash
-    # Script to get the current status, including license state
-    cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
     #!/bin/bash
     IS_ACTIVE="false"
     IS_AUTO_ENABLED="false"
-    LICENSE_NEEDS_ACTIVATION="false"
+    # Assume activation is needed unless we find a license file.
+    LICENSE_NEEDS_ACTIVATION="true"
 
     # Check for Purist Mode
     if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
@@ -1599,13 +1598,12 @@ On the **Diretta Target**, we will create a new user with very limited permissio
       IS_AUTO_ENABLED="true"
     fi
 
-    # Check for the presence of the Diretta License Key File
+    # Look for the license file (a file not starting with 'diretta').
     for entry in /opt/diretta-alsa-target/*; do
-        # If the glob doesn't match any files, break the loop immediately.
         [ -e "$entry" ] || break
-        # If any file's name does not start with 'diretta', it's not licensed.
+        # If we find the license file, then activation is NOT needed.
         if [[ "$(basename "$entry")" != "diretta"* ]]; then
-            LICENSE_NEEDS_ACTIVATION="true"
+            LICENSE_NEEDS_ACTIVATION="false"
             break
         fi
     done

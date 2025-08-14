@@ -34,7 +34,7 @@ activate_mode() {
 
 # Function to revert changes
 revert_mode() {
-    # Idempotency check
+    # Idempotency check. This will now continue to the license check.
     if [ ! -f "$BACKUP_FILE" ]; then
         echo "✅ System is already in standard operation mode."
     fi
@@ -55,34 +55,33 @@ revert_mode() {
     echo "  -> Restarting services..."
     sudo systemctl start chronyd &>/dev/null
 
-    # --- Diretta license cache logic (silent & shellcheck compliant) ---
+    # --- Diretta license cache logic (Corrected) ---
     local CACHE_DIR="/var/opt/diretta-alsa-target"
     local CACHE_FILE="${CACHE_DIR}/diretta_license_url.cache"
     local LICENSE_APP="/opt/diretta-alsa-target/diretta_app_activate"
 
-    local is_fully_licensed=true
+    # Assume the system is unlicensed until the license file is found.
+    local is_licensed=false
     for entry in /opt/diretta-alsa-target/*; do
-        # If the glob doesn't match any files, break the loop immediately.
         [ -e "$entry" ] || break
-        # If any file's name does not start with 'diretta', it's not licensed.
+        # If we find a file not starting with 'diretta', it is the license file.
         if [[ "$(basename "$entry")" != "diretta"* ]]; then
-            is_fully_licensed=false
+            is_licensed=true
             break
         fi
     done
 
-    if [ "$is_fully_licensed" = true ]; then
-        # SC2024 fix: Use 'tee' for writes that require sudo.
+    # If it IS licensed, write "Licensed" to the cache.
+    if [ "$is_licensed" = true ]; then
         echo "Licensed" | sudo tee "$CACHE_FILE" > /dev/null
+    # Otherwise, it's UNLICENSED, so if the cache is missing, get the URL.
     elif [ ! -s "$CACHE_FILE" ]; then
-        # SC2024 fix: Capture command output first, then use 'tee' for the sudo write.
         local license_url
         license_url=$(sudo "$LICENSE_APP" GetLicenseStatusUrl)
 
         if [ -n "$license_url" ]; then
             echo "$license_url" | sudo tee "$CACHE_FILE" > /dev/null
         else
-            # Clean up the empty file if the command failed
             sudo rm -f "$CACHE_FILE"
         fi
     fi
