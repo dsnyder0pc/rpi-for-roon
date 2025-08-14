@@ -1582,6 +1582,8 @@ On the **Diretta Target**, we will create a new user with very limited permissio
 3.  **Create Secure Command Scripts:**
     We will create four small, dedicated scripts that are the *only* actions the web app is allowed to perform. This is a critical security step.
     ```bash
+    # Create the script to fetch the Status
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
     #!/bin/bash
     IS_ACTIVE="false"
     IS_AUTO_ENABLED="false"
