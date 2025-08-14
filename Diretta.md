@@ -672,11 +672,11 @@ To prevent a long boot delay while the system waits for a network connection, we
 # Disable the network wait service to prevent long boot delays
 sudo systemctl disable systemd-networkd-wait-online.service
 
-# Create an override to make the MOTD script wait for ANY IP address (v4 or v6)
+# Create an override to make the MOTD script wait for a default route
 sudo mkdir -p /etc/systemd/system/update_motd.service.d
 cat <<'EOT' | sudo tee /etc/systemd/system/update_motd.service.d/wait-for-ip.conf
 [Service]
-ExecStartPre=/bin/sh -c "while ! ip addr show scope global | grep -q 'inet'; do sleep 0.5; done"
+ExecStartPre=/bin/sh -c "while [ -z \"$(ip route show default)\" ]; do sleep 0.5; done"
 EOT
 ```
 
