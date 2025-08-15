@@ -7,7 +7,7 @@ readonly TARGET_DIR="/opt/diretta-alsa-target"
 readonly LICENSE_APP="${TARGET_DIR}/diretta_app_activate"
 readonly DIRETTA_SERVER_IP="20.78.113.37"
 
-# Check if the system is already licensed.
+# 1. Check if the system is already licensed.
 is_licensed=false
 if ls "${TARGET_DIR}/" | grep -qv '^diretta'; then
     is_licensed=true
@@ -19,9 +19,9 @@ if [ "$is_licensed" = true ]; then
     exit 0
 fi
 
-# If unlicensed, wait for a network route to the Diretta server.
+# If unlicensed, wait for the full network path to be ready by pinging the server.
 timeout=30
-until ip -4 route get "$DIRETTA_SERVER_IP" &>/dev/null; do
+until ping -c 1 -W 1 "$DIRETTA_SERVER_IP" &>/dev/null; do
     sleep 1
     timeout=$((timeout - 1))
     if [ "$timeout" -eq 0 ]; then
@@ -31,10 +31,8 @@ done
 
 # Fetch the license URL and write it to the cache.
 if [ -x "$LICENSE_APP" ]; then
-    # Capture the output from the application into a variable
     license_url=$("$LICENSE_APP")
 
-    # Only create the cache file if the command actually produced a URL
     if [ -n "$license_url" ]; then
         echo "$license_url" > "$CACHE_FILE"
     fi
