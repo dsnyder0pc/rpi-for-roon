@@ -1697,6 +1697,22 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     EOT
     ```
 
+5.  **Populate the Diretta License Cache File at Boot Time**
+    Fetching the Diretta License URL requires an Internet connection. If we have Purist Mode enabled by default, the Target will never be able to fetch the URL. However, at boot time, we have Purist Mode disabled for 60 seconds in order to set the clock and check for a Diretta License activation. We can use that time window to fetch the URL also.
+    ```bash
+    # Download the script, set correct permissions, and place it in the system path
+    curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh
+    sudo install -m 0755 create-diretta-cache.sh /usr/local/bin/
+    rm create-diretta-cache.sh
+
+    # Create the Systemd Drop-in File
+    sudo mkdir -p /etc/systemd/system/purist-mode-revert-on-boot.service.d
+    cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-revert-on-boot.service.d/create-cache.conf
+    [Service]
+    ExecStartPost=/usr/local/bin/create-diretta-cache.sh
+    EOT
+    ```
+
 ---
 
 ### **Part 2: Diretta Host Configuration**
