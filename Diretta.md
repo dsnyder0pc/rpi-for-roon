@@ -129,7 +129,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x USB DAC or DDC
 
 **Required Build Tools:**
-* Laptop or desktop PC running Linux, macOS, or Microsoft Windows with [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install)
+* Laptop or desktop PC running Linux, macOS (iTerm2, https://iterm2.com/, recommended), or Microsoft Windows with [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install)
 * An SD or microSD card reader
 * An HDMI TV or display (optional, but useful for troubleshooting)
 
