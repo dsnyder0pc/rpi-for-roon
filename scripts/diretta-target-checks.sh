@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.3
+# Diretta Target QA Check Script v1.4
 #
 
 # --- Colors and Formatting ---
@@ -53,6 +53,8 @@ run_appendix4_checks() {
     check "'pm-toggle-mode' script exists" "[ -x /usr/local/bin/pm-toggle-mode ]"
     check "'pm-toggle-auto' script exists" "[ -x /usr/local/bin/pm-toggle-auto ]"
     check "'pm-restart-target' script exists" "[ -x /usr/local/bin/pm-restart-target ]"
+    check "'create-diretta-cache.sh' script exists" "[ -x /usr/local/bin/create-diretta-cache.sh ]"
+    check "Systemd drop-in for cache creation exists" "[ -f /etc/systemd/system/purist-mode-revert-on-boot.service.d/create-cache.conf ]"
     check "Sudoers file for 'purist-app' exists" "[ -f /etc/sudoers.d/purist-app ]"
     check "Sudoers allows 'pm-get-license-url'" "grep -q 'NOPASSWD: /usr/local/bin/pm-get-license-url' /etc/sudoers.d/purist-app"
     check "SSH authorized_keys for 'purist-app' exists" "[ -f /home/purist-app/.ssh/authorized_keys ]"
