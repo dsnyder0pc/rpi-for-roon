@@ -10,16 +10,9 @@ readonly LICENSE_APP="${TARGET_DIR}/diretta_app_activate"
 readonly DIRETTA_SERVER_IP="20.78.113.37"
 
 # 1. Check if the system is already licensed.
-is_licensed=false
-shopt -s nocasematch
-for entry in "${TARGET_DIR}"/*; do
-    [ -e "$entry" ] || break
-    if [[ "$(basename "$entry")" != "diretta"* ]]; then
-        is_licensed=true
-        break
-    fi
-done
-shopt -u nocasematch
+if ls /opt/diretta-alsa-target/ | grep -qv '^diretta'; then
+  is_licensed="true"
+fi
 
 if [ "$is_licensed" = true ]; then
     echo "Licensed" > "$CACHE_FILE"
