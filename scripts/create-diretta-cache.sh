@@ -10,6 +10,7 @@ readonly LICENSE_APP="${TARGET_DIR}/diretta_app_activate"
 readonly DIRETTA_SERVER_IP="20.78.113.37"
 
 # 1. Check if the system is already licensed.
+is_licensed=false
 if ls /opt/diretta-alsa-target/ | grep -qv '^diretta'; then
   is_licensed="true"
 fi
