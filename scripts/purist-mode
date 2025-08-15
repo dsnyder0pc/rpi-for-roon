@@ -34,17 +34,16 @@ activate_mode() {
 
 # Function to revert changes
 revert_mode() {
-    # Idempotency check. This will now continue to the license check.
+    # Idempotency check
     if [ ! -f "$BACKUP_FILE" ]; then
         echo "✅ System is already in standard operation mode."
+        exit 0
     fi
 
     echo "⏪ Reverting to Standard Mode..."
 
-    # Restore network and DNS configuration if a backup exists.
-    if [ -f "$BACKUP_FILE" ]; then
-        sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
-    fi
+    # Restore network and DNS configuration.
+    sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
 
     # If no default route exists, restart networking.
     if ! ip route | grep -q default; then
@@ -54,38 +53,6 @@ revert_mode() {
     # Always restart services when this script is called.
     echo "  -> Restarting services..."
     sudo systemctl start chronyd &>/dev/null
-
-    # --- Diretta license cache logic (Corrected) ---
-    local CACHE_DIR="/var/opt/diretta-alsa-target"
-    local CACHE_FILE="${CACHE_DIR}/diretta_license_url.cache"
-    local LICENSE_APP="/opt/diretta-alsa-target/diretta_app_activate"
-
-    # Assume the system is unlicensed until the license file is found.
-    local is_licensed=false
-    for entry in /opt/diretta-alsa-target/*; do
-        [ -e "$entry" ] || break
-        # If we find a file not starting with 'diretta', it is the license file.
-        if [[ "$(basename "$entry")" != "diretta"* ]]; then
-            is_licensed=true
-            break
-        fi
-    done
-
-    # If it IS licensed, write "Licensed" to the cache.
-    if [ "$is_licensed" = true ]; then
-        echo "Licensed" | sudo tee "$CACHE_FILE" > /dev/null
-    # Otherwise, it's UNLICENSED, so if the cache is missing, get the URL.
-    elif [ ! -s "$CACHE_FILE" ]; then
-        local license_url
-        license_url=$(sudo "$LICENSE_APP" GetLicenseStatusUrl)
-
-        if [ -n "$license_url" ]; then
-            echo "$license_url" | sudo tee "$CACHE_FILE" > /dev/null
-        else
-            sudo rm -f "$CACHE_FILE"
-        fi
-    fi
-    # --- END ---
 
     echo ""
     echo "✅ Purist Mode DISABLED. System is in standard operation mode."

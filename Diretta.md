@@ -1582,13 +1582,12 @@ On the **Diretta Target**, we will create a new user with very limited permissio
 3.  **Create Secure Command Scripts:**
     We will create four small, dedicated scripts that are the *only* actions the web app is allowed to perform. This is a critical security step.
     ```bash
-    # Create the script to fetch the Status
+    # Script to get the current status, including license state
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
     #!/bin/bash
     IS_ACTIVE="false"
     IS_AUTO_ENABLED="false"
-    # Assume activation is needed unless we find a license file.
-    LICENSE_NEEDS_ACTIVATION="true"
+    LICENSE_LIMITED="false"
 
     # Check for Purist Mode
     if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
@@ -1600,18 +1599,13 @@ On the **Diretta Target**, we will create a new user with very limited permissio
       IS_AUTO_ENABLED="true"
     fi
 
-    # Look for the license file (a file not starting with 'diretta').
-    for entry in /opt/diretta-alsa-target/*; do
-        [ -e "$entry" ] || break
-        # If we find the license file, then activation is NOT needed.
-        if [[ "$(basename "$entry")" != "diretta"* ]]; then
-            LICENSE_NEEDS_ACTIVATION="false"
-            break
-        fi
-    done
+    # Check for the presence of the Diretta License Key File
+    if ! ls /opt/diretta-alsa-target/ | grep -qv '^diretta'; then
+      LICENSE_LIMITED="true"
+    fi
 
     # Output all status flags as a single JSON object
-    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_NEEDS_ACTIVATION}"
+    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED}"
     EOT
 
     # Script to toggle Purist Mode
@@ -1645,19 +1639,42 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     # Create the script to fetch the Diretta License URL
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-license-url
     #!/bin/bash
+    # This script is intended to be called via sudo by the purist-app user.
+    # It returns the license activation URL, caching it for 24 hours in /tmp.
 
-    # Define the persistent cache file location
-    CACHE_FILE="/var/opt/diretta-alsa-target/diretta_license_url.cache"
+    CACHE_FILE="/tmp/diretta_license_url.cache"
+    CACHE_AGE_SECONDS=$(( 24 * 60 * 60 )) # 24 hours
 
-    # Check if the cache file exists and has content
+    # Check if a non-empty cache file exists
     if [ -s "$CACHE_FILE" ]; then
-      # If it exists, print the URL
-      cat "$CACHE_FILE"
-    else
-      # If not, print a helpful error to stderr and exit
-      echo "Error: License URL not found."
-      exit 1
+      # Check the age of the cache file
+      FILE_MOD_TIME=$(stat -c %Y "$CACHE_FILE")
+      CURRENT_TIME=$(date +%s)
+      FILE_AGE=$(( CURRENT_TIME - FILE_MOD_TIME ))
+
+      if [ "$FILE_AGE" -lt "$CACHE_AGE_SECONDS" ]; then
+        # Cache is valid, so we return its content and exit
+        cat "$CACHE_FILE"
+        exit 0
+      fi
     fi
+
+    # If we're here, the cache is stale or doesn't exist. Fetch a new URL.
+    LICENSE_STATUS=$(/opt/diretta-alsa-target/diretta_app_activate 2>/dev/null)
+
+    if [[ "$LICENSE_STATUS" == http* ]]; then
+      # A valid URL was found. Write it to the cache file.
+      echo "$LICENSE_STATUS" > "$CACHE_FILE"
+      # Also print it to stdout for the current request.
+      echo "$LICENSE_STATUS"
+    else
+      # If the license is now valid or an error occurred, remove any old cache.
+      rm -f "$CACHE_FILE"
+      # Return an empty string.
+      echo ""
+    fi
+
+    exit 0
     EOT
 
     # Make the new scripts executable
