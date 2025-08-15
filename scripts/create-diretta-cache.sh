@@ -35,7 +35,16 @@ done
 
 # 3. Fetch the license URL and write it to the cache.
 if [ -x "$LICENSE_APP" ]; then
-    "$LICENSE_APP" > "$CACHE_FILE"
+    # Capture the output from the application into a variable
+    local license_url
+    license_url=$("$LICENSE_APP")
+
+    # Only create the cache file if the command actually produced a URL
+    if [ -n "$license_url" ]; then
+        echo "$license_url" > "$CACHE_FILE"
+    fi
+    # If the app fails or returns nothing, we simply do nothing.
+    # The absence of a cache file is a clearer signal of failure.
 fi
 
 exit 0
