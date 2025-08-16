@@ -1639,42 +1639,18 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     # Create the script to fetch the Diretta License URL
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-license-url
     #!/bin/bash
-    # This script is intended to be called via sudo by the purist-app user.
-    # It returns the license activation URL, caching it for 24 hours in /tmp.
 
-    CACHE_FILE="/tmp/diretta_license_url.cache"
-    CACHE_AGE_SECONDS=$(( 24 * 60 * 60 )) # 24 hours
+    # This script's only job is to read the cache file created at boot.
+    readonly CACHE_FILE="/tmp/diretta_license_url.cache"
 
-    # Check if a non-empty cache file exists
     if [ -s "$CACHE_FILE" ]; then
-      # Check the age of the cache file
-      FILE_MOD_TIME=$(stat -c %Y "$CACHE_FILE")
-      CURRENT_TIME=$(date +%s)
-      FILE_AGE=$(( CURRENT_TIME - FILE_MOD_TIME ))
-
-      if [ "$FILE_AGE" -lt "$CACHE_AGE_SECONDS" ]; then
-        # Cache is valid, so we return its content and exit
+        # If the cache exists and has content, display it.
         cat "$CACHE_FILE"
-        exit 0
-      fi
-    fi
-
-    # If we're here, the cache is stale or doesn't exist. Fetch a new URL.
-    LICENSE_STATUS=$(/opt/diretta-alsa-target/diretta_app_activate 2>/dev/null)
-
-    if [[ "$LICENSE_STATUS" == http* ]]; then
-      # A valid URL was found. Write it to the cache file.
-      echo "$LICENSE_STATUS" > "$CACHE_FILE"
-      # Also print it to stdout for the current request.
-      echo "$LICENSE_STATUS"
     else
-      # If the license is now valid or an error occurred, remove any old cache.
-      rm -f "$CACHE_FILE"
-      # Return an empty string.
-      echo ""
+        # If not, print a helpful error to stderr and exit.
+        echo "Error: License cache not found or is empty." >&2
+        exit 1
     fi
-
-    exit 0
     EOT
 
     # Make the new scripts executable
