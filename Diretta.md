@@ -124,6 +124,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [iFi Audio iPower Elite](https://www.amazon.com/gp/product/B08S622SM7/) (to provide clean power to the Diretta Target)
 * 1 x [DC 5.5mm x 2.1mm to UsB C Adapter](https://www.amazon.com/5-5mm-Adapter-Female-Convert-Connector/dp/B0CRB7N4GH/) (needed to adapt the plug on the iPower Elite to the Diretta Target's USB C power input)
 * 1 x [SMSL PO100 PRO DDC](https://www.amazon.com/dp/B0BLYVZCV5) (a digital-to-digital converter for DACs that lack a good USB input implementation)
+* 1 x [USB Wireless Adapter](https://www.amazon.com/gp/product/B078NRDTYK/) (a wired connection is highly preferable and more reliable, but if adding wired Ethernet near your audio system is impractical, replace the Plugable USB to Ethernet adapter with this Wi-Fi adapter)
 
 **Required Audio Component:**
 * 1 x USB DAC or DDC
