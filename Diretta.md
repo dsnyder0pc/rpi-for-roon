@@ -382,6 +382,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     ```
 
 3.  **Configure Network Address Translation (NAT):**
+    **Note:** In the commands below, I'm using `enp+` as the device wildcard for the Plugable USB to Ethernet adapter. If you are using the recommended Wi-Fi adapter instead, use `wlp+` in pace of `enp+` in the commands below:
     ```bash
     # Check if the NAT rule already exists before adding it
     if ! sudo iptables -t nat -C POSTROUTING -s 172.20.0.0/24 -o enp+ -j MASQUERADE 2>/dev/null; then
