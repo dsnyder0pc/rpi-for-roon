@@ -55,7 +55,7 @@ echo "------------------------------------------------"
 echo "🧹 Removing Roon Bridge ID..."
 rm -fv /var/roon/RoonBridge/Settings/unique_id
 echo "🧹 Removing RAAT Server ID..."
-rm -fv /var/roon/RAATServer/Settings/unique_id
+rm -fv /var/roon/RAATServer/Settings/unique_id /var/roon/*/Settings/*.json
 echo "🧹 Removing Roon IR Remote Extension Token..."
 rm -fv "/home/audiolinux/roon-ir-remote/.roon-token"
 

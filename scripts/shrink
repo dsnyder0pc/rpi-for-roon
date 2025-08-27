@@ -130,6 +130,7 @@ EOF
   # Remove the Roon IDs generalize the image
   sudo rm -fv "${MOUNT_POINT}/var/roon/RoonBridge/Settings/unique_id"
   sudo rm -fv "${MOUNT_POINT}/var/roon/RAATServer/Settings/unique_id"
+  sudo rm -fv "${MOUNT_POINT}"/var/roon/*/Settings/*.json
   sudo rm -fv "${MOUNT_POINT}/home/audiolinux/roon-ir-remote/.roon-token"
 
   if [ -d "${MOUNT_POINT}/opt/diretta-alsa-target" ]; then
