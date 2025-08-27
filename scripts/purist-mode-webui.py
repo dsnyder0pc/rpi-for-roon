@@ -366,10 +366,32 @@ def toggle_auto():
 
 @app.route("/restart-target", methods=["POST"])
 def restart_target():
-    """Restarts Diretta on Target and Roon Bridge on Host."""
+    """
+    Disables Purist Mode on the Target to ensure internet access,
+    then restarts the Diretta service for license activation. Also
+    restarts the Roon Bridge service on the Host.
+    """
+    app.logger.info("Starting license activation sequence...")
+
+    # First, check if Purist Mode is active on the Target.
+    target_status = get_status_from_target()
+
+    # If it's active, send the command to disable it.
+    if target_status and target_status.get("purist_mode_active"):
+        app.logger.info("Purist Mode is active. Disabling it before restart.")
+        # Use the existing, authorized toggle script to turn it off.
+        run_remote_command("/usr/local/bin/pm-toggle-mode")
+    else:
+        app.logger.info("Purist Mode is not active. Proceeding with restart.")
+
+    # Now, restart the Diretta service on the Target.
+    app.logger.info("Restarting Diretta ALSA Target service...")
     run_remote_command("/usr/local/bin/pm-restart-target")
+
+    # Finally, restart Roon Bridge on the Host.
+    app.logger.info("Restarting Roon Bridge service on Host...")
     subprocess.run(['sudo', 'systemctl', 'restart', 'roonbridge.service'], check=True)
-    app.logger.info("Roon Bridge service on Host restarted.")
+
     now = datetime.now().strftime("%H:%M:%S")
     return f"""
     <span>Restart commands sent at {now}. Page will refresh shortly.</span>
