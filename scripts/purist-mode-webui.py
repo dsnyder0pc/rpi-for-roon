@@ -90,7 +90,8 @@ BASE_TEMPLATE = """
         {{ content | safe }}
 
         <div class="text-center mt-8 text-sm text-gray-500">
-            <p>&copy; 2025 AnCaolas Link</p>
+            <p>&copy; {{ current_year }} AnCaolas Link</p>
+            <p class="text-xs mt-1">Powered by AudioLinux</p>
         </div>
     </div>
 </body>
@@ -102,7 +103,7 @@ LANDING_PAGE_CONTENT = """
 <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center space-y-6">
     <h2 class="text-2xl font-bold text-white">Welcome</h2>
     <p class="text-gray-400">Please choose a control panel to continue.</p>
-    <div class="flex justify-center gap-4">
+    <div class="flex flex-wrap justify-center gap-4">
         <a href="{{ url_for('purist_app') }}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
             Purist Mode Control
         </a>
@@ -111,6 +112,9 @@ LANDING_PAGE_CONTENT = """
             IR Remote Control
         </a>
         {% endif %}
+        <a href="#" onclick="window.open('//' + window.location.hostname + ':5001', '_blank')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+            AudioLinux UI
+        </a>
     </div>
 </div>
 """
@@ -303,19 +307,22 @@ def get_roon_zone_from_host():
 @app.route("/")
 def landing_page():
     """Serves the main landing page."""
-    content = render_template_string(LANDING_PAGE_CONTENT, roon_is_configured=os.path.exists(ROON_CONFIG_PATH))
-    return render_template_string(BASE_TEMPLATE, content=content, active_page='home', roon_is_configured=os.path.exists(ROON_CONFIG_PATH))
+    roon_configured = os.path.exists(ROON_CONFIG_PATH)
+    content = render_template_string(LANDING_PAGE_CONTENT, roon_is_configured=roon_configured)
+    return render_template_string(BASE_TEMPLATE, content=content, active_page='home', roon_is_configured=roon_configured, current_year=datetime.now().year)
 
 @app.route("/purist")
 def purist_app():
     """Serves the Purist Mode control application."""
+    roon_configured = os.path.exists(ROON_CONFIG_PATH)
     content = render_template_string(PURIST_APP_TEMPLATE)
-    return render_template_string(BASE_TEMPLATE, content=content, active_page='purist', roon_is_configured=os.path.exists(ROON_CONFIG_PATH))
+    return render_template_string(BASE_TEMPLATE, content=content, active_page='purist', roon_is_configured=roon_configured, current_year=datetime.now().year)
 
 @app.route("/remote", methods=['GET', 'POST'])
 def remote_app():
     """Serves the IR Remote control application."""
-    if not os.path.exists(ROON_CONFIG_PATH):
+    roon_configured = os.path.exists(ROON_CONFIG_PATH)
+    if not roon_configured:
         return redirect(url_for('landing_page'))
 
     if request.method == 'POST':
@@ -338,7 +345,7 @@ def remote_app():
     # For GET request
     current_zone = get_roon_zone_from_host()
     content = render_template_string(REMOTE_APP_TEMPLATE, current_zone=current_zone)
-    return render_template_string(BASE_TEMPLATE, content=content, active_page='remote', roon_is_configured=os.path.exists(ROON_CONFIG_PATH))
+    return render_template_string(BASE_TEMPLATE, content=content, active_page='remote', roon_is_configured=roon_configured, current_year=datetime.now().year)
 
 # --- HTMX API Endpoints (for Purist App) ---
 
