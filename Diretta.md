@@ -694,7 +694,15 @@ The default behavior for Arch Linux is to leave the /boot filesystem in an uncle
 
 Please perform these steps on _both_ the Diretta Host and Target computers.
 
-#### 7.1. Optimize Boot Time
+#### 7.1. Fix Systemd "Degraded" State
+
+On a fresh AudioLinux installation, the system status is often reported as `degraded`. This is typically caused by a harmless inconsistency between the system's group files (`/etc/group` and `/etc/gshadow`). The following command safely synchronizes these files, which resolves the failed `shadow.service` and ensures a clean system state.
+
+```bash
+sudo grpconv
+```
+
+#### 7.2. Optimize Boot Time
 To prevent a long boot delay while the system waits for a network connection, we will disable the "wait-online" service.
 ```bash
 # Disable the network wait service to prevent long boot delays
@@ -708,7 +716,7 @@ ExecStartPre=/bin/sh -c "while [ -z \"$(ip route show default)\" ]; do sleep 0.5
 EOT
 ```
 
-#### 7.2. Create the Repair Script
+#### 7.3. Create the Repair Script
 
 This script is safe to run both automatically at boot and manually on a live system.
 ```bash
@@ -717,7 +725,7 @@ sudo install -m 0755 check-and-repair-boot.sh /usr/local/sbin/
 rm check-and-repair-boot.sh
 ```
 
-#### 7.3. Create the `systemd` Service File and enable the service
+#### 7.4. Create the `systemd` Service File and enable the service
 ```bash
 cat <<'EOT' | sudo tee /etc/systemd/system/boot-repair.service
 [Unit]
@@ -740,7 +748,7 @@ sleep 5
 journalctl -b -u boot-repair.service
 ```
 
-#### 7.4. Verification After a Clean Reboot
+#### 7.5. Verification After a Clean Reboot
 Not critical, but to make sure this is working as expected, do a reboot test. **Note:** Reboot the Target  first, then the Host.
 ```bash
 sudo sync && sudo reboot

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.4
+# Diretta Host QA Check Script v1.5
 #
 
 # --- Colors and Formatting ---
@@ -85,11 +85,14 @@ check "/etc/hosts contains 'diretta-target' entry" "grep -q '172.20.0.2.*diretta
 check "IP forwarding is enabled in sysctl.d" "grep -q 'net.ipv4.ip_forward=1' /etc/sysctl.d/99-ip-forwarding.conf"
 check "IP forwarding is active in kernel" "[[ \$(cat /proc/sys/net/ipv4/ip_forward) -eq 1 ]]"
 check "iptables NAT rule file exists" "[ -f /etc/iptables/iptables.rules ]"
+check "iptables contains Target UI port forward (DNAT)" "grep -q -- '--to-destination 172.20.0.2:5001' /etc/iptables/iptables.rules"
+check "iptables contains FORWARD rule for Target UI" "grep -q -- '-A FORWARD -d 172.20.0.2' /etc/iptables/iptables.rules"
 check "'iptables' service is enabled" "systemctl is-enabled iptables.service"
 check "USB Ethernet udev rule exists" "[ -f /etc/udev/rules.d/99-ax88179a.rules ]"
 check "MOTD update script is up-to-date" "[ -f /opt/scripts/update/update_motd.sh ] && [[ \$(md5sum /opt/scripts/update/update_motd.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh | md5sum | awk '{print \$1}') ]]"
 
-header "Section 7" "Boot Filesystem Integrity"
+header "Section 7" "Common System Optimizations"
+check "'shadow' service is not in a failed state" "! systemctl is-failed --quiet shadow.service"
 check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
 check "MOTD service actively waits for a default route" "[ -f /etc/systemd/system/update_motd.service.d/wait-for-ip.conf ] && grep -q 'while.*ip route' /etc/systemd/system/update_motd.service.d/wait-for-ip.conf"
 check "Boot repair script is up-to-date" "[ -x /usr/local/sbin/check-and-repair-boot.sh ] && [[ \$(md5sum /usr/local/sbin/check-and-repair-boot.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh | md5sum | awk '{print \$1}') ]]"

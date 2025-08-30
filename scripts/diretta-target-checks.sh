@@ -81,7 +81,8 @@ check "P2P network file contains correct Gateway" "grep -q 'Gateway=172.20.0.1' 
 check "Old generic network file is removed" "! [ -f /etc/systemd/network/en.network ]"
 check "/etc/hosts contains 'diretta-host' entry" "grep -q '172.20.0.1.*diretta-host' /etc/hosts"
 
-header "Section 7" "Boot Filesystem Integrity"
+header "Section 7" "Common System Optimizations"
+check "'shadow' service is not in a failed state" "! systemctl is-failed --quiet shadow.service"
 check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
 check "MOTD service actively waits for a default route" "[ -f /etc/systemd/system/update_motd.service.d/wait-for-ip.conf ] && grep -q 'while.*ip route' /etc/systemd/system/update_motd.service.d/wait-for-ip.conf"
 check "Boot repair script is up-to-date" "[ -x /usr/local/sbin/check-and-repair-boot.sh ] && [[ \$(md5sum /usr/local/sbin/check-and-repair-boot.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh | md5sum | awk '{print \$1}') ]]"

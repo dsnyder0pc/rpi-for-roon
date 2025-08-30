@@ -107,14 +107,26 @@ LANDING_PAGE_CONTENT = """
         <a href="{{ url_for('purist_app') }}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
             Purist Mode Control
         </a>
+        <a href="#" onclick="window.open('//' + window.location.hostname + ':5001', '_blank')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+            Host AudioLinux UI
+        </a>
+
+        {% if status.purist_mode_active or music_playing %}
+            {% set reason = "Unavailable while Purist Mode is active" if status.purist_mode_active else "Unavailable while music is playing" %}
+            <a href="#" class="bg-gray-800 text-gray-500 cursor-not-allowed font-bold py-3 px-6 rounded-lg" title="{{ reason }}">
+                Target AudioLinux UI
+            </a>
+        {% else %}
+            <a href="#" onclick="window.open('//' + window.location.hostname + ':5101', '_blank')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                Target AudioLinux UI
+            </a>
+        {% endif %}
+
         {% if roon_is_configured %}
         <a href="{{ url_for('remote_app') }}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
             IR Remote Control
         </a>
         {% endif %}
-        <a href="#" onclick="window.open('//' + window.location.hostname + ':5001', '_blank')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-            AudioLinux UI
-        </a>
     </div>
 </div>
 """
@@ -308,7 +320,10 @@ def get_roon_zone_from_host():
 def landing_page():
     """Serves the main landing page."""
     roon_configured = os.path.exists(ROON_CONFIG_PATH)
-    content = render_template_string(LANDING_PAGE_CONTENT, roon_is_configured=roon_configured)
+    # Fetch status for Purist Mode and music playback
+    target_status = get_status_from_target() or {'purist_mode_active': False}
+    music_playing = is_music_playing()
+    content = render_template_string(LANDING_PAGE_CONTENT, roon_is_configured=roon_configured, status=target_status, music_playing=music_playing)
     return render_template_string(BASE_TEMPLATE, content=content, active_page='home', roon_is_configured=roon_configured, current_year=datetime.now().year)
 
 @app.route("/purist")
