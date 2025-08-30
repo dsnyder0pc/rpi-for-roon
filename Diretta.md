@@ -731,7 +731,7 @@ print @lines;
 ' > "$TEMP_SUDOERS"
 
 # Validate the new file with visudo before installing
-if sudo visudo -c -f "$TEMP_SUDOERS"; then
+if [ -s "$TEMP_SUDOERS" ] && sudo visudo -c -f "$TEMP_SUDOERS"; then
     echo "Sudoers file passed validation. Installing corrected version..."
     # Use install to set correct ownership/permissions and replace the original
     sudo install -m 0440 -o root -g root "$TEMP_SUDOERS" "$SUDOERS_FILE"
