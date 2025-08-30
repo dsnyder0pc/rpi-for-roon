@@ -702,7 +702,46 @@ On a fresh AudioLinux installation, the system status is often reported as `degr
 sudo grpconv
 ```
 
-#### 7.2. Optimize Boot Time
+#### 7.2. Correct `sudoers` Rule Precedence
+
+A default rule in the main `/etc/sudoers` file can sometimes override more specific rules needed for the web UI and other features. This can cause commands that should be passwordless to incorrectly ask for a password.
+
+The following script safely corrects the order of rules in the `/etc/sudoers` file to ensure that specific exceptions are processed correctly. The script will only make changes if it detects the incorrect order.
+
+```bash
+SUDOERS_FILE="/etc/sudoers"
+TEMP_SUDOERS=$(mktemp)
+
+# Use a Perl filter to create a corrected version of the sudoers file.
+# This script is idempotent and will not change a file that is already correct.
+sudo cat "$SUDOERS_FILE" | perl -e '
+while (<>) {
+  if (m{/etc/sudoers.d} and not $found_audiolinux_all) {
+    pop @lines if $#lines > -1 and $lines[$#lines] =~ /^$/;
+    push @drop_in, $_;
+  } else {
+    push @lines, $_;
+  }
+  if (/^audiolinux ALL=\(ALL\) ALL$/) {
+    $found_audiolinux_all++;
+    push @lines, ("\n", @drop_in) if @drop_in;
+  }
+}
+print @lines;
+' > "$TEMP_SUDOERS"
+
+# Validate the new file with visudo before installing
+if sudo visudo -c -f "$TEMP_SUDOERS"; then
+    echo "Sudoers file passed validation. Installing corrected version..."
+    # Use install to set correct ownership/permissions and replace the original
+    sudo install -m 0440 -o root -g root "$TEMP_SUDOERS" "$SUDOERS_FILE"
+else
+    echo "ERROR: The modified sudoers file failed validation. No changes were made." >&2
+fi
+rm -f "$TEMP_SUDOERS"
+```
+
+#### 7.3. Optimize Boot Time
 To prevent a long boot delay while the system waits for a network connection, we will disable the "wait-online" service.
 ```bash
 # Disable the network wait service to prevent long boot delays
@@ -716,7 +755,7 @@ ExecStartPre=/bin/sh -c "while [ -z \"$(ip route show default)\" ]; do sleep 0.5
 EOT
 ```
 
-#### 7.3. Create the Repair Script
+#### 7.4. Create the Repair Script
 
 This script is safe to run both automatically at boot and manually on a live system.
 ```bash
@@ -725,7 +764,7 @@ sudo install -m 0755 check-and-repair-boot.sh /usr/local/sbin/
 rm check-and-repair-boot.sh
 ```
 
-#### 7.4. Create the `systemd` Service File and enable the service
+#### 7.5. Create the `systemd` Service File and enable the service
 ```bash
 cat <<'EOT' | sudo tee /etc/systemd/system/boot-repair.service
 [Unit]
@@ -748,7 +787,7 @@ sleep 5
 journalctl -b -u boot-repair.service
 ```
 
-#### 7.5. Verification After a Clean Reboot
+#### 7.6. Verification After a Clean Reboot
 Not critical, but to make sure this is working as expected, do a reboot test. **Note:** Reboot the Target  first, then the Host.
 ```bash
 sudo sync && sudo reboot
@@ -1325,7 +1364,8 @@ Create a service to run the script automatically in the background.
 cat <<EOT | sudo tee /etc/systemd/system/roon-ir-remote.service
 [Unit]
 Description=Roon IR Remote Service
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
@@ -1928,12 +1968,9 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     This step is critical for allowing the web application to restart the necessary Roon-related services without a password.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/webui-restarts
-    # For the audiolinux user, do not require a TTY or authentication for NOPASSWD commands.
-    # This is necessary for the web application service to run sudo.
-    Defaults:audiolinux !requiretty, !authenticate
-
     # Allow the webui (running as audiolinux) to restart required services
-    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roon-ir-remote.service, /usr/bin/systemctl restart roonbridge.service
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roon-ir-remote.service
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roonbridge.service
     EOT
     sudo chmod 0440 /etc/sudoers.d/webui-restarts
     ```
@@ -1945,6 +1982,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     [Unit]
     Description=Purist Mode Web UI
     After=network-online.target
+    Wants=network-online.target
 
     [Service]
     Type=simple

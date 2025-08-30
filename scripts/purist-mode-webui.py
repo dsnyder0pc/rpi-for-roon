@@ -248,7 +248,7 @@ def is_music_playing():
     """Checks if music is actively playing by inspecting the local Diretta Host log."""
     try:
         # Check the local diretta_alsa.service log on the Host
-        cmd = ["journalctl", "-u", "diretta_alsa.service", "--no-pager", "-n", "20", "-g", "info rcv"]
+        cmd = ["/usr/bin/journalctl", "-u", "diretta_alsa.service", "--no-pager", "-n", "20", "-g", "info rcv"]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
 
         if result.returncode != 0 or not result.stdout:
@@ -277,7 +277,7 @@ def is_music_playing():
 
 def run_remote_command(command):
     """Executes a command on the Diretta Target via SSH."""
-    ssh_command = ["ssh", "-i", SSH_KEY_PATH, "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", f"{REMOTE_USER}@{REMOTE_HOST}", command]
+    ssh_command = ["/usr/bin/ssh", "-i", SSH_KEY_PATH, "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", f"{REMOTE_USER}@{REMOTE_HOST}", command]
     try:
         app.logger.info(f"Running remote command: {' '.join(ssh_command)}")
         result = subprocess.run(ssh_command, capture_output=True, text=True, check=True, timeout=15)
@@ -349,7 +349,7 @@ def remote_app():
                 with open(ROON_CONFIG_PATH, 'r') as f: config = json.load(f)
                 config['roon']['zone']['name'] = new_zone_name
                 with open(ROON_CONFIG_PATH, 'w') as f: json.dump(config, f, indent=2)
-                subprocess.run(['sudo', 'systemctl', 'restart', 'roon-ir-remote.service'], check=True)
+                subprocess.run(['/usr/bin/sudo', '/usr/bin/systemctl', 'restart', 'roon-ir-remote.service'], check=True)
                 app.logger.info(f"Roon zone updated to '{new_zone_name}' and service restarted.")
                 flash(f"Successfully updated Roon Zone to: {new_zone_name}")
             except Exception as e:
@@ -412,7 +412,7 @@ def restart_target():
 
     # Finally, restart Roon Bridge on the Host.
     app.logger.info("Restarting Roon Bridge service on Host...")
-    subprocess.run(['sudo', 'systemctl', 'restart', 'roonbridge.service'], check=True)
+    subprocess.run(['/usr/bin/sudo', '/usr/bin/systemctl', 'restart', 'roonbridge.service'], check=True)
 
     now = datetime.now().strftime("%H:%M:%S")
     return f"""
