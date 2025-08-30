@@ -382,15 +382,40 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     ```
 
 3.  **Configure Network Address Translation (NAT):**
-    **Note:** In the commands below, I'm using `enp+` as the device wildcard for the Plugable USB to Ethernet adapter. If you are using the recommended Wi-Fi adapter instead, use `wlp+` in pace of `enp+` in the commands below:
     ```bash
-    # Check if the NAT rule already exists before adding it
-    if ! sudo iptables -t nat -C POSTROUTING -s 172.20.0.0/24 -o enp+ -j MASQUERADE 2>/dev/null; then
+    # --- Auto-detect the active LAN interface ---
+    # We identify the LAN interface by looking for a 'global' and 'dynamic' address,
+    # which is characteristic of a DHCP lease from a router.
+    LAN_IFACE=$(ip -o -4 addr show | awk '/global/ && /dynamic/ {print $2; exit}')
+
+    # Exit if no suitable interface was found
+    if [ -z "$LAN_IFACE" ]; then
+      echo "ERROR: Could not auto-detect an active LAN interface. Aborting firewall configuration."
+      return 1
+    fi
+    echo "Detected LAN interface as '$LAN_IFACE'. Using it for NAT rule."
+
+
+    # Rule 1: Allow the Target to access the internet (NAT) using the detected interface
+    if ! sudo iptables -t nat -C POSTROUTING -s 172.20.0.0/24 -o "$LAN_IFACE" -j MASQUERADE 2>/dev/null; then
       echo "Adding NAT rule for IP forwarding..."
-      sudo iptables -t nat -A POSTROUTING -s 172.20.0.0/24 -o enp+ -j MASQUERADE
+      sudo iptables -t nat -A POSTROUTING -s 172.20.0.0/24 -o "$LAN_IFACE" -j MASQUERADE
     fi
 
-    # Save the rule to make it permanent
+    # Rule 2: Forward Host port 5101 to Target port 5001 (Port Forward)
+    if ! sudo iptables -t nat -C PREROUTING -p tcp --dport 5101 -j DNAT --to-destination 172.20.0.2:5001 2>/dev/null; then
+      echo "Adding port forward rule for Target Web UI..."
+      sudo iptables -t nat -A PREROUTING -p tcp --dport 5101 -j DNAT --to-destination 172.20.0.2:5001
+    fi
+
+    # Rule 3: Allow the forwarded traffic to pass through the firewall
+    if ! sudo iptables -C FORWARD -p tcp -d 172.20.0.2 --dport 5001 -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT 2>/dev/null; then
+      echo "Adding firewall FORWARD rule for Target Web UI..."
+      sudo iptables -A FORWARD -p tcp -d 172.20.0.2 --dport 5001 -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+    fi
+
+    # Save all rules to make them permanent and enable the service
+    echo "Saving firewall rules..."
     sudo iptables-save | sudo tee /etc/iptables/iptables.rules
     sudo systemctl enable iptables.service
     ```
