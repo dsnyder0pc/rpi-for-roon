@@ -179,8 +179,8 @@ Once you have the IP address of one of your RPi computers, use the SSH client on
 ```bash
 cmd=$(cat <<'EOT'
 read -rp "Enter the address of your RPi and hit [enter]: " RPi_IP_Address
-echo '$' ssh "audiolinux@${RPi_IP_Address}"
 echo 'Reminder: the default password is in your AudioLinux email from Piero'
+echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 EOT
 )
