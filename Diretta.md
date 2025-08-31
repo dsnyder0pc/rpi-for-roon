@@ -1221,7 +1221,7 @@ pyenv global $PYVER
 
 ---
 
-### **Step 3: Prepare and Patch `roon-ir-remote` Software**
+### **Step 3: Download `roon-ir-remote` Software Repo**
 
 Clone the script repository and fetch a patch to correctly handle keycodes by name instead of by number.
 
