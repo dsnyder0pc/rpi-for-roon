@@ -387,7 +387,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     # Rule 1: Allow the Target to access the internet (NAT) using the detected interface
     for LAN_IFACE in 'enp+' 'wlp+'; do
       if ! sudo iptables -t nat -C POSTROUTING -s 172.20.0.0/24 -o "${LAN_IFACE}" -j MASQUERADE 2>/dev/null; then
-        echo "Adding NAT rule for IP forwarding via "${LAN_IFACE}..."
+        echo "Adding NAT rule for IP forwarding via ${LAN_IFACE}..."
         sudo iptables -t nat -A POSTROUTING -s 172.20.0.0/24 -o "${LAN_IFACE}" -j MASQUERADE
       fi
     done
