@@ -798,19 +798,20 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     What do you want to do?
 
     1) Install/update
-    2) Enable/Disable Diretta Target
-    3) Configure Audio card
-    4) License
-    5) Exit
+    2) Install previous version
+    3) Enable/Disable Diretta Target
+    4) Configure Audio card
+    5) License
+    6) Exit
 
     ?
     ```
 6.  You should perform these actions in sequence:
     * Choose **1) Install/update** to install the software.
-    * Choose **2) Enable/Disable Diretta Target** and enable it.
-    * Choose **3) Configure Audio card**. The system will list your available audio devices. Enter the card number corresponding to your USB DAC.
+    * Choose **3) Enable/Disable Diretta Target** and enable it.
+    * Choose **4) Configure Audio card**. The system will list your available audio devices. Enter the card number corresponding to your USB DAC.
         ```text
-        ?3
+        ?4
         This option will set DIRETTA target to use a specific card
         Your available cards are:
 
@@ -819,7 +820,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         Please type the card number (0,1,2...) you want to use:
         ?0
         ```
-    * Choose **4) License**. The system will play hi-res (greater than 44.1 kHz PCM audio) for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license for hi-res support. This requires the internet access we configured in step 5.
+    * Choose **5) License**. The system will play hi-res (greater than 44.1 kHz PCM audio) for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license for hi-res support. This requires the internet access we configured in step 5.
 
 #### 8.2. On the Diretta Host
 
