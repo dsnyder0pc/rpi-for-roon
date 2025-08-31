@@ -778,7 +778,7 @@ journalctl -b -u boot-repair.service
 ```
 
 #### 7.6. Minimize Disk I/O
-* Change `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
+Change `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
 ```bash
 sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 ```
