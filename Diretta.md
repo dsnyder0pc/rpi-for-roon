@@ -777,27 +777,6 @@ sleep 5
 journalctl -b -u boot-repair.service
 ```
 
-#### 7.6. Verification After a Clean Reboot
-Not critical, but to make sure this is working as expected, do a reboot test. **Note:** Reboot the Target  first, then the Host.
-```bash
-sudo sync && sudo reboot
-```
-After the system is back online, check the journal on each computer for the service's logs from that boot session.
-```bash
-journalctl -b -u boot-repair.service
-```
-The expected output should show that the check ran and found nothing to do:
-```text
-Jun 27 10:17:55 diretta-host boot_repair[287]: /boot is clean. No action needed.
-Jun 27 10:17:55 diretta-host boot_repair[290]: Check/repair process complete.
-Jun 27 10:17:55 diretta-host systemd[1]: Finished Check and repair /boot filesystem before other services.
-```
-
-If you see `-- No entries --`, try this:
-```bash
-sudo systemctl restart boot-repair.service
-```
-
 ---
 
 ### 8. Diretta Software Installation & Configuration
