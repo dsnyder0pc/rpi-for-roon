@@ -1727,6 +1727,9 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     [Service]
     ExecStartPost=/usr/local/bin/create-diretta-cache.sh
     EOT
+
+    # Go ahead and run the script manually once
+    sudo /usr/local/bin/create-diretta-cache.sh
     ```
 
 ---
