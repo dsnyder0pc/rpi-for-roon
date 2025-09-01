@@ -120,6 +120,24 @@ EOF
   # Enable the service by creating the symlink
   sudo ln -s /etc/systemd/system/resize-fs-once.service "${MOUNT_POINT}/etc/systemd/system/multi-user.target.wants/resize-fs-once.service"
 
+  # --- START OF CLEANUP SYNCHRONIZATION ---
+
+  # --- Remove personal SSH public key ---
+  if [ -f "${MOUNT_POINT}/home/audiolinux/.ssh/authorized_keys" ]; then
+    echo "Removing SSH public key..."
+    sudo rm -fv "${MOUNT_POINT}/home/audiolinux/.ssh/authorized_keys"
+  fi
+
+  # --- Restore default pacman mirrorlist ---
+  echo "Restoring default pacman mirrorlist..."
+  MIRROR_FILE="${MOUNT_POINT}/etc/pacman.d/mirrorlist"
+  DEFAULT_MIRROR="http://mirror.archlinuxarm.org/\$arch/\$repo"
+  CUSTOM_MIRROR="http://ca.us.mirror.archlinuxarm.org/\$arch/\$repo"
+  if [ -f "$MIRROR_FILE" ]; then
+    sudo sed -i "s|# *Server = ${DEFAULT_MIRROR}|Server = ${DEFAULT_MIRROR}|" "$MIRROR_FILE"
+    sudo sed -i "s|^Server = ${CUSTOM_MIRROR}|# Server = ${CUSTOM_MIRROR}|" "$MIRROR_FILE"
+  fi
+
   # Remove the machine-id to generalize the image
   if [ -f "${MOUNT_POINT}/etc/machine-id" ]; then
     echo "Removing existing machine-id..."
@@ -127,11 +145,27 @@ EOF
     sudo touch "${MOUNT_POINT}/etc/machine-id"
   fi
 
-  # Remove the Roon IDs generalize the image
+  # Remove the Roon IDs to generalize the image
+  echo "Removing Roon unique identifiers..."
   sudo rm -fv "${MOUNT_POINT}/var/roon/RoonBridge/Settings/unique_id"
   sudo rm -fv "${MOUNT_POINT}/var/roon/RAATServer/Settings/unique_id"
   sudo rm -fv "${MOUNT_POINT}"/var/roon/*/Settings/*.json
   sudo rm -fv "${MOUNT_POINT}/home/audiolinux/roon-ir-remote/.roon-token"
+
+  # --- Clean up root's Bash history ---
+  if [ -f "${MOUNT_POINT}/root/.bash_history" ]; then
+    echo "Cleaning up root user's Bash history..."
+    # Use sh -c for redirection with sudo
+    sudo truncate --size 0 "${MOUNT_POINT}/root/.bash_history"
+  fi
+
+  # --- Clean up audiolinux user's Bash history ---
+  if [ -f "${MOUNT_POINT}/home/audiolinux/.bash_history" ]; then
+    echo "Cleaning up audiolinux user's Bash history..."
+    sudo truncate --size 0 "${MOUNT_POINT}/home/audiolinux/.bash_history"
+  fi
+
+  # --- END OF CLEANUP SYNCHRONIZATION ---
 
   if [ -d "${MOUNT_POINT}/opt/diretta-alsa-target" ]; then
     dl=$(find "${MOUNT_POINT}/opt/diretta-alsa-target" ! -name 'diretta*')
@@ -141,7 +175,6 @@ EOF
     fi
   fi
 ) # The subshell now exits, and its trap automatically cleans up mounts/loops.
-
 
 # --- PHASE 2: Shrink the fully prepared and unmounted image ---
 echo "--- Shrinking image ---"
