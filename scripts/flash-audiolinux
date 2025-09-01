@@ -22,7 +22,7 @@ echo "Source Image: ${IMAGE_FILE}"
 
 # 2. Detect and select the target device
 echo "🔎 Searching for internal microSD card reader..."
-mapfile -t mmc_devices < <(lsblk -dno NAME,TRAN | awk '$2 == "mmc" {print "/dev/"$1}')
+mapfile -t mmc_devices < <(lsblk -dno NAME | awk '/^mmcblk/ {print "/dev/"$0}')
 
 # Check how many devices were found
 device_count=${#mmc_devices[@]}
