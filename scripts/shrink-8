@@ -91,7 +91,7 @@ EOF
     dl=$(find "${MOUNT_POINT}/opt/diretta-alsa-target" ! -name 'diretta*')
     if [ -n "${dl}" ]; then
       echo "- Diretta License File Found."
-      sudo mv -v "${dl}" "${IMAGE_FILE%.img}".lic
+      sudo mv -v "${dl}" "${WORK_FILE%.img}"."$(basename "${dl}")"
     fi
   fi
 ) # The subshell now exits, and its trap automatically cleans up mounts/loops.

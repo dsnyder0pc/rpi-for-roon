@@ -13,7 +13,7 @@ BLOCK_SIZE_BYTES=$((4 * 1024 * 1024)) # 4MiB in bytes
 
 # --- Automatic MMC Device Detection ---
 echo "🔎 Searching for internal microSD card reader..."
-mapfile -t mmc_devices < <(lsblk -dno NAME | awk '/^mmcblk/ {print "/dev/"$0}')
+mapfile -t mmc_devices < <(lsblk -dno PATH | grep /mmcblk)
 
 # Check how many devices were found
 device_count=${#mmc_devices[@]}
