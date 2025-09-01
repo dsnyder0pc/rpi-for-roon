@@ -2,17 +2,16 @@
 #
 # create_golden_image_nopasswd.sh
 #
-# Interactively creates a golden image from an SD card (/dev/mmcblk0).
-# This version is designed to be run by a normal user with NOPASSWD
-# sudo privileges, as it calls sudo internally for specific commands.
+# Interactively creates a golden image from an SD card, then optionally
+# calls the appropriate shrink script based on the image stage.
 
 # --- Configuration ---
 set -e # Exit immediately if a command exits with a non-zero status.
 set -o pipefail # Exit if any command in a pipeline fails.
-
 BLOCK_SIZE_DD="4M"
 BLOCK_SIZE_BYTES=$((4 * 1024 * 1024)) # 4MiB in bytes
 
+# --- Automatic MMC Device Detection ---
 echo "🔎 Searching for internal microSD card reader..."
 mapfile -t mmc_devices < <(lsblk -dno NAME,TRAN | awk '$2 == "mmc" {print "/dev/"$1}')
 
@@ -31,18 +30,10 @@ fi
 DEVICE="${mmc_devices[0]}"
 echo "✅ Success! Using device: ${DEVICE}"
 
-# --- Sanity Checks ---
-
-# Check if the device exists
-if [ ! -b "${DEVICE}" ]; then
-  echo "🚫 Error: Block device ${DEVICE} not found."
-  echo "Please ensure the microSD card is inserted correctly."
-  exit 1
-fi
-
 # --- User Interaction ---
 
 # 1. Prompt for Diretta Type (Host/Target)
+echo
 echo "Select the image type:"
 select IMG_TYPE in "Host" "Target"; do
   if [ -n "${IMG_TYPE}" ]; then
@@ -86,7 +77,6 @@ echo -n "🔎 Reading partition table from ${DEVICE}... "
 PART_INFO=$(sudo parted -ms "${DEVICE}" unit B print | grep "^2:")
 END_BYTE=$(echo "${PART_INFO}" | cut -d':' -f3 | tr -d 'B')
 echo "Done."
-
 if ! [[ "${END_BYTE}" =~ ^[0-9]+$ ]]; then
   echo "🚫 Error: Could not determine the end sector of the partition."
   exit 1
@@ -124,3 +114,20 @@ sudo chown "${LOGNAME}:${LOGNAME}" "${FILENAME}"
 
 echo
 echo "✅ Success! Image created: ${FILENAME}"
+
+# --- NEW: Optional Shrink Phase ---
+echo
+read -p "Do you want to shrink this image now? (y/N) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    # Check if the filename is for the final 'apdx4' stage
+    if [[ "${FILENAME}" == *apdx4* ]]; then
+        echo "Image is 'apdx4'. Running the full shrink script..."
+        shrink "${FILENAME}"
+    else
+        echo "Image is an intermediate step. Running the shrink-8 script..."
+        shrink-8 "${FILENAME}"
+    fi
+else
+    echo "Skipping shrink process."
+fi
