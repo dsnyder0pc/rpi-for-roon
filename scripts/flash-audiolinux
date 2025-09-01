@@ -21,23 +21,23 @@ fi
 echo "Source Image: ${IMAGE_FILE}"
 
 # 2. Detect and select the target device
-mapfile -t devices < <(lsblk -d -o NAME,SIZE,TRAN,VENDOR | grep -E 'mmc|sd|usb' | awk '{printf "/dev/%s (%s %s)\n", $1, $4, $2}')
-if [ ${#devices[@]} -eq 0 ]; then
-    red_text "Error: No suitable microSD card readers found."
+echo "🔎 Searching for internal microSD card reader..."
+mapfile -t mmc_devices < <(lsblk -dno NAME,TRAN | awk '$2 == "mmc" {print "/dev/"$1}')
+
+# Check how many devices were found
+device_count=${#mmc_devices[@]}
+
+if [ "$device_count" -eq 0 ]; then
+    echo "🚫 Error: No microSD card found in the internal slot."
+    exit 1
+elif [ "$device_count" -gt 1 ]; then
+    echo "🚫 Error: Multiple 'mmc' devices detected. Cannot determine the correct one."
     exit 1
 fi
 
-yellow_text "\nPlease select the target microSD card device:"
-select device_choice in "${devices[@]}"; do
-    if [ -n "$device_choice" ]; then
-        TARGET_DEVICE=$(echo "$device_choice" | awk '{print $1}')
-        break
-    else
-        red_text "Invalid selection. Please try again."
-    fi
-done
-
-echo "Target Device: ${TARGET_DEVICE}"
+# Exactly one device was found, so we can proceed.
+TARGET_DEVICE="${mmc_devices[0]}"
+echo "✅ Success! Using device: ${TARGET_DEVICE}"
 
 # 3. Unmount the target device if it's mounted
 MOUNTED_PARTS=$(lsblk -no MOUNTPOINT "${TARGET_DEVICE}" | grep -v '^$' || true)

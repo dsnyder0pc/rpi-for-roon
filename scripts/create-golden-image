@@ -10,9 +10,26 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 set -o pipefail # Exit if any command in a pipeline fails.
 
-DEVICE="/dev/mmcblk0"
 BLOCK_SIZE_DD="4M"
 BLOCK_SIZE_BYTES=$((4 * 1024 * 1024)) # 4MiB in bytes
+
+echo "🔎 Searching for internal microSD card reader..."
+mapfile -t mmc_devices < <(lsblk -dno NAME,TRAN | awk '$2 == "mmc" {print "/dev/"$1}')
+
+# Check how many devices were found
+device_count=${#mmc_devices[@]}
+
+if [ "$device_count" -eq 0 ]; then
+    echo "🚫 Error: No microSD card found in the internal slot."
+    exit 1
+elif [ "$device_count" -gt 1 ]; then
+    echo "🚫 Error: Multiple 'mmc' devices detected. Cannot determine the correct one."
+    exit 1
+fi
+
+# Exactly one device was found, so we can proceed.
+DEVICE="${mmc_devices[0]}"
+echo "✅ Success! Using device: ${DEVICE}"
 
 # --- Sanity Checks ---
 
@@ -92,10 +109,11 @@ echo "  DD Count      : ${COUNT}"
 echo "---------------------------------"
 echo
 
-read -r -p "Do you want to proceed with these settings? (y/N) " confirm
-if [[ ! "$confirm" =~ ^[yY]([eE][sS])?$ ]]; then
-  echo "Aborted by user."
-  exit 0
+read -p "Do you want to proceed with these settings? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborting."
+    exit 1
 fi
 
 # 5. Execute the dd command
