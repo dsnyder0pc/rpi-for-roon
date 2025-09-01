@@ -2,11 +2,11 @@
 
 This guide provides comprehensive, step-by-step instructions for configuring two Raspberry Pi devices as a dedicated Diretta Host and Diretta Target. This setup uses a direct, point-to-point Ethernet connection between the two devices for the ultimate in network isolation and audio performance.
 
-The **Diretta Host** will connect to your main network (for Roon Core, etc.) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC or DDC.
+The **Diretta Host** will connect to your main network (to access your music server) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC or DDC.
 
 ## An Introduction to the Reference Roon Architecture
 
-Welcome to the definitive guide for building a state-of-the-art Roon streaming endpoint. Before diving into the step-by-step instructions, it's important to understand the "why" behind this project. This introduction will explain the problem this architecture solves, why it's fundamentally superior to many high-cost commercial alternatives, and how this DIY project represents a direct and rewarding path to unlocking the ultimate sound quality from your Roon system.
+Welcome to the definitive guide for building a state-of-the-art Roon streaming endpoint. While AudioLinux supports other protocols, I will use Roon as the example for this build. You may use the menu system on the Diretta Host to install support for other protocols, including HQPlayer, Audirvana, DLNA, AirPlay, etc. Before diving into the step-by-step instructions, it's important to understand the "why" behind this project. This introduction will explain the problem this architecture solves, why it's fundamentally superior to many high-cost commercial alternatives, and how this DIY project represents a direct and rewarding path to unlocking the ultimate sound quality from your Roon system.
 
 ### The Roon Paradox: A Powerful Experience with a Sonic Caveat
 
