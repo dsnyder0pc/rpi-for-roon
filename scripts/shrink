@@ -118,7 +118,7 @@ EOF
   sudo chmod +x "${MOUNT_POINT}/usr/local/sbin/resize-fs-once.sh"
 
   # Enable the service by creating the symlink
-  sudo ln -s /etc/systemd/system/resize-fs-once.service "${MOUNT_POINT}/etc/systemd/system/multi-user.target.wants/resize-fs-once.service"
+  sudo ln -sf /etc/systemd/system/resize-fs-once.service "${MOUNT_POINT}/etc/systemd/system/multi-user.target.wants/resize-fs-once.service"
 
   # --- START OF CLEANUP SYNCHRONIZATION ---
 
