@@ -327,6 +327,17 @@ In this section, we will create the network configuration files that will activa
 
 If you just finished updating your Diretta Target, click [here](https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md#52-pre-configure-the-diretta-target) to jump to the point-to-point network configuration steps for the Target.
 
+---
+> #### **A Note on Network Configuration: Why Not a Simple Bridge?**
+>
+> Users familiar with AudioLinux may wonder why this guide uses specific scripts to configure a routed point-to-point link with NAT instead of using the simpler network bridge option available in the `menu` system. This is a deliberate architectural choice made to achieve the highest possible level of network isolation.
+>
+> * A **network bridge** would place the Diretta Target directly on your main LAN, exposing it to all unrelated network broadcast and multicast traffic.
+> * Our **routed setup** creates a completely separate, firewalled subnet. The Diretta Host protects the Target from all non-essential network chatter, ensuring the Target's processor only handles the audio stream. This minimizes system activity and potential electrical noise, which is the ultimate goal of this purist architecture.
+>
+> While a bridge is functionally simpler to set up, the routed method provides a theoretically superior foundation for audio performance by maximizing isolation.
+---
+
 #### 5.1. Pre-configure the Diretta Host
 
 1.  **Create Network Files:**
