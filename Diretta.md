@@ -862,7 +862,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         end0
         ```
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient; however, here are some settings you may wish to try:
-        ```toml
+        ```text
         [global]
         Interface=end0
         TargetProfileLimitTime=0
