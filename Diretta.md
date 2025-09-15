@@ -861,7 +861,28 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         Please type the name of your preferred interface:
         end0
         ```
-    * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient.
+    * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient; however, here are some settings you may wish to try:
+        ```toml
+        [global]
+        Interface=end0
+        TargetProfileLimitTime=0
+        ThredMode=1
+        InfoCycle=100000
+        FlexCycle=disable
+        CycleTime=800
+        CycleMinTime=
+        Debug=disable
+        periodMax=32
+        periodMin=16
+        periodSizeMax=38400
+        periodSizeMin=2048
+        syncBufferCount=8
+        alsaUnderrun=enable
+        unInitMemDet=disable
+        CpuSend=
+        CpuOther=
+        LatencyBuffer=0
+        ```
 
 5.  Create an override to make the Diretta service auto-restart on failure
     ```bash
