@@ -1,0 +1,118 @@
+#!/bin/bash
+
+# Diretta Host Configuration Switcher
+
+# --- Configuration Variables ---
+CONFIG_PATH="/opt/diretta-alsa/setting.inf"
+
+# --- Main Logic ---
+main() {
+    clear
+    echo "=========================================="
+    echo "  Diretta Host Configuration Switcher"
+    echo "=========================================="
+    echo
+    echo "This script will switch the Diretta Host software between two profiles."
+    echo "This will briefly stop music playback."
+    echo
+    echo "Please choose an option:"
+    echo "  1) Apply Default Settings (Original Profile)"
+    echo "  2) Apply Tuned Settings (New Profile)"
+    echo
+    echo "  q) Quit without making changes"
+    echo
+    read -p "Enter your choice [1, 2, or q]: " choice
+    echo
+
+    case $choice in
+        1)
+            apply_default
+            ;;
+        2)
+            apply_tuned
+            ;;
+        [qQ])
+            echo "Exiting without changes."
+            exit 0
+            ;;
+        *)
+            echo "Invalid option. Please run the script again."
+            exit 1
+            ;;
+    esac
+}
+
+# --- Functions ---
+apply_default() {
+    echo "Applying Default settings..."
+    # Write the default config file using a heredoc
+    # Using 'tee' with sudo allows us to write to a protected file
+    sudo tee "$CONFIG_PATH" > /dev/null << EOF
+[global]
+Interface=end0
+TargetProfileLimitTime=200
+ThredMode=1
+InfoCycle=100000
+FlexCycle=enable
+CycleTime=10000
+CycleMinTime=
+Debug=stdout
+periodMax=32
+periodMin=8
+periodSizeMax=38400
+periodSizeMin=960
+syncBufferCount=8
+alsaUnderrun=enable
+unInitMemDet=disable
+CpuSend=
+CpuOther=
+LatencyBuffer=0
+EOF
+    restart_service
+}
+
+apply_tuned() {
+    echo "Applying Tuned settings..."
+    # Write the tuned config file using a heredoc
+    sudo tee "$CONFIG_PATH" > /dev/null << EOF
+[global]
+Interface=end0
+TargetProfileLimitTime=0
+ThredMode=1
+InfoCycle=100000
+FlexCycle=disable
+CycleTime=800
+CycleMinTime=
+Debug=disable
+periodMax=32
+periodMin=16
+periodSizeMax=38400
+periodSizeMin=2048
+syncBufferCount=8
+alsaUnderrun=enable
+unInitMemDet=disable
+CpuSend=
+CpuOther=
+LatencyBuffer=0
+EOF
+    restart_service
+}
+
+restart_service() {
+    echo
+    echo "Configuration file written. Restarting the Diretta ALSA service..."
+    echo "⚠️  Music playback will stop now."
+    
+    if sudo systemctl restart diretta_alsa; then
+        echo
+        echo "✅ Success! The new configuration has been applied."
+        echo "You can now close this window. Please press Play in Roon or your remote app to resume music."
+    else
+        echo
+        echo "❌ Error! Failed to restart the Diretta ALSA service."
+        echo "Please contact support."
+    fi
+}
+
+# --- Run the main function ---
+main
