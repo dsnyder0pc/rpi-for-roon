@@ -75,6 +75,7 @@ If you are located in the US, expect to pay around $295 (plus tax and shipping) 
 12. [Appendix 3: Optional Purist Mode](#12-appendix-3-optional-purist-mode)
 13. [Appendix 4: Optional System Control Web UI](#13-appendix-4-optional-system-control-web-ui)
 14. [Appendix 5: System Health Checks](#14-appendix-5-system-health-checks)
+15. [Appendix 6: Advanced Realtime Performance Tuning](#15-appendix-6-advanced-realtime-performance-tuning)
 
 ---
 
@@ -2065,3 +2066,151 @@ On either the Host or the Target, run the following single command. It will down
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh | sudo bash
+
+---
+
+## 15. Appendix 6: Advanced Realtime Performance Tuning
+
+The following steps are optional but recommended for users seeking to extract the absolute maximum performance from their Diretta setup. The strategy, based on advice from AudioLinux author Piero, is to create the most stable and electrically quiet environment possible on both the Host and Target devices.
+
+This is achieved by using **CPU isolation** to dedicate specific processor cores to audio tasks, shielding them from the operating system, and carefully tuning **realtime priorities** to ensure the audio data path is never interrupted.
+
+> **Note:** This is an advanced tuning process. Please ensure your core Diretta system is fully functional by completing sections 1-9 of the main guide before proceeding. Proper cooling for both Raspberry Pi devices is essential.
+
+---
+
+### **Part 1: Optimizing the Diretta Target (RPi5)**
+
+The goal for the Target is to make it a pure, low-latency audio endpoint. We will isolate the Diretta application on a single, dedicated CPU core and give it a high, but not excessive, realtime priority.
+
+#### **Step 6.1: Isolate a CPU Core for the Audio Application**
+
+This step dedicates one CPU core exclusively to the Diretta Target application.
+
+1.  SSH to the Diretta Target:
+    ```bash
+    ssh diretta-target
+    ```
+2.  Enter the AudioLinux menu system:
+    ```bash
+    menu
+    ```
+3.  Navigate to the **ISOLATED CPU CORES configuration** menu.
+4.  Follow the prompts exactly as shown below to isolate **core 3** and assign the Diretta application to it.
+
+    ```text
+    Please chose your option:
+    1) Configure and enable
+    2) Disable
+    3) Exit
+    ?
+    1
+
+    How many groups do you want to create? (1 or more)
+    ?1
+    Please type the cores of the group 1:
+    ?3
+
+    Type the application(s) that should be confined to group 1...:
+    ?diretta_app_target
+
+    Type the IRQ numbers that should be confined to the group 1...:
+    ?
+    [PRESS ENTER]
+    ```
+5.  After the process completes, press **ENTER** to exit back to the main menu. **Do not reboot yet.**
+
+> **A Note on Automatic IRQ Affinity:** You may notice the script reports that it has also isolated the `end0` network IRQs to the same core. This is not a bug, but an intelligent optimization. The script automatically pins the network interrupts to the same core as the application using the network, creating the most efficient data path possible.
+
+---
+
+#### **Step 6.2: Set Realtime Priority**
+
+Next, we will give the Diretta application a "not too high" priority, ensuring it runs smoothly without interfering with the more critical USB audio interrupts.
+
+1.  From the main menu, navigate to the **REALTIME PRIORITY configuration** menu.
+2.  Select **Option 5) Configure APPLICATION priority (expert)**.
+3.  Follow the prompts to set a **manual** priority of **70**.
+
+    ```text
+    ...
+    Type Y if you want to edit it
+    ?
+    [PRESS ENTER]
+
+    Here you will configure the max. priority given to audio applications...
+    ?70
+
+    Now you can configure your preferred method...
+    ?manual
+    ```
+4.  After confirming the changes, select **7) Exit** to return to the command line.
+5.  Reboot the Diretta Target for all changes to take effect.
+    ```bash
+    sudo sync && sudo reboot
+    ```
+
+---
+
+### **Part 2: Optimizing the Diretta Host (RPi4)**
+
+The goal for the Host is to give Roon Bridge and the Diretta service dedicated processing resources, but without using high realtime priorities. CPU isolation is a more powerful tool here, as it prevents the processes from being interrupted in the first place.
+
+#### **Step 6.3: Isolate CPU Cores for Audio Applications**
+
+This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Host service.
+
+1.  SSH to the Diretta Host:
+    ```bash
+    ssh diretta-host
+    ```
+2.  Enter the AudioLinux menu system:
+    ```bash
+    menu
+    ```
+3.  Navigate to the **ISOLATED CPU CORES configuration** menu.
+4.  Follow the prompts to isolate **cores 2 and 3** and assign the relevant applications.
+
+    ```text
+    Please chose your option:
+    1) Configure and enable
+    ...
+    ?
+    1
+
+    How many groups do you want to create? (1 or more)
+    ?1
+    Please type the cores of the group 1:
+    ?2,3
+
+    Type the application(s) that should be confined to group 1...:
+    ?RoonBridge diretta_app_target
+
+    Type the IRQ numbers that should be confined to the group 1...:
+    ?
+    [PRESS ENTER]
+    ```
+    > **Note:** We list `diretta_app_target` here as a catch-all, though the Host runs the `diretta_alsa` service which is not in the list. The system is smart enough to apply the isolation to the correct running processes like RoonBridge.
+
+5.  After the process completes, press **ENTER** to exit back to the main menu.
+
+---
+
+#### **Step 6.4: Disable Application Realtime Priority**
+
+With our audio applications running on dedicated cores, they no longer need to compete for CPU time. Forcing a high realtime priority is now unnecessary and can be counterproductive. We will disable the service entirely on the Host.
+
+1.  From the main menu, navigate to the **REALTIME PRIORITY configuration** menu.
+2.  Select **Option 2) Enable/disable APPLICATION service (rtapp)**. This will immediately disable the service.
+3.  Select **7) Exit** to return to the command line.
+4.  Reboot the Diretta Host.
+    ```bash
+    sudo sync && sudo reboot
+    ```
+
+> ---
+> ### ✅ Checkpoint: Verify Your Realtime Tuning
+>
+> Your advanced realtime tuning should now be complete. To verify all components of this new configuration, please return to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
+>
+> ---
