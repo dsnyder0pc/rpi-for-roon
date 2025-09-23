@@ -2066,6 +2066,7 @@ On either the Host or the Target, run the following single command. It will down
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh | sudo bash
+```
 
 ---
 
