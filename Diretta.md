@@ -2096,7 +2096,8 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
     ```bash
     menu
     ```
-3.  Navigate to the **ISOLATED CPU CORES configuration** menu.
+3.  Navigate to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**).
+
 4.  Follow the prompts exactly as shown below to isolate **core 3** and assign the Diretta application to it.
 
     ```text
@@ -2129,7 +2130,7 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
 
 Next, we will give the Diretta application a "not too high" priority, ensuring it runs smoothly without interfering with the more critical USB audio interrupts.
 
-1.  From the main menu, navigate to the **REALTIME PRIORITY configuration** menu.
+1.  Also under the **SYSTEM menu**, navigate to the **REALTIME PRIORITY configuration** menu.
 2.  Select **Option 5) Configure APPLICATION priority (expert)**.
 3.  Follow the prompts to set a **manual** priority of **70**.
 
@@ -2169,7 +2170,8 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     ```bash
     menu
     ```
-3.  Navigate to the **ISOLATED CPU CORES configuration** menu.
+3.  Navigate to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**).
+
 4.  Follow the prompts to isolate **cores 2 and 3** and assign the relevant applications.
 
     ```text
@@ -2201,7 +2203,7 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
 
 With our audio applications running on dedicated cores, they no longer need to compete for CPU time. Forcing a high realtime priority is now unnecessary and can be counterproductive. We will disable the service entirely on the Host.
 
-1.  From the main menu, navigate to the **REALTIME PRIORITY configuration** menu.
+1.  Also under the **SYSTEM menu**, navigate to the **REALTIME PRIORITY configuration** menu.
 2.  Select **Option 2) Enable/disable APPLICATION service (rtapp)**. This will immediately disable the service.
 3.  Select **7) Exit** to return to the command line.
 4.  Reboot the Diretta Host.
