@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.5
+# Diretta Target QA Check Script v1.7
 #
 
 # --- Colors and Formatting ---
@@ -22,7 +22,7 @@ check_status() {
 }
 header() { echo -e "\n${C_BOLD}${C_YELLOW}--- $1: $2 ---${C_RESET}"; }
 check_optional_section() {
-    if eval "$1" &>/dev/null; then eval "$2"; else echo -e "\n${C_BOLD}${C_YELLOW}--- Skipping QA for $3 (Not Detected) ---${C_RESET}"; fi
+    if eval "$1" &>/dev/null; then eval "$2"; else echo -e "\n${C_BOLD}${C_YELLOW}--- Skipping QA for $3 (Not Detected) ---\033[0m"; fi
 }
 
 # --- QA Check Functions for Optional Sections ---
@@ -59,6 +59,12 @@ run_appendix4_checks() {
     check "Sudoers allows 'pm-get-license-url'" "grep -q 'NOPASSWD: /usr/local/bin/pm-get-license-url' /etc/sudoers.d/purist-app"
     check "SSH authorized_keys for 'purist-app' exists" "[ -f /home/purist-app/.ssh/authorized_keys ]"
     check "SSH authorized_keys has security restrictions" "grep -q 'command=\"sudo' /home/purist-app/.ssh/authorized_keys"
+}
+run_appendix6_checks() {
+    header "Appendix 6" "Advanced Realtime Performance Tuning"
+    check "Diretta app realtime priority is set to 70" "[[ \$(ps -o rtprio -C diretta_app_target | tail -n 1 | tr -d ' ') -eq 70 ]]"
+    check "CPU isolation is set to core 3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '3' ]]"
+    check "Diretta app is running on the isolated core" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'diretta_app_target'"
 }
 
 # --- Main Script ---
@@ -102,5 +108,6 @@ check_status "Diretta Target License Status" "ls /opt/diretta-alsa-target/ | gre
 check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Appendix 1 (Argon ONE Fan)"
 check_optional_section "[ -f /usr/local/bin/purist-mode ]" "run_appendix3_checks" "Appendix 3 (Purist Mode)"
 check_optional_section "id purist-app" "run_appendix4_checks" "Appendix 4 (Web UI Backend)"
+check_optional_section "cset set --list 2>/dev/null | grep -q 'isolated1'" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}\n"

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.5
+# Diretta Host QA Check Script v1.7
 #
 
 # --- Colors and Formatting ---
@@ -61,6 +61,12 @@ run_appendix4_checks() {
     check "'purist-webui' service is enabled" "systemctl is-enabled purist-webui.service"
     check "'purist-webui' service is active" "systemctl is-active purist-webui.service"
 }
+run_appendix6_checks() {
+    header "Appendix 6" "Advanced Realtime Performance Tuning"
+    check "'rtapp.timer' service is disabled" "! systemctl is-enabled rtapp.timer"
+    check "CPU isolation is set to cores 2-3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '2-3' ]]"
+    check "RoonBridge is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'RoonBridge'"
+}
 
 # --- Main Script ---
 if [ "$EUID" -ne 0 ]; then echo -e "${C_RED}Please run this script with sudo or as root.${C_RESET}"; exit 1; fi
@@ -119,5 +125,6 @@ check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Append
 check_optional_section "[ -d /home/audiolinux/.pyenv ]" "header 'Appendices 2 & 4' 'Optional: Python Environment'; check 'pyenv is installed for user audiolinux' '[ -d /home/audiolinux/.pyenv ]'; check 'A python version is installed via pyenv' 'ls /home/audiolinux/.pyenv/versions | grep -q \"[0-9]\"'; check '.bashrc is configured for pyenv' 'grep -q \"pyenv init\" /home/audiolinux/.bashrc'" "Python Environment"
 check_optional_section "[ -d /home/audiolinux/roon-ir-remote ]" "run_appendix2_checks" "Appendix 2 (IR Remote)"
 check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix4_checks" "Appendix 4 (Web UI)"
+check_optional_section "cset set --list 2>/dev/null | grep -q 'isolated1'" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}\n"

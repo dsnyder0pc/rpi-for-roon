@@ -861,8 +861,19 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         Please type the name of your preferred interface:
         end0
         ```
-    * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient; however, here are some settings you may wish to try:
+    * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient; however, here are some tuned settings you may wish to try:
         ```text
+        TargetProfileLimitTime=0
+        FlexCycle=disable
+        CycleTime=800
+        Debug=disable
+        periodMin=16
+        periodSizeMin=2048
+        ```
+
+    * If you just want to install the tuned parameters above, you can use this command block:
+        ```bash
+        cat <<'EOT' | sudo tee /opt/diretta-alsa/setting.inf
         [global]
         Interface=end0
         TargetProfileLimitTime=0
@@ -882,6 +893,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         CpuSend=
         CpuOther=
         LatencyBuffer=0
+        EOT
         ```
 
 5.  Create an override to make the Diretta service auto-restart on failure
