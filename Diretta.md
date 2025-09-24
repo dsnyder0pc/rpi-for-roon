@@ -2187,13 +2187,12 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     ?2,3
 
     Type the application(s) that should be confined to group 1...:
-    ?RoonBridge diretta_app_target
+    ?RoonBridge ssyncAlsa
 
     Type the IRQ numbers that should be confined to the group 1...:
     ?
     [PRESS ENTER]
     ```
-    > **Note:** We list `diretta_app_target` here as a catch-all, though the Host runs the `diretta_alsa` service which is not in the list. The system is smart enough to apply the isolation to the correct running processes like RoonBridge.
 
 5.  After the process completes, press **ENTER** to exit back to the main menu.
 
