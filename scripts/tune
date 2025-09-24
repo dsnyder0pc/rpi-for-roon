@@ -83,7 +83,7 @@ InfoCycle=100000
 FlexCycle=disable
 CycleTime=800
 CycleMinTime=
-Debug=disable
+Debug=stdout
 periodMax=32
 periodMin=16
 periodSizeMax=38400
@@ -102,7 +102,7 @@ restart_service() {
     echo
     echo "Configuration file written. Restarting the Diretta ALSA service..."
     echo "⚠️  Music playback will stop now."
-    
+
     if sudo systemctl restart diretta_alsa; then
         echo
         echo "✅ Success! The new configuration has been applied."

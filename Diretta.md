@@ -867,7 +867,6 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         TargetProfileLimitTime=0
         FlexCycle=disable
         CycleTime=800
-        Debug=disable
         periodMin=16
         periodSizeMin=2048
         ```
@@ -883,7 +882,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         FlexCycle=disable
         CycleTime=800
         CycleMinTime=
-        Debug=disable
+        Debug=stdout
         periodMax=32
         periodMin=16
         periodSizeMax=38400
