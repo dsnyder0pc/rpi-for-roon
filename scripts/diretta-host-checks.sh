@@ -14,7 +14,11 @@ C_BOLD='\033[1m'
 # --- Helper Functions ---
 check() {
     printf "  ${C_BLUE}*${C_RESET} %-68s" "$1"
-    if eval "$2" &>/dev/null; then printf "[${C_GREEN}PASS${C_RESET}]\n"; else printf "[${C_RED}FAIL${C_RESET}]\n"; fi
+    if eval "$2" &>/dev/null; then
+        printf '[%sPASS%s]\n' "$C_GREEN" "$C_RESET"
+    else
+        printf '[%sFAIL%s]\n' "$C_RED" "$C_RESET"
+    fi
 }
 header() { echo -e "\n${C_BOLD}${C_YELLOW}--- $1: $2 ---${C_RESET}"; }
 check_optional_section() {
@@ -66,6 +70,7 @@ run_appendix6_checks() {
     check "'rtapp.timer' service is disabled" "! systemctl is-enabled rtapp.timer"
     check "CPU isolation is set to cores 2-3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '2-3' ]]"
     check "RoonBridge is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'RoonBridge'"
+    check "ssyncAlsa is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'ssyncAlsa'"
 }
 
 # --- Main Script ---

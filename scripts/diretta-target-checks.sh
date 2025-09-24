@@ -13,12 +13,20 @@ C_BOLD='\033[1m'
 
 # --- Helper Functions ---
 check() {
-    printf "  ${C_BLUE}*${C_RESET} %-68s" "$1";
-    if eval "$2" &>/dev/null; then printf "[${C_GREEN}PASS${C_RESET}]\n"; else printf "[${C_RED}FAIL${C_RESET}]\n"; fi
+    printf "  ${C_BLUE}*${C_RESET} %-68s" "$1"
+    if eval "$2" &>/dev/null; then
+        printf '[%sPASS%s]\n' "$C_GREEN" "$C_RESET"
+    else
+        printf '[%sFAIL%s]\n' "$C_RED" "$C_RESET"
+    fi
 }
 check_status() {
-    printf "  ${C_BLUE}*${C_RESET} %-68s" "$1";
-    if eval "$2" &>/dev/null; then printf "[${C_GREEN}%s${C_RESET}]\n" "$3"; else printf "[${C_YELLOW}%s${C_RESET}]\n" "$4"; fi
+    printf "  ${C_BLUE}*${C_RESET} %-68s" "$1"
+    if eval "$2" &>/dev/null; then
+        printf '[%s%s%s]\n' "$C_GREEN" "$3" "$C_RESET"
+    else
+        printf '[%s%s%s]\n' "$C_YELLOW" "$4" "$C_RESET"
+    fi
 }
 header() { echo -e "\n${C_BOLD}${C_YELLOW}--- $1: $2 ---${C_RESET}"; }
 check_optional_section() {
