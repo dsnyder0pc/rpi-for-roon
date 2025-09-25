@@ -2110,14 +2110,13 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
     How many groups do you want to create? (1 or more)
     ?1
     Please type the cores of the group 1:
-    ?3
+    ?2,3
 
     Type the application(s) that should be confined to group 1...:
     ?diretta_app_target
 
     Type the IRQ numbers that should be confined to the group 1...:
-    ?
-    [PRESS ENTER]
+    ?27 28
     ```
 5.  After the process completes, press **ENTER** to exit back to the main menu. **Do not reboot yet.**
 
@@ -2189,8 +2188,7 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     ?RoonBridge ssyncAlsa
 
     Type the IRQ numbers that should be confined to the group 1...:
-    ?
-    [PRESS ENTER]
+    ?27 28
     ```
 
 5.  After the process completes, press **ENTER** to exit back to the main menu.
