@@ -71,7 +71,7 @@ run_appendix4_checks() {
 run_appendix6_checks() {
     header "Appendix 6" "Advanced Realtime Performance Tuning"
     check "Diretta app realtime priority is set to 70" "[[ \$(ps -o rtprio -C diretta_app_target | tail -n 1 | tr -d ' ') -eq 70 ]]"
-    check "CPU isolation is set to core 3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '3' ]]"
+    check "CPU isolation is set to cores 2 and 3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '2-3' ]]"
     check "Diretta app is running on the isolated core" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'diretta_app_target'"
 }
 
