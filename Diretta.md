@@ -2144,6 +2144,7 @@ Next, we will give the Diretta application a "not too high" priority, ensuring i
     Now you can configure your preferred method...
     ?manual
     ```
+    **Note:** it may take up to a minute for the terminal to return
 4.  After confirming the changes, select **7) Exit** to return to the command line.
 5.  Reboot the Diretta Target for all changes to take effect.
     ```bash
