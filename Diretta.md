@@ -2114,9 +2114,11 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
 
     Type the application(s) that should be confined to group 1...:
     ?diretta_app_target
-
+    ```
+    **Note:** For this last question, the IRQ for network interface `end0` may be 104 for the RPi5 or 27 and 28 for the RPi4. Use what the screen shows above for the network interface IRQ on your system.
+    ```
     Type the IRQ numbers that should be confined to the group 1...:
-    ?27 28
+    ?104
     ```
 5.  After the process completes, press **ENTER** to exit back to the main menu. **Do not reboot yet.**
 
