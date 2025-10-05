@@ -1965,16 +1965,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     sudo setcap 'cap_net_bind_service=+ep' "$PYTHON_EXEC"
     ```
 
-10. **Test the Flask App Interactively:**
-    Now, run the app from the command line on the **Diretta Host** to ensure it starts correctly.
-    ```bash
-    cd ~/purist-mode-webui
-    pyenv activate purist-webui
-    python app.py
-    ```
-    You should see output indicating the Flask server has started on port **8080**. From another device, access [http://diretta-host.local:8080](http://diretta-host.local:8080). If it works, return to the SSH terminal and press `Ctrl+C` to stop the server.
-
-11. **Grant Sudo Permissions on the Host:**
+10. **Grant Sudo Permissions on the Host:**
     This step is critical for allowing the web application to restart the necessary Roon-related services without a password.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/webui-restarts
@@ -1984,6 +1975,15 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     EOT
     sudo chmod 0440 /etc/sudoers.d/webui-restarts
     ```
+
+11. **Test the Flask App Interactively:**
+    Now, run the app from the command line on the **Diretta Host** to ensure it starts correctly.
+    ```bash
+    cd ~/purist-mode-webui
+    pyenv activate purist-webui
+    python app.py
+    ```
+    You should see output indicating the Flask server has started on port **8080**. From another device, access [http://diretta-host.local:8080](http://diretta-host.local:8080). If it works, return to the SSH terminal and press `Ctrl+C` to stop the server.
 
 12. **Create the `systemd` Service:**
     This service will run the web app automatically the **Diretta Host**, using the correct Python executable from our `pyenv` virtual environment.
