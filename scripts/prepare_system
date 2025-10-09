@@ -87,7 +87,11 @@ echo "------------------------------------------------"
 
 # Step 5: Remove AudioLinux Menu Configuration Data
 echo "🧹 Resetting AudioLinux Menu Configuration Data..."
-rm -fv "/opt/configuration/data"
+tee "/opt/configuration/data" <<EOT> /dev/null
+EMAIL=
+VERSION=
+EOT
+chmod 600 "/opt/configuration/data"
 echo "------------------------------------------------"
 
 # Step 6: Clean up root's Bash history

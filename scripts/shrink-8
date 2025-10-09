@@ -154,7 +154,11 @@ EOF
 
   # Remove AudioLinux Configuration Data
   echo "Removing AudioLinux Menu Configuration Data..."
-  sudo rm -fv "${MOUNT_POINT}/opt/configuration/data"
+  sudo tee "${MOUNT_POINT}/opt/configuration/data" <<EOT> /dev/null
+EMAIL=
+VERSION=
+EOT
+  sudo chmod 600 "${MOUNT_POINT}/opt/configuration/data"
 
   # --- Clean up root's Bash history ---
   if [ -f "${MOUNT_POINT}/root/.bash_history" ]; then
