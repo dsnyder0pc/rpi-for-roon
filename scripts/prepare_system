@@ -61,8 +61,6 @@ rm -fv "/home/audiolinux/roon-ir-remote/.roon-token"
 
 echo "------------------------------------------------"
 
-# ... (previous steps remain the same)
-
 # Step 4: Extract Diretta Target Information
 echo "🔗 Extracting Diretta Target Information..."
 DIRETTA_APP="/opt/diretta-alsa-target/diretta_app_activate"
@@ -87,7 +85,12 @@ fi
 
 echo "------------------------------------------------"
 
-# Step 5: Clean up root's Bash history
+# Step 5: Remove AudioLinux Menu Configuration Data
+echo "🧹 Resetting AudioLinux Menu Configuration Data..."
+rm -fv "/opt/configuration/data"
+echo "------------------------------------------------"
+
+# Step 6: Clean up root's Bash history
 echo "🧹 Cleaning up root user's Bash history..."
 history -c
 if [ -f "$HOME/.bash_history" ]; then
@@ -98,7 +101,7 @@ export HISTSIZE=0
 echo "   - History disabled for this session."
 echo "------------------------------------------------"
 
-# Step 6: Sync disks and power off the system
+# Step 7: Sync disks and power off the system
 echo "✅ Preparation complete. System will power off in 5 seconds."
 sleep 5
 sync
