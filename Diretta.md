@@ -93,6 +93,14 @@ The scripts and commands have been carefully written to be safe and to prevent e
 
 ---
 
+### Video Walkthrough
+
+Here's a link to a series of short videos walking through this process:
+
+* [Diretta Build Walkthrough with Two Raspberry Pi Computers](https://youtube.com/playlist?list=PLMl09rJ6zKCk13V-IH_kRKW7FP8Q0_Fw0&si=u_E8rUEhgMiQ4NIb)
+
+---
+
 ### 1. Prerequisites
 
 #### Hardware
