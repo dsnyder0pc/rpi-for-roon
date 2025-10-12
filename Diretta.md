@@ -1268,7 +1268,7 @@ fi
 pyenv global $PYVER
 ```
 
-**Note:** It's normal for the `Installing Python-3.13.7...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
+**Note:** It's normal for the `Installing Python-3.14.0...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
 ---
 
