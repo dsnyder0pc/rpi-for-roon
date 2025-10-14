@@ -133,7 +133,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [iFi SilentPower Pulsar USB Cable](https://www.silentpower.tech/products/pulsar-usb) (USB connection with galvanic isolation)
 * 1 x [DC 5.5mm x 2.1mm to UsB C Adapter](https://www.amazon.com/5-5mm-Adapter-Female-Convert-Connector/dp/B0CRB7N4GH/) (needed to adapt the plug on the iPower Elite to the Diretta Target's USB C power input)
 * 1 x [SMSL PO100 PRO DDC](https://www.amazon.com/dp/B0BLYVZCV5) (a digital-to-digital converter for DACs that lack a good USB input implementation)
-* 1 x [USB Wireless Adapter](https://www.amazon.com/gp/product/B078NRDTYK/) (a wired connection is highly preferable and more reliable, but if adding wired Ethernet near your audio system is impractical, replace the Plugable USB to Ethernet adapter with this Wi-Fi adapter)
+* 1 x [USB Wireless Adapter](https://www.pishop.us/product/raspberry-pi-dual-band-5ghz-2-4ghz-usb-wifi-adapter-with-antenna/) (a wired connection is highly preferable and more reliable, but if adding wired Ethernet near your audio system is impractical, replace the Plugable USB to Ethernet adapter with this Wi-Fi adapter)
 * 1 x [Power Splitter Cord](https://www.amazon.com/dp/B01K3ADXX2?th=1) (plug both 45W power adapters into a single receptacle)
 
 **Required Audio Component:**
