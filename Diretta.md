@@ -561,9 +561,9 @@ SSH_DIR="$HOME/.ssh"
 
 # --- Ensure the .ssh directory and config file exist with correct permissions ---
 mkdir -p "$SSH_DIR"
-chmod 700 "$SSH_DIR"
+chmod 0700 "$SSH_DIR"
 touch "$SSH_CONFIG_FILE"
-chmod 600 "$SSH_CONFIG_FILE"
+chmod 0600 "$SSH_CONFIG_FILE"
 
 # --- Define the recommended global settings block ---
 GLOBAL_SETTINGS=$(cat <<'EOF'
@@ -2223,7 +2223,7 @@ With our audio applications running on dedicated cores, they no longer need to c
 
 #### **Step 6.5: Reduce Diretta `CycleTime`**
 
-With the real-time kernel optimizations in place, the Diretta Host can now handle a more aggressive packet interval, which can lead to improved sound quality. This final step reduces the `CycleTime` parameter from 800 to 600 microseconds.
+With the real-time kernel optimizations in place, the Diretta Host can now handle a more aggressive packet interval, which can lead to improved sound quality. This final step reduces the `CycleTime` parameter from 800 to 514 microseconds. This smaller timing gap between packets ensures that that all content up to DSD256 and DXD (32-bit, 352.8 kHz) will require only one packet per cycle.
 
 1.  SSH to the **Diretta Host** if you are not still logged in.
 2.  Run the following command to apply the optimized setting:
@@ -2235,7 +2235,7 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     ThredMode=1
     InfoCycle=100000
     FlexCycle=disable
-    CycleTime=600
+    CycleTime=514
     CycleMinTime=
     Debug=stdout
     periodMax=32
