@@ -67,15 +67,15 @@ echo "PATH configured. Log out and back in for changes to apply universally."
 # --- Clean and Set IgnorePkg ---
 PACMAN_CONF="/etc/pacman.conf"
 echo "Cleaning old LLVM IgnorePkg entries and setting for required version (${PACKAGES_TO_IGNORE})..."
-sudo sed -i '/^IgnorePkg =.*\(clang\|llvm\|lld\)[0-9]*/d' ${PACMAN_CONF}
-sudo sed -i '/^IgnorePkg =.*\(clang\|llvm\|lld\)\s/d' ${PACMAN_CONF}
-sudo sed -i '/^IgnorePkg =.*\(clang\|llvm\|lld\)$/d' ${PACMAN_CONF}
-if ! grep -q "^IgnorePkg =.*${CLANG_PKG}" ${PACMAN_CONF}; then
-    sudo sed -i "0,/^#*IgnorePkg\s*=\s*/{s/^#*IgnorePkg\s*=\s*.*/IgnorePkg = ${PACKAGES_TO_IGNORE}/}" ${PACMAN_CONF}
-    echo "Added required packages to IgnorePkg."
-else
-    echo "Required packages already seem to be in IgnorePkg."
-fi
+
+# Remove any existing IgnorePkg lines (commented or uncommented) to avoid duplicates
+sudo sed -i '/^#*IgnorePkg\s*=/d' ${PACMAN_CONF}
+
+# Add the new, correct IgnorePkg line directly after the [options] header
+sudo sed -i "/^\[options\]/a IgnorePkg = ${PACKAGES_TO_IGNORE}" ${PACMAN_CONF}
+
+echo "Set IgnorePkg to: ${PACKAGES_TO_IGNORE}"
+
 
 # --- Verification ---
 echo "Verifying installation..."
