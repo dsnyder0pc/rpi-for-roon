@@ -385,7 +385,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     **Important:** Remove the old en.network file if present:
     ```bash
     # Remove the old generic network file to prevent conflicts.
-    sudo rm -fv /etc/systemd/network/en.network
+    sudo rm -fv /etc/systemd/network/{en,auto,eth}.network
     ```
 
     Add an /etc/hosts entry for the Diretta Target:
@@ -485,7 +485,7 @@ EOT
 **Important:** Remove the old en.network file if present:
 ```bash
 # Remove the old generic network file to prevent conflicts.
-sudo rm -fv /etc/systemd/network/en.network
+sudo rm -fv /etc/systemd/network/{en,auto,eth}.network
 ```
 
 Add an /etc/hosts entry for the Diretta Host. **Note:** Even if you selected a different network name for your Diretta Host, it's best for the Diretta Target to know your Host as `diretta-host`.
