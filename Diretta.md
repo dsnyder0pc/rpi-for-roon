@@ -466,8 +466,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     sudo rm /etc/iptables/iptables.rules 2>/dev/null
 
     # Enable and apply rules via nft
-    sudo systemctl enable nftables.service
-    sudo systemctl restart nftables.service
+    sudo systemctl enable --now nftables.service
     ```
 
 4.  **Configure the Plugable USB to Ethernet Adapter**
