@@ -446,6 +446,9 @@ If you just finished updating your Diretta Target, click [here](https://github.c
 
             # Allow NEW traffic matching your port forward rule
             ip daddr 172.20.0.2 tcp dport 5001 ct state new accept
+
+            # Allow all other NEW traffic from the Target subnet
+            ip saddr 172.20.0.0/24 accept
         }
 
         # === Rule 1: Internet Access (MASQUERADE) ===
