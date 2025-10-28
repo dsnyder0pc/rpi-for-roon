@@ -271,7 +271,7 @@ echo "You will first select a region, then a specific timezone."
 # Allow the user to select a region
 PS3="
 Please select a number for your region: "
-select region in $(timedatectl list-timezones | cut -d/ -f1 | sort -u); do
+select region in $(timedatectl list-timezones | grep -F / | cut -d/ -f1 | sort -u); do
   if [[ -n "$region" ]]; then
     echo "You have selected the region: $region"
     break
