@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.7
+# Diretta Target QA Check Script v1.8
 #
 
 # --- Colors and Formatting ---
@@ -87,12 +87,13 @@ header "Section 4" "System Updates & Time"
 check "'chrony' package is installed" "pacman -Q chrony"
 check "'chronyd' service is enabled" "systemctl is-enabled chronyd.service"
 check "Timezone is configured" "[ -e /etc/localtime ] && [[ \$(readlink /etc/localtime) == ../usr/share/zoneinfo/* ]]"
+check "'dnsutils' package is installed (for menu updates)" "pacman -Q dnsutils"
 
 header "Section 5" "Point-to-Point Network Configuration"
 check "P2P network file 'end0.network' exists" "[ -f /etc/systemd/network/end0.network ]"
 check "P2P network file contains correct IP" "grep -q 'Address=172.20.0.2/24' /etc/systemd/network/end0.network"
 check "P2P network file contains correct Gateway" "grep -q 'Gateway=172.20.0.1' /etc/systemd/network/end0.network"
-check "Old generic network file is removed" "! [ -f /etc/systemd/network/en.network ]"
+check "Old generic network files are removed" "! [ -f /etc/systemd/network/en.network ] && ! [ -f /etc/systemd/network/auto.network ] && ! [ -f /etc/systemd/network/eth.network ]"
 check "/etc/hosts contains 'diretta-host' entry" "grep -q '172.20.0.1.*diretta-host' /etc/hosts"
 
 header "Section 7" "Common System Optimizations"
@@ -111,6 +112,13 @@ check "'diretta_alsa_target' service is enabled" "systemctl is-enabled diretta_a
 check "'diretta_alsa_target' service is active" "systemctl is-active diretta_alsa_target.service"
 check "USB DAC/DDC is configured and detected" "journalctl -b -u diretta_alsa_target.service | grep -q 'DAC Name :'"
 check_status "Diretta Target License Status" "ls /opt/diretta-alsa-target/ | grep -qv '^diretta'" "activated" "limited"
+
+header "Section 8a" "Diretta Compiler Toolchain"
+check "Compiler profile script exists" "[ -f /etc/profile.d/llvm_diretta.sh ]"
+check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\\$PATH' /etc/profile.d/llvm_diretta.sh"
+check "pacman.conf ignores 'clang'" "grep -Pq '^IgnorePkg\s*=\s*.*(clang|clang[0-9]+)' /etc/pacman.conf"
+check "pacman.conf ignores 'llvm'" "grep -Pq '^IgnorePkg\s*=\s*.*(llvm|llvm[0-9]+)' /etc/pacman.conf"
+check "pacman.conf ignores 'lld'" "grep -Pq '^IgnorePkg\s*=\s*.*(lld|lld[0-9]+)' /etc/pacman.conf"
 
 # --- Optional Appendix Checks ---
 check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Appendix 1 (Argon ONE Fan)"

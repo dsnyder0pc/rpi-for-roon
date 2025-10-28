@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.7
+# Diretta Host QA Check Script v1.8
 #
 
 # --- Colors and Formatting ---
@@ -85,20 +85,26 @@ check "'chrony' package is installed" "pacman -Q chrony"
 check "'chronyd' service is enabled" "systemctl is-enabled chronyd.service"
 check "'chronyd' service is active" "systemctl is-active chronyd.service"
 check "Timezone is configured" "[ -e /etc/localtime ] && [[ \$(readlink /etc/localtime) == ../usr/share/zoneinfo/* ]]"
+check "'dnsutils' package is installed (for menu updates)" "pacman -Q dnsutils"
 
 header "Section 5" "Point-to-Point Network Configuration"
 check "P2P network file 'end0.network' exists" "[ -f /etc/systemd/network/end0.network ]"
 check "P2P network file contains correct IP" "grep -q 'Address=172.20.0.1/24' /etc/systemd/network/end0.network"
 check "USB LAN network file 'enp.network' exists" "[ -f /etc/systemd/network/enp.network ]"
 check "USB LAN network file is set for DHCP" "grep -q 'DHCP=yes' /etc/systemd/network/enp.network"
-check "Old generic network file is removed" "! [ -f /etc/systemd/network/en.network ]"
+check "Old generic network files are removed" "! [ -f /etc/systemd/network/en.network ] && ! [ -f /etc/systemd/network/auto.network ] && ! [ -f /etc/systemd/network/eth.network ]"
 check "/etc/hosts contains 'diretta-target' entry" "grep -q '172.20.0.2.*diretta-target' /etc/hosts"
 check "IP forwarding is enabled in sysctl.d" "grep -q 'net.ipv4.ip_forward=1' /etc/sysctl.d/99-ip-forwarding.conf"
 check "IP forwarding is active in kernel" "[[ \$(cat /proc/sys/net/ipv4/ip_forward) -eq 1 ]]"
-check "iptables NAT rule file exists" "[ -f /etc/iptables/iptables.rules ]"
-check "iptables contains Target UI port forward (DNAT)" "grep -q -- '--to-destination 172.20.0.2:5001' /etc/iptables/iptables.rules"
-check "iptables contains FORWARD rule for Target UI" "grep -q -- '-A FORWARD -d 172.20.0.2' /etc/iptables/iptables.rules"
-check "'iptables' service is enabled" "systemctl is-enabled iptables.service"
+check "'nftables' package is installed" "pacman -Q nftables"
+check "'nftables' service is enabled" "systemctl is-enabled nftables.service"
+check "'nftables' service is active" "systemctl is-active nftables.service"
+check "nftables config file '/etc/nftables.conf' exists" "[ -f /etc/nftables.conf ]"
+check "nftables config contains DNAT rule (5101 -> 5001)" "grep -q 'tcp dport 5101 dnat to 172.20.0.2:5001' /etc/nftables.conf"
+check "nftables config contains FORWARD rule (-> 5001)" "grep -q 'ip daddr 172.20.0.2 tcp dport 5001 ct state new accept' /etc/nftables.conf"
+check "nftables config contains MASQUERADE rules" "grep -q 'oifname \"enp\*\" masquerade' /etc/nftables.conf && grep -q 'oifname \"wlp\*\" masquerade' /etc/nftables.conf"
+check "Old 'iptables' service is disabled" "! systemctl is-enabled iptables.service 2>/dev/null"
+check "Old 'iptables' rule file is removed" "! [ -f /etc/iptables/iptables.rules ] 2>/dev/null"
 check "USB Ethernet udev rule exists" "[ -f /etc/udev/rules.d/99-ax88179a.rules ]"
 check "MOTD update script is up-to-date" "[ -f /opt/scripts/update/update_motd.sh ] && [[ \$(md5sum /opt/scripts/update/update_motd.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh | md5sum | awk '{print \$1}') ]]"
 
@@ -119,6 +125,13 @@ check "'diretta_alsa' service is enabled" "systemctl is-enabled diretta_alsa.ser
 check "'diretta_alsa' service is active" "systemctl is-active diretta_alsa.service"
 check "Diretta is configured for 'end0' interface" "grep -q 'Interface=end0' /opt/diretta-alsa/setting.inf"
 check "Diretta service is set to auto-restart" "[ -f /etc/systemd/system/diretta_alsa.service.d/restart.conf ] && grep -q 'Restart=on-failure' /etc/systemd/system/diretta_alsa.service.d/restart.conf"
+
+header "Section 8a" "Diretta Compiler Toolchain"
+check "Compiler profile script exists" "[ -f /etc/profile.d/llvm_diretta.sh ]"
+check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\\$PATH' /etc/profile.d/llvm_diretta.sh"
+check "pacman.conf ignores 'clang'" "grep -Pq '^IgnorePkg\s*=\s*.*(clang|clang[0-9]+)' /etc/pacman.conf"
+check "pacman.conf ignores 'llvm'" "grep -Pq '^IgnorePkg\s*=\s*.*(llvm|llvm[0-9]+)' /etc/pacman.conf"
+check "pacman.conf ignores 'lld'" "grep -Pq '^IgnorePkg\s*=\s*.*(lld|lld[0-9]+)' /etc/pacman.conf"
 
 header "Section 9" "Roon Integration"
 check "'roonbridge' is installed" "pacman -Q roonbridge"
