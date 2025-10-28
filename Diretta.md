@@ -327,7 +327,7 @@ sudo pacman -S --noconfirm dnsutils
 
 #### 4.5. Run System and Menu Updates
 
-Use the AudioLinux menu system to perform all updates.
+Use the AudioLinux menu system to perform all updates. Have your email from Piero with your image download user and password. You'll need these for the menu update. It will ask for **your menu update user**, which is a bit confusing. It's asking for the username and password that you used to download the AudioLinux install image.
 
 1.  Run `menu` in the terminal.
 2.  Select **INSTALL/UPDATE menu**.
