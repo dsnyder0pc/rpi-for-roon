@@ -868,8 +868,10 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     2) Install previous version
     3) Enable/Disable Diretta Target
     4) Configure Audio card
-    5) License
-    6) Exit
+    5) Edit configuration
+    6) Copy and edit new default configuration
+    7) License
+    8) Exit
 
     ?
     ```
@@ -887,7 +889,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         Please type the card number (0,1,2...) you want to use:
         ?0
         ```
-    * Choose **5) License**. The system will play hi-res (greater than 44.1 kHz PCM audio) for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license for hi-res support. This requires the internet access we configured in step 5.
+    * Choose **7) License**. The system will play hi-res (greater than 44.1 kHz PCM audio) for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license for hi-res support. This requires the internet access we configured in step 5.
 
 #### 8.2. On the Diretta Host
 
