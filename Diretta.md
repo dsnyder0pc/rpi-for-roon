@@ -911,7 +911,8 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     2) Enable/Disable Diretta daemon
     3) Set Ethernet interface
     4) Edit configuration
-    5) Exit
+    5) Copy and edit new default configuration
+    6) Exit
 
     ?
     ```
