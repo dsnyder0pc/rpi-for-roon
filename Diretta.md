@@ -811,9 +811,14 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 1.  Connect your USB DAC to one of the black USB 2.0 ports on the **Diretta Target** and ensure the DAC is powered on.
 2.  SSH to the Target: `ssh diretta-target`.
-3.  Run `menu`.
-4.  Select **AUDIO extra menu**.
-5.  Select **DIRETTA target installation**. You will see the following menu:
+3.  Configure Compatible Compiler Toolchain
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_diretta_compiler.sh | sudo bash
+    source /etc/profile.d/llvm_diretta.sh
+    ```
+4.  Run `menu`.
+5.  Select **AUDIO extra menu**.
+6.  Select **DIRETTA target installation**. You will see the following menu:
     ```text
     What do you want to do?
 
@@ -826,7 +831,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
     ?
     ```
-6.  You should perform these actions in sequence:
+7.  You should perform these actions in sequence:
     * Choose **1) Install/update** to install the software.
     * Choose **3) Enable/Disable Diretta Target** and enable it.
     * Choose **4) Configure Audio card**. The system will list your available audio devices. Enter the card number corresponding to your USB DAC.
@@ -846,9 +851,15 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 1.  SSH to the Host: `ssh diretta-host`.
 
-2.  Select **AUDIO extra menu**.
+2.  Configure Compatible Compiler Toolchain
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_diretta_compiler.sh | sudo bash
+    source /etc/profile.d/llvm_diretta.sh
+    ```
 
-3.  Select **DIRETTA host installation/configuration**. You will see the following menu:
+3.  Select **AUDIO extra menu**.
+
+4.  Select **DIRETTA host installation/configuration**. You will see the following menu:
     ```text
     What do you want to do?
 
@@ -861,7 +872,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ?
     ```
 
-4.  You should perform these actions in sequence:
+5.  You should perform these actions in sequence:
     * Choose **1) Install/update** to install the software. *(Note: you may see `error: package 'lld' was not found. Don't worry, that will be corrected automatically by the installation)*
     * Choose **2) Enable/Disable Diretta daemon** and enable it.
     * Choose **3) Set Ethernet interface**. It is critical to select `end0`, the interface for the point-to-point link.
@@ -905,7 +916,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         EOT
         ```
 
-5.  Create an override to make the Diretta service auto-restart on failure
+6.  Create an override to make the Diretta service auto-restart on failure
     ```bash
     sudo mkdir -p /etc/systemd/system/diretta_alsa.service.d
     cat <<'EOT' | sudo tee /etc/systemd/system/diretta_alsa.service.d/restart.conf
