@@ -10,13 +10,12 @@ import json
 import logging
 import sys
 from flask import Flask, render_template_string, jsonify, request, redirect, url_for, flash
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # --- Configuration ---
 REMOTE_USER = "purist-app"
 REMOTE_HOST = "diretta-target"
 SSH_KEY_PATH = os.path.expanduser("~/.ssh/purist_app_key")
-PLAYBACK_THRESHOLD_SECONDS = 15
 ROON_CONFIG_PATH = os.path.expanduser('~/roon-ir-remote/app_info.json')
 
 
@@ -245,35 +244,32 @@ MUSIC_PLAYING_TEMPLATE = """
 # --- BACKEND LOGIC (Helper Functions) ---
 
 def is_music_playing():
-    """Checks if music is actively playing by inspecting the local Diretta Host log."""
-    try:
-        # Check the local diretta_alsa.service log on the Host
-        cmd = ["/usr/bin/journalctl", "-u", "diretta_alsa.service", "--no-pager", "-n", "20", "-g", "info rcv"]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+    """Checks if music is actively playing by inspecting /proc/asound/."""
+    # Define the path to the ALSA status file
+    status_file_path = "/proc/asound/card0/pcm0p/sub0/status"
 
-        if result.returncode != 0 or not result.stdout:
+    try:
+        # Read the content of the status file
+        with open(status_file_path, 'r') as f:
+            status_content = f.read()
+
+        # Check if the state is "RUNNING"
+        if "state: RUNNING" in status_content:
+            app.logger.info("Playback detected on Host via /proc.")
+            return True
+        else:
+            # This will catch "closed" and other states
+            app.logger.info("No playback detected on Host via /proc (state is not RUNNING).")
             return False
 
-        last_line = result.stdout.strip().split('\n')[-1]
-        log_time_str = ' '.join(last_line.split()[:3])
-        log_time = datetime.strptime(log_time_str, "%b %d %H:%M:%S").replace(year=datetime.now().year)
-
-        now = datetime.now()
-        # Handle year-end case: if log is Dec and now is Jan, log was last year.
-        if log_time > now and log_time.month == 12 and now.month == 1:
-            log_time = log_time.replace(year=now.year - 1)
-
-        delta = now - log_time
-        if 0 <= delta.total_seconds() < PLAYBACK_THRESHOLD_SECONDS:
-            app.logger.info(f"Playback detected on Host. Last log entry was {delta.total_seconds():.2f}s ago.")
-            return True
-
-    except Exception as e:
-        app.logger.error(f"Error checking playback status on Host: {e}")
+    except FileNotFoundError:
+        # This handles the case where the path doesn't exist, which implies no playback
+        app.logger.info(f"ALSA status file not found at {status_file_path}. Assuming no playback.")
         return False
-
-    app.logger.info("No recent playback detected on Host.")
-    return False
+    except Exception as e:
+        # Catch other potential errors (e.g., permissions)
+        app.logger.error(f"Error checking playback status via /proc: {e}")
+        return False
 
 def run_remote_command(command):
     """Executes a command on the Diretta Target via SSH."""
