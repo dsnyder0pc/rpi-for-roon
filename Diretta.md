@@ -2416,9 +2416,9 @@ On the Target, we will disable both `isolated_app.timer` and `rtapp.timer` and h
     sudo bash -c 'cat <<EOF > /etc/systemd/system/diretta_alsa_target.service.d/10-local-hooks.conf
     [Service]
     ExecStartPost=/opt/scripts/system/isolated_app.sh
-    ExecStartPost=/bin/bash /usr/bin/rtapp
+    ExecStartPost=-/bin/bash /usr/bin/rtapp
     ExecReloadPost=/opt/scripts/system/isolated_app.sh
-    ExecReloadPost=/bin/bash /usr/bin/rtapp
+    ExecReloadPost=-/bin/bash /usr/bin/rtapp
     EOF'
     ```
 
