@@ -105,7 +105,28 @@ export HISTSIZE=0
 echo "   - History disabled for this session."
 echo "------------------------------------------------"
 
-# Step 7: Sync disks and power off the system
+# Step 7: Clean up audiolinux user's Bash history
+# (This is handled by the curl command, but we clean it one last time)
+echo "🧹 Cleaning up audiolinux user's Bash history..."
+USER_HISTORY="/home/$TARGET_USER/.bash_history"
+if [ -f "$USER_HISTORY" ]; then
+    cat /dev/null > "$USER_HISTORY"
+    echo "   - Cleared history file for user '$TARGET_USER'."
+fi
+echo "------------------------------------------------"
+
+# Step 8: Clean up audiolinux user's wget logs
+echo "🧹 Cleaning up audiolinux user's wget logs..."
+WGET_LOGS="/home/$TARGET_USER/wget-log*"
+if ls $WGET_LOGS &> /dev/null; then
+    rm -fv $WGET_LOGS
+    echo "   - Removed wget-log files."
+else
+    echo "   - No wget-log files found. Skipping."
+fi
+echo "------------------------------------------------"
+
+# Step 9: Sync disks and power off the system
 echo "✅ Preparation complete. System will power off in 5 seconds."
 sleep 5
 sync

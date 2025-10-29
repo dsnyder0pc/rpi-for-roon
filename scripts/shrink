@@ -173,6 +173,11 @@ EOT
     sudo truncate --size 0 "${MOUNT_POINT}/home/audiolinux/.bash_history"
   fi
 
+  # --- Clean up audiolinux user's wget logs ---
+  echo "Cleaning up audiolinux user's wget logs..."
+  # Use sh -c to handle the glob expansion and potential "no file" errors gracefully
+  sudo sh -c "rm -fv ${MOUNT_POINT}/home/audiolinux/wget-log*"
+
   # --- END OF CLEANUP SYNCHRONIZATION ---
 
   if [ -d "${MOUNT_POINT}/opt/diretta-alsa-target" ]; then
@@ -183,7 +188,6 @@ EOT
     fi
   fi
 ) # The subshell now exits, and its trap automatically cleans up mounts/loops.
-
 # --- PHASE 2: Shrink the fully prepared and unmounted image ---
 echo "--- Shrinking image ---"
 sudo pishrink.sh "${WORK_FILE}"
