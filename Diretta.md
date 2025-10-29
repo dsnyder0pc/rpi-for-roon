@@ -76,6 +76,7 @@ If you are located in the US, expect to pay around $295 (plus tax and shipping) 
 13. [Appendix 4: Optional System Control Web UI](#13-appendix-4-optional-system-control-web-ui)
 14. [Appendix 5: System Health Checks](#14-appendix-5-system-health-checks)
 15. [Appendix 6: Advanced Realtime Performance Tuning](#15-appendix-6-advanced-realtime-performance-tuning)
+16. [Appendix 7: Optimize CPU with Event-Driven Hooks](#16-appendix-7-optimize-cpu-with-event-driven-hooks)
 
 ---
 
@@ -2351,3 +2352,146 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
 > Your advanced realtime tuning should now be complete. To verify all components of this new configuration, please return to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
+
+## 16. Appendix 7: Optimize CPU with Event-Driven Hooks
+
+This appendix provides an advanced optimization to further reduce system jitter and needless CPU activity.
+
+The default AudioLinux configuration includes background "timers" (e.g., `isolated_app.timer`, `rtapp.timer`) that run tuning scripts once per minute. While effective, these timers cause periodic CPU spikes, which is contrary to our goal of a quiet, stable system.
+
+This guide will replace that "periodic" behavior with an "event-driven" one. We will **disable the timers** and instead use `systemd` drop-in files to run these tuning scripts **only once** when the main audio services start. This "set it and forget it" approach eliminates the one-minute CPU spikes entirely.
+
+-----
+
+### **Part 1: Optimizing the Diretta Target**
+
+On the Target, we will disable both `isolated_app.timer` and `rtapp.timer` and hook their scripts into the `diretta_alsa_target.service`.
+
+1.  SSH to the Diretta Target:
+
+    ```bash
+    ssh diretta-target
+    ```
+
+2.  **Stop and Disable the Timers:**
+    This command permanently stops the timers from running and removes their auto-start links.
+
+    ```bash
+    sudo systemctl stop isolated_app.timer rtapp.timer
+    sudo systemctl disable isolated_app.timer rtapp.timer
+    ```
+
+3.  **Create the Systemd Drop-in Hook:**
+    This command creates a new configuration file that instructs `systemd` to run the two scripts *after* the main `diretta_alsa_target.service` starts.
+
+    ```bash
+    # Create the directory
+    sudo mkdir -p /etc/systemd/system/diretta_alsa_target.service.d/
+
+    # Create the drop-in file
+    sudo bash -c 'cat <<EOF > /etc/systemd/system/diretta_alsa_target.service.d/10-local-hooks.conf
+    [Service]
+    ExecStartPost=/opt/scripts/system/isolated_app.sh
+    ExecStartPost=-/bin/bash /usr/bin/rtapp
+    ExecReloadPost=/opt/scripts/system/isolated_app.sh
+    ExecReloadPost=-/bin/bash /usr/bin/rtapp
+    EOF'
+    ```
+
+    > **Note on the Hyphen (`-`):**
+    > The prefix `-` before the `/bin/bash /usr/bin/rtapp` command is intentional. The `rtapp` script may fail to run in this context (exiting with a non-zero status). The hyphen tells `systemd` to "ignore failure" for this specific command, allowing the main `diretta_alsa_target.service` to continue running.
+
+4.  **Reload Systemd and Restart the Service:**
+
+    ```bash
+    sudo systemctl daemon-reload
+    sudo systemctl restart diretta_alsa_target.service
+    ```
+
+5.  **Verify the Changes:**
+
+    ```bash
+    systemctl status diretta_alsa_target.service
+    ```
+
+    In the output, you should see that the service is `Active: active (running)`. You should also see two `Process:` lines, one for `isolated_app.sh` (which should show `status=0/SUCCESS`) and one for `rtapp` (which will likely show `status=1/FAILURE`). This is the correct and expected outcome.
+
+-----
+
+### **Part 2: Optimizing the Diretta Host**
+
+On the Host, we will disable the `isolated_app.timer` and hook its script into *both* the `roonbridge.service` and `diretta_alsa.service`. This ensures the optimizations are applied regardless of which service starts first.
+
+1.  SSH to the Diretta Host:
+
+    ```bash
+    ssh diretta-host
+    ```
+
+2.  **Stop and Disable the Timer:**
+
+    ```bash
+    sudo systemctl stop isolated_app.timer
+    sudo systemctl disable isolated_app.timer
+    ```
+
+3.  **Create the Systemd Drop-in Hooks:**
+    We must create two separate drop-in files, one for each service.
+
+    **For `roonbridge.service`:**
+
+    ```bash
+    # Create the directory
+    sudo mkdir -p /etc/systemd/system/roonbridge.service.d/
+
+    # Create the drop-in file
+    sudo bash -c 'cat <<EOF > /etc/systemd/system/roonbridge.service.d/10-local-hooks.conf
+    [Service]
+    ExecStartPost=/opt/scripts/system/isolated_app.sh
+    ExecReloadPost=/opt/scripts/system/isolated_app.sh
+    EOF'
+    ```
+
+    **For `diretta_alsa.service`:**
+
+    ```bash
+    # Create the directory
+    sudo mkdir -p /etc/systemd/system/diretta_alsa.service.d/
+
+    # Create the drop-in file
+    sudo bash -c 'cat <<EOF > /etc/systemd/system/diretta_alsa.service.d/10-local-hooks.conf
+    [Service]
+    ExecStartPost=/opt/scripts/system/isolated_app.sh
+    ExecReloadPost=/opt/scripts/system/isolated_app.sh
+    EOF'
+    ```
+
+4.  **Reload Systemd and Restart the Services:**
+
+    ```bash
+    sudo systemctl daemon-reload
+    sudo systemctl restart roonbridge.service
+    sudo systemctl restart diretta_alsa.service
+    ```
+
+5.  **Verify the Changes:**
+    Check the status of both services.
+
+    ```bash
+    systemctl status roonbridge.service
+    systemctl status diretta_alsa.service
+    ```
+
+    For both services, you should see `Active: active (running)` and a `Process:` line for `isolated_app.sh` showing `status=0/SUCCESS`.
+
+-----
+
+>
+>
+> -----
+>
+> ### ✅ Checkpoint: Verify Your CPU Optimizations
+>
+> Your system is now optimized to run its tuning scripts only at boot, eliminating periodic CPU spikes. To verify this new configuration is working correctly with the rest of the system, please return to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
+>
+> -----
