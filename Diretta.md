@@ -2162,8 +2162,24 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
     ```
 3.  Navigate to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**).
 
-4.  Follow the prompts exactly as shown below to isolate **core 3** and assign the Diretta application to it.
+4.  Disable any previous settings as shown below:
+    ```text
+    Please chose your option:
+    1) Configure and enable
+    2) Disable
+    3) Exit
+    ?
+    2
 
+    ISOLATED CORES has been reset
+
+    IRQ balancer was disabled
+    It can be enabled in Expert menu
+
+    PRESS RETURN TO EXIT
+    ```
+
+5.  Follow the prompts exactly as shown below to isolate **core 3** and assign the Diretta application to it.
     ```text
     Please chose your option:
     1) Configure and enable
@@ -2179,13 +2195,12 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
 
     Type the application(s) that should be confined to group 1...:
     ?diretta_app_target
+
+    Please type the Address (iSerial) number of your card(s)...:
+    (Press ENTER if you don't want to assign IRQ to this group):
+    ?end0
     ```
-    **Note:** For this last question, the IRQ for network interface `end0` may be 104 for the RPi5 or 27 and 28 for the RPi4. Use what the screen shows above for the network interface IRQ on your system.
-    ```
-    Type the IRQ numbers that should be confined to the group 1...:
-    ?104
-    ```
-5.  After the process completes, press **ENTER** to exit back to the main menu. **Do not reboot yet.**
+6.  After the process completes, press **ENTER** to exit back to the main menu. **Do not reboot yet.**
 
 > **A Note on Automatic IRQ Affinity:** You may notice the script reports that it has also isolated the `end0` network IRQs to the same core. This is not a bug, but an intelligent optimization. The script automatically pins the network interrupts to the same core as the application using the network, creating the most efficient data path possible.
 
@@ -2196,7 +2211,7 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
 Next, we will give the Diretta application a "not too high" priority, ensuring it runs smoothly without interfering with the more critical USB audio interrupts.
 
 1.  Also under the **SYSTEM menu**, navigate to the **REALTIME PRIORITY configuration** menu.
-2.  Select **Option 5) Configure APPLICATION priority (expert)**.
+2.  Select **Option 4) Configure APPLICATION priority**.
 3.  Follow the prompts to set a **manual** priority of **70**.
 
     ```text
@@ -2211,8 +2226,7 @@ Next, we will give the Diretta application a "not too high" priority, ensuring i
     Now you can configure your preferred method...
     ?manual
     ```
-    **Note:** it may take up to a minute for the terminal to return
-4.  After confirming the changes, select **7) Exit** to return to the command line.
+4.  After confirming the changes, select **5) Exit** and return to the command line.
 5.  Reboot the Diretta Target for all changes to take effect.
     ```bash
     sudo sync && sudo reboot
@@ -2238,7 +2252,24 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     ```
 3.  Navigate to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**).
 
-4.  Follow the prompts to isolate **cores 2 and 3** and assign the relevant applications.
+4.  Disable any previous settings as shown below:
+    ```text
+    Please chose your option:
+    1) Configure and enable
+    2) Disable
+    3) Exit
+    ?
+    2
+
+    ISOLATED CORES has been reset
+
+    IRQ balancer was disabled
+    It can be enabled in Expert menu
+
+    PRESS RETURN TO EXIT
+    ```
+
+5.  Follow the prompts to isolate **cores 2 and 3** and assign the relevant applications.
 
     ```text
     Please chose your option:
@@ -2253,13 +2284,14 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     ?2,3
 
     Type the application(s) that should be confined to group 1...:
-    ?RoonBridge ssyncAlsa
+    ?RoonBridge syncAlsa
 
-    Type the IRQ numbers that should be confined to the group 1...:
-    ?27 28
+    Please type the Address (iSerial) number of your card(s)...:
+    (Press ENTER if you don't want to assign IRQ to this group):
+    ?end0
     ```
 
-5.  After the process completes, press **ENTER** to exit back to the main menu.
+6.  After the process completes, press **ENTER** to exit back to the main menu.
 
 ---
 
@@ -2269,7 +2301,7 @@ With our audio applications running on dedicated cores, they no longer need to c
 
 1.  Also under the **SYSTEM menu**, navigate to the **REALTIME PRIORITY configuration** menu.
 2.  Select **Option 2) Enable/disable APPLICATION service (rtapp)**. This will immediately disable the service.
-3.  Select **7) Exit** to return to the command line.
+3.  Select **5) Exit** and return to the command line.
 4.  Reboot the Diretta Host.
     ```bash
     sudo sync && sudo reboot
