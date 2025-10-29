@@ -2212,8 +2212,32 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
 Next, we will give the Diretta application a "not too high" priority, ensuring it runs smoothly without interfering with the more critical USB audio interrupts.
 
 1.  Also under the **SYSTEM menu**, navigate to the **REALTIME PRIORITY configuration** menu.
-2.  Select **Option 4) Configure APPLICATION priority**.
-3.  Follow the prompts to set a **manual** priority of **70**.
+2.  Select **Option 3) Configure IRQ priority**.
+3.  Follow the prompts to make sure there's a default IRQ Priority
+    ```text
+    Do you want to set the IRQ priority for each device? (1/2)
+    1 - IRQ priority (advanced)
+    2 - IRQ priority (simple)
+    3 - Exit
+    ?2
+
+    -> Your previous configuration has been saved to /etc/rtpriority/rtirqs.conf.bak
+    Please type xhci (default) or snd for internal cards
+    ?xhci
+
+    The max. available realtime priority is 98
+    Suggested values are 95 (extreme) or 90 (default)
+    Please enter your value:
+    ?70
+
+    Do you want to set the IRQ priority for each device? (1/2)
+    1 - IRQ priority (advanced)
+    2 - IRQ priority (simple)
+    3 - Exit
+    ?3
+    ```
+4.  Select **Option 4) Configure APPLICATION priority**.
+5.  Follow the prompts to set a **manual** priority of **70**.
 
     ```text
     ...
@@ -2227,8 +2251,8 @@ Next, we will give the Diretta application a "not too high" priority, ensuring i
     Now you can configure your preferred method...
     ?manual
     ```
-4.  After confirming the changes, select **5) Exit** and return to the command line.
-5.  Reboot the Diretta Target for all changes to take effect.
+6.  After confirming the changes, select **5) Exit** and return to the command line.
+7.  Reboot the Diretta Target for all changes to take effect.
     ```bash
     sudo sync && sudo reboot
     ```
