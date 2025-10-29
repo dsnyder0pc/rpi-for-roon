@@ -2179,7 +2179,7 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
     PRESS RETURN TO EXIT
     ```
 
-5.  Follow the prompts exactly as shown below to isolate **core 3** and assign the Diretta application to it.
+5.  Follow the prompts exactly as shown below to isolate **cores 2 and 3** and assign the Diretta application to it.
     ```text
     Please chose your option:
     1) Configure and enable

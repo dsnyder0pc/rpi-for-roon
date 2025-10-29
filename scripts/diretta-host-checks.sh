@@ -84,7 +84,7 @@ run_appendix6_checks() {
     check "'rtapp.timer' service is disabled" "! systemctl is-enabled rtapp.timer"
     check "CPU isolation is set to cores 2-3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '2-3' ]]"
     check "RoonBridge is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'RoonBridge'"
-    check "ssyncAlsa is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'ssyncAlsa'"
+    check "syncAlsa is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'syncAlsa'"
 }
 
 # --- Main Script ---
