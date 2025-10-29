@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.8
+# Diretta Host QA Check Script v1.9
 #
 
 # --- Colors and Formatting ---
@@ -25,7 +25,19 @@ check_optional_section() {
     if eval "$1" &>/dev/null; then eval "$2"; else echo -e "\n${C_BOLD}${C_YELLOW}--- Skipping QA for $3 (Not Detected) ---\033[0m"; fi
 }
 
+# --- State for Optional Checks ---
+PYTHON_CHECK_COMPLETE=0
+
 # --- QA Check Functions for Optional Sections ---
+run_python_checks() {
+    if [[ $PYTHON_CHECK_COMPLETE -eq 0 ]]; then
+        header 'Appendices 2 & 4' 'Optional: Python Environment'
+        check 'pyenv is installed for user audiolinux' '[ -d /home/audiolinux/.pyenv ]'
+        check 'A python version is installed via pyenv' 'ls /home/audiolinux/.pyenv/versions | grep -q "[0-9]"'
+        check '.bashrc is configured for pyenv' 'grep -q "pyenv init" /home/audiolinux/.bashrc'
+        PYTHON_CHECK_COMPLETE=1
+    fi
+}
 run_appendix1_checks() {
     header "Appendix 1" "Optional: Argon ONE Fan Control"
     check "/boot/config.txt enables i2c" "grep -q '^dtparam=i2c_arm=on' /boot/config.txt"
@@ -39,6 +51,7 @@ run_appendix1_checks() {
     check "Custom fan schedule '/etc/argononed.conf' exists" "[ -f /etc/argononed.conf ]"
 }
 run_appendix2_checks() {
+    check_optional_section "[ -d /home/audiolinux/.pyenv ]" "run_python_checks" "Python Environment"
     header "Appendix 2" "Optional: IR Remote Control"
     check "'audiolinux' user is in 'input' group" "groups audiolinux | grep -q '\<input\>'"
     check "'roon-ir-remote' directory exists" "[ -d /home/audiolinux/roon-ir-remote ]"
@@ -48,13 +61,14 @@ run_appendix2_checks() {
     check "'set-roon-zone' script is up-to-date" "[ -x /usr/local/bin/set-roon-zone ] && [[ \$(md5sum /usr/local/bin/set-roon-zone | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone | md5sum | awk '{print \$1}') ]]"
     # Only check for Argon IR specifics if the dtoverlay is active in /boot/config.txt
     if grep -q '^dtoverlay=gpio-ir,gpio_pin=23' /boot/config.txt; then
-        header "Appendix 2a" "Optional: Argon IR Receiver"
+        header "Appendix 2b" "Optional: Argon IR Receiver"
         check "/boot/config.txt enables Argon IR" "grep -q '^dtoverlay=gpio-ir,gpio_pin=23' /boot/config.txt"
         check "Argon IR keymap '/etc/rc_keymaps/argon.toml' exists" "[ -f /etc/rc_keymaps/argon.toml ]"
         check "'ir-keymap' service is enabled" "systemctl is-enabled ir-keymap.service"
     fi
 }
 run_appendix4_checks() {
+    check_optional_section "[ -d /home/audiolinux/.pyenv ]" "run_python_checks" "Python Environment"
     header "Appendix 4" "Optional: Purist Mode Web UI"
     check "'avahi-daemon' service is enabled" "systemctl is-enabled avahi-daemon.service"
     check "Avahi is configured for USB LAN" "[ -f /etc/avahi/avahi-daemon.conf.d/interface-scoping.conf ]"
@@ -140,7 +154,6 @@ check "'roonbridge' service is active" "systemctl is-active roonbridge.service"
 
 # --- Optional Appendix Checks ---
 check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Appendix 1 (Argon ONE Fan)"
-check_optional_section "[ -d /home/audiolinux/.pyenv ]" "header 'Appendices 2 & 4' 'Optional: Python Environment'; check 'pyenv is installed for user audiolinux' '[ -d /home/audiolinux/.pyenv ]'; check 'A python version is installed via pyenv' 'ls /home/audiolinux/.pyenv/versions | grep -q \"[0-9]\"'; check '.bashrc is configured for pyenv' 'grep -q \"pyenv init\" /home/audiolinux/.bashrc'" "Python Environment"
 check_optional_section "[ -d /home/audiolinux/roon-ir-remote ]" "run_appendix2_checks" "Appendix 2 (IR Remote)"
 check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix4_checks" "Appendix 4 (Web UI)"
 check_optional_section "cset set --list 2>/dev/null | grep -q 'isolated1'" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
