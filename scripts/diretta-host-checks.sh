@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Diretta Host QA Check Script v1.9
+# (Updated to include Appendix 7 checks)
 #
 
 # --- Colors and Formatting ---
@@ -87,6 +88,17 @@ run_appendix6_checks() {
     check "syncAlsa is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'syncAlsa'"
 }
 
+# --- [NEW] Appendix 7 Function ---
+run_appendix7_checks() {
+    header "Appendix 7" "Optional: Event-Driven CPU Hooks"
+    check "'isolated_app.timer' is disabled" "! systemctl is-enabled isolated_app.timer 2>/dev/null"
+    check "Roon hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/roonbridge.service.d/"
+    check "Roon reload hook for 'isolated_app.sh' is set" "grep -qr 'ExecReloadPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/roonbridge.service.d/"
+    check "Diretta hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa.service.d/"
+    check "Diretta reload hook for 'isolated_app.sh' is set" "grep -qr 'ExecReloadPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa.service.d/"
+}
+# --- End of new function ---
+
 # --- Main Script ---
 if [ "$EUID" -ne 0 ]; then echo -e "${C_RED}Please run this script with sudo or as root.${C_RESET}"; exit 1; fi
 echo -e "${C_BOLD}Starting Diretta Host Configuration Quality Assurance Check...${C_RESET}"
@@ -157,5 +169,8 @@ check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Append
 check_optional_section "[ -d /home/audiolinux/roon-ir-remote ]" "run_appendix2_checks" "Appendix 2 (IR Remote)"
 check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix4_checks" "Appendix 4 (Web UI)"
 check_optional_section "cset set --list 2>/dev/null | grep -q 'isolated1'" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
+# --- [NEW] Appendix 7 Check Call ---
+check_optional_section "[ -d /etc/systemd/system/roonbridge.service.d ]" "run_appendix7_checks" "Appendix 7 (Event-Driven Hooks)"
+# --- End of new call ---
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}\n"

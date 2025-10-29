@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Diretta Target QA Check Script v1.10
+# (Updated to include Appendix 7 checks)
 #
 
 # --- Colors and Formatting ---
@@ -75,6 +76,18 @@ run_appendix6_checks() {
     check "Diretta app is running on the isolated core" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'diretta_app_target'"
 }
 
+# --- [NEW] Appendix 7 Function ---
+run_appendix7_checks() {
+    header "Appendix 7" "Optional: Event-Driven CPU Hooks"
+    check "'isolated_app.timer' is disabled" "! systemctl is-enabled isolated_app.timer 2>/dev/null"
+    check "'rtapp.timer' is disabled" "! systemctl is-enabled rtapp.timer 2>/dev/null"
+    check "Hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa_target.service.d/"
+    check "Hook for 'rtapp' is set" "grep -qr 'ExecStartPost=-/bin/bash /usr/bin/rtapp' /etc/systemd/system/diretta_alsa_target.service.d/"
+    check "Reload hook for 'isolated_app.sh' is set" "grep -qr 'ExecReloadPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa_target.service.d/"
+    check "Reload hook for 'rtapp' is set" "grep -qr 'ExecReloadPost=-/bin/bash /usr/bin/rtapp' /etc/systemd/system/diretta_alsa_target.service.d/"
+}
+# --- End of new function ---
+
 # --- Main Script ---
 if [ "$EUID" -ne 0 ]; then echo -e "${C_RED}Please run this script with sudo or as root.${C_RESET}"; exit 1; fi
 echo -e "${C_BOLD}Starting Diretta Target Configuration Quality Assurance Check...${C_RESET}"
@@ -125,5 +138,8 @@ check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Append
 check_optional_section "[ -f /usr/local/bin/purist-mode ]" "run_appendix3_checks" "Appendix 3 (Purist Mode)"
 check_optional_section "id purist-app" "run_appendix4_checks" "Appendix 4 (Web UI Backend)"
 check_optional_section "cset set --list 2>/dev/null | grep -q 'isolated1'" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
+# --- [NEW] Appendix 7 Check Call ---
+check_optional_section "[ -d /etc/systemd/system/diretta_alsa_target.service.d ]" "run_appendix7_checks" "Appendix 7 (Event-Driven Hooks)"
+# --- End of new call ---
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}\n"
