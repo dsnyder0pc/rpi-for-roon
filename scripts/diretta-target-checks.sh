@@ -115,7 +115,7 @@ check_status "Diretta Target License Status" "ls /opt/diretta-alsa-target/ | gre
 
 header "Section 8a" "Diretta Compiler Toolchain"
 check "Compiler profile script exists" "[ -f /etc/profile.d/llvm_diretta.sh ]"
-check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\\$PATH' /etc/profile.d/llvm_diretta.sh"
+check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\$PATH' /etc/profile.d/llvm_diretta.sh"
 check "pacman.conf ignores 'clang'" "grep -Pq '^IgnorePkg\s*=\s*.*(clang|clang[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'llvm'" "grep -Pq '^IgnorePkg\s*=\s*.*(llvm|llvm[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'lld'" "grep -Pq '^IgnorePkg\s*=\s*.*(lld|lld[0-9]+)' /etc/pacman.conf"

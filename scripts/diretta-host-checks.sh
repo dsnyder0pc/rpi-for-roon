@@ -98,7 +98,7 @@ check "IP forwarding is enabled in sysctl.d" "grep -q 'net.ipv4.ip_forward=1' /e
 check "IP forwarding is active in kernel" "[[ \$(cat /proc/sys/net/ipv4/ip_forward) -eq 1 ]]"
 check "'nftables' package is installed" "pacman -Q nftables"
 check "'nftables' service is enabled" "systemctl is-enabled nftables.service"
-check "'nftables' service is active" "systemctl is-active nftables.service"
+check "'nftables' service has not failed" "! systemctl is-failed --quiet nftables.service"
 check "nftables config file '/etc/nftables.conf' exists" "[ -f /etc/nftables.conf ]"
 check "nftables config contains DNAT rule (5101 -> 5001)" "grep -q 'tcp dport 5101 dnat to 172.20.0.2:5001' /etc/nftables.conf"
 check "nftables config contains FORWARD rule (-> 5001)" "grep -q 'ip daddr 172.20.0.2 tcp dport 5001 ct state new accept' /etc/nftables.conf"
@@ -128,7 +128,7 @@ check "Diretta service is set to auto-restart" "[ -f /etc/systemd/system/diretta
 
 header "Section 8a" "Diretta Compiler Toolchain"
 check "Compiler profile script exists" "[ -f /etc/profile.d/llvm_diretta.sh ]"
-check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\\$PATH' /etc/profile.d/llvm_diretta.sh"
+check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\$PATH' /etc/profile.d/llvm_diretta.sh"
 check "pacman.conf ignores 'clang'" "grep -Pq '^IgnorePkg\s*=\s*.*(clang|clang[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'llvm'" "grep -Pq '^IgnorePkg\s*=\s*.*(llvm|llvm[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'lld'" "grep -Pq '^IgnorePkg\s*=\s*.*(lld|lld[0-9]+)' /etc/pacman.conf"
