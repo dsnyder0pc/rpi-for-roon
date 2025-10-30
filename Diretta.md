@@ -896,7 +896,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         ?0
         ```
     * Choose **7) License**. The system will play hi-res (greater than 44.1 kHz PCM audio) for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license for hi-res support. This requires the internet access we configured in step 5.
-    * Choose **8) and follow prompts to get back to the terminal
+    * Choose **8) Exit**. Follow prompts to get back to the terminal
 
 #### 8.2. On the Diretta Host
 
@@ -968,7 +968,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         LatencyBuffer=0
         EOT
         ```
-    * Choose **6) and follow prompts to get back to the terminal
+    * Choose **6) Exit**. Follow prompts to get back to the terminal
 
 6.  Create an override to make the Diretta service auto-restart on failure
     ```bash
