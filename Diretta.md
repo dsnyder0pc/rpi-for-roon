@@ -320,7 +320,7 @@ sudo pacman -Syu --noconfirm linux-firmware
 ```
 
 
-#### 4.4. Run System and Menu Updates
+#### 4.4. Install DNS Utils
 Install the `dnsutils` package so that the **menu** update will have access to the `dig` command:
 ```bash
 sudo pacman -S --noconfirm dnsutils
