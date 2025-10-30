@@ -1979,7 +1979,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 
     **Note:** OPTIONAL - If you have more than one Diretta Host on your network, please make sure that they have unique names. You can use a command like the following to rename this one before proceeding:
 
-    ```text
+    ```bash
     # Optionally rename the Diretta Host if this is your second build on the same network
     sudo hostnamectl set-hostname diretta-host2
     ```
