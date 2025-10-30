@@ -984,20 +984,24 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 ### 9. Final Steps & Roon Integration
 
-1.  **Install Roon Bridge (on Host):** If you use Roon, perform the following steps on the **Diretta Host**:
+1.  Run `menu` if you exited back to the terminal after the previous step, otherwise go to the **Main menu**.
+
+2.  **Install Roon Bridge (on Host):** If you use Roon, perform the following steps on the **Diretta Host**:
     * Run `menu`.
     * Select **INSTALL/UPDATE menu**.
     * Select **INSTALL/UPDATE Roonbridge**.
     * The installation will proceed. The installation may take a minute or two.
 
-2.  Run `menu` if you exited back to the terminal after the previous step, otherwise go to the **Main menu**.
 
 3.  **Enable Roon Bridge (on the Host):**
     * Select **Audio menu** from the Main menu
     * Select **SHOW audio service**
     * If you don't see **roonbridge** under enabled services, select **ROONBRIDGE enable/disable**
 
-4.  **Reboot Both Devices:** For a clean start, `sudo sync && sudo reboot` both the Target and Host, in that order.
+4.  **Reboot Both Devices:** For a clean start, reboot both the Target and Host, in that order:
+    ```bash
+    sudo sync && sudo reboot
+    ```
 
 5.  **Configure Roon:**
     * Open Roon on your control device.
