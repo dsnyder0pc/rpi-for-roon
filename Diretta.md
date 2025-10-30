@@ -2192,7 +2192,7 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
     PRESS RETURN TO EXIT
     ```
 
-5.  Follow the prompts exactly as shown below to isolate **cores 2 and 3** and assign the Diretta application to it.
+5.  Navigate back to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**). Follow the prompts exactly as shown below to isolate **cores 2 and 3** and assign the Diretta application to it.
     ```text
     Please chose your option:
     1) Configure and enable
@@ -2306,7 +2306,7 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     PRESS RETURN TO EXIT
     ```
 
-5.  Follow the prompts to isolate **cores 2 and 3** and assign the relevant applications.
+5.  Navigate back to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**). Follow the prompts to isolate **cores 2 and 3** and assign the relevant applications.
 
     ```text
     Please chose your option:
