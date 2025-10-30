@@ -2240,7 +2240,7 @@ Next, we will give the Diretta application a "not too high" priority, ensuring i
     The max. available realtime priority is 98
     Suggested values are 95 (extreme) or 90 (default)
     Please enter your value:
-    ?70
+    ?90
 
     Do you want to set the IRQ priority for each device? (1/2)
     1 - IRQ priority (advanced)
