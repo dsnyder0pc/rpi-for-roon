@@ -2213,7 +2213,7 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
     (Press ENTER if you don't want to assign IRQ to this group):
     ?end0
     ```
-6.  After the process completes, press **ENTER** to exit back to the main menu. **Do not reboot yet.**
+6.  After the process completes, press **ENTER** to exit back to the System menu. **Do not reboot yet.**
 
 > **A Note on Automatic IRQ Affinity:** You may notice the script reports that it has also isolated the `end0` network IRQs to the same core. This is not a bug, but an intelligent optimization. The script automatically pins the network interrupts to the same core as the application using the network, creating the most efficient data path possible.
 
@@ -2328,7 +2328,7 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     ?end0
     ```
 
-6.  After the process completes, press **ENTER** to exit back to the main menu.
+6.  After the process completes, press **ENTER** to exit back to the System menu. **Do not reboot yet.**
 
 ---
 
