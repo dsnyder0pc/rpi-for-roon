@@ -123,7 +123,7 @@ read -p "Do you want to shrink this image now? (y/N) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Check if the filename is for the final 'apdx4' stage
-    if [[ "${FILENAME}" == *apdx4* ]]; then
+    if [[ "${FILENAME}" == *apdx7* ]]; then
         echo "Image is 'apdx4'. Running the full shrink script..."
         shrink "${FILENAME}"
     else
