@@ -1188,6 +1188,8 @@ This guide provides instructions for installing and configuring an IR remote to 
 
     Select the "Flirc" device from the menu. When you press buttons on your remote, you should see keyboard events printed to the screen.
 
+3.  Skip to [Part 2: Control Script Software Setup](#part-2-control-script-software-setup)
+
 ---
 
 #### **Option 2: Argon One IR Remote Setup**
