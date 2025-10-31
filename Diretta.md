@@ -4,6 +4,23 @@ This guide provides comprehensive, step-by-step instructions for configuring two
 
 The **Diretta Host** will connect to your main network (to access your music server) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC or DDC.
 
+# Disclaimer
+
+The introduction of Diretta Direct Stream (DDS) suggests the project is taking a rather disruptive turn. Unfortunately, this transition is causing significant growing pains: the sound quality with Diretta version 146 is poor compared to previous versions.
+
+As far as I can tell, the root cause is that Yu is now focusing on the precise timing of packet delivery at the expense of smooth and steady CPU usage on the Target.
+
+I'm not sure if this shift means he now believes that timing is fundamentally more critical than CPU usage and current spikes near the Target, or if he is pivoting the project in a different direction to expand business opportunities into non-audio use cases.
+
+I've been able to verify the improved timing of DDS by analyzing packet captures; it does what it claims to do very well. Sadly, it represents a significant step backwards in sound quality due to the loss of tempered CPU usage on the Target.
+
+For our use case, I would say the project is at risk unless these issues improve. However, I'm trying to remain hopeful that the regression is temporary and will be addressed soon.
+
+Here are some links for more information:
+* https://help.diretta.link/support/solutions/articles/73000661018-146
+* https://help.diretta.link/support/solutions/articles/73000661171-dds-diretta-direct-stream
+
+
 ## An Introduction to the Reference Roon Architecture
 
 Welcome to the definitive guide for building a state-of-the-art Roon streaming endpoint. While AudioLinux supports other protocols, I will use Roon as the example for this build. You may use the menu system on the Diretta Host to install support for other protocols, including HQPlayer, Audirvana, DLNA, AirPlay, etc. Before diving into the step-by-step instructions, it's important to understand the "why" behind this project. This introduction will explain the problem this architecture solves, why it's fundamentally superior to many high-cost commercial alternatives, and how this DIY project represents a direct and rewarding path to unlocking the ultimate sound quality from your Roon system.
