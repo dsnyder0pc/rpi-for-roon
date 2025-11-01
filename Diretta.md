@@ -6,15 +6,7 @@ The **Diretta Host** will connect to your main network (to access your music ser
 
 # Disclaimer
 
-The introduction of Diretta Direct Stream (DDS) suggests the project is taking a rather disruptive turn. Unfortunately, this transition is causing significant growing pains: the sound quality with Diretta version 146 is poor compared to previous versions.
-
-As far as I can tell, the root cause is that Yu is now focusing on the precise timing of packet delivery at the expense of smooth and steady CPU usage on the Target.
-
-I'm not sure if this shift means he now believes that timing is fundamentally more critical than CPU usage and current spikes near the Target, or if he is pivoting the project in a different direction to expand business opportunities into non-audio use cases.
-
-I've been able to verify the improved timing of DDS by analyzing packet captures; it does what it claims to do very well. Sadly, it represents a significant step backwards in sound quality due to the loss of tempered CPU usage on the Target.
-
-For our use case, I would say the project is at risk unless these issues improve. However, I'm trying to remain hopeful that the regression is temporary and will be addressed soon.
+Diretta is a moving target. However, I'm pleased to confirm that version 146_7 (and later?) performs very well with a ~45% reduction in CPU usage on the Target, and it sounds great.
 
 Here are some links for more information:
 * https://help.diretta.link/support/solutions/articles/73000661018-146
