@@ -4,6 +4,8 @@ This document provides an overview of a project for building an audiophile-grade
 
 This architecture is designed to solve one of the most persistent challenges in high-end digital audio: the "Roon Paradox."
 
+![Diretta Host and Target Pair Photo](https://dsnyder.ws-e.com/photos/potn/dtah.jpg)
+
 ### The "Roon Paradox"
 
 Roon is celebrated for its powerful library management and user experience. However, its "heavyweight" Core requires significant processing, which generates electrical noise (RFI/EMI). When the Roon Core runs on a computer near your sensitive DAC, this noise can contaminate the analog output, masking detail and shrinking the soundstage.
