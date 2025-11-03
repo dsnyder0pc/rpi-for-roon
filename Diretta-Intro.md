@@ -32,7 +32,7 @@ One of its board members, Leslie Lundin, documented her journey from skeptic to 
 
 Initially, she was underwhelmed, describing the sound in a highly-resolving system as "a bit clinical... full of information but lacking warmth, fullness, and soul". However, after a few software tweaks and testing the streamer in her own MBL-based system, her conclusion changed dramatically:
 
-"And wow again. The brightness I'd heard in Joe's setup was gone. On my system, the Diretta streamer was detailed, dimensional, and full of life... After that, Joe never got his Pis back. I bought the setup from him, and now I use it daily on my whole-house system."
+> And wow again. The brightness I'd heard in Joe's setup was gone. On my system, the Diretta streamer was detailed, dimensional, and full of life... After that, Joe never got his Pis back. I bought the setup from him, and now I use it daily on my whole-house system.
 
 She also noted that despite being a "non-technical person," the setup has been "rock solid and totally hands-off".
 
