@@ -42,6 +42,12 @@ She also noted that despite being a "non-technical person," the setup has been "
 
 This project, developed by David Snyder, has been gaining significant recognition in the audiophile community. Based on the positive impressions from its board members, the Audiophile Foundation is now considering hosting a "DIY Diretta Build Workshop" and purchasing a pre-built system to add to its members' "Lending Library".
 
+Here is what another member had to say after building the project:
+
+> The sonic improvements in my system from the Diretta are not small or subtle. The improvement and difference... are readily apparent... and the Diretta is a bargain!
+
+Read the [full review](https://audiophilefoundation.org/content.aspx?page_id=5&club_id=794405&item_id=126724&)
+
 You can read the full newsletter here: [The Muse: The Diretta Edition](https://audiophilefoundation.org/content.aspx?page_id=22&club_id=794405&module_id=548532)
 
 ### A "No-Compromise" Roon Experience
