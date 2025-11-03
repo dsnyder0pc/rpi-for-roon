@@ -60,7 +60,7 @@ This is a game-changer. You no longer have to choose between Roon's best feature
 
 ### Get Started: The Comprehensive Guide
 
-This [HOWTO-style document](https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md) provides all the step-by-step instructions, hardware lists, and software configurations needed to build, optimize, and optionally add features like IR remote control.
+This [HOWTO-style document](https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md) provides all the step-by-step instructions, hardware lists, and software configurations needed to build, optimize, and optionally add features like IR remote control. You'll even find a video walkthrough [here](https://youtube.com/playlist?list=PLMl09rJ6zKCk13V-IH_kRKW7FP8Q0_Fw0&si=u_E8rUEhgMiQ4NIb).
 
 ---
 
