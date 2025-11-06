@@ -42,7 +42,7 @@ LLD_PKG="lld${TOOLCHAIN_SUFFIX}"
 if [[ -n "${TOOLCHAIN_SUFFIX}" ]]; then LLVM_BIN_PATH="/usr/lib/llvm${TOOLCHAIN_SUFFIX}/bin"; else LLVM_BIN_PATH="/usr/bin"; fi
 
 PACKAGES_TO_INSTALL="${CLANG_PKG} ${LLVM_PKG} ${LLVM_LIBS_PKG} ${COMPILER_RT_PKG} ${LLD_PKG}"
-PACKAGES_TO_IGNORE="${CLANG_PKG} ${LLVM_PKG} ${LLD_PKG} ${LLVM_LIBS_PKG} ${COMPILER_RT_PKG}"
+PACKAGES_TO_IGNORE="${CLANG_PKG} ${LLVM_PKG} ${LLD_PKG} ${LLVM_LIBS_PKG} ${COMPILER_RT_PKG} diretta-alsa-daemon diretta-alsa-dkms diretta-alsa-target diretta-direct-dkms"
 
 # --- Installation ---
 echo "Ensuring required toolchain packages (${PACKAGES_TO_INSTALL}) are installed..."

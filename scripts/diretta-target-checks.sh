@@ -132,6 +132,8 @@ check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\$PATH' /e
 check "pacman.conf ignores 'clang'" "grep -Pq '^IgnorePkg\s*=\s*.*(clang|clang[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'llvm'" "grep -Pq '^IgnorePkg\s*=\s*.*(llvm|llvm[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'lld'" "grep -Pq '^IgnorePkg\s*=\s*.*(lld|lld[0-9]+)' /etc/pacman.conf"
+check "pacman.conf ignores 'diretta-alsa-target'" "grep -Pq '^IgnorePkg\s*=\s*.*diretta-alsa-target' /etc/pacman.conf"
+check "pacman.conf ignores 'diretta-direct-dkms'" "grep -Pq '^IgnorePkg\s*=\s*.*diretta-direct-dkms' /etc/pacman.conf"
 
 # --- Optional Appendix Checks ---
 check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Appendix 1 (Argon ONE Fan)"

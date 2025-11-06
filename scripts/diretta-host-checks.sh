@@ -158,6 +158,8 @@ check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\$PATH' /e
 check "pacman.conf ignores 'clang'" "grep -Pq '^IgnorePkg\s*=\s*.*(clang|clang[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'llvm'" "grep -Pq '^IgnorePkg\s*=\s*.*(llvm|llvm[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'lld'" "grep -Pq '^IgnorePkg\s*=\s*.*(lld|lld[0-9]+)' /etc/pacman.conf"
+check "pacman.conf ignores 'diretta-alsa-daemon'" "grep -Pq '^IgnorePkg\s*=\s*.*diretta-alsa-daemon' /etc/pacman.conf"
+check "pacman.conf ignores 'diretta-alsa-dkms'" "grep -Pq '^IgnorePkg\s*=\s*.*diretta-alsa-dkms' /etc/pacman.conf"
 
 header "Section 9" "Roon Integration"
 check "'roonbridge' is installed" "pacman -Q roonbridge"
