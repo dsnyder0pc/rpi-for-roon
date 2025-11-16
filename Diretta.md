@@ -756,9 +756,8 @@ You can now SSH to both devices (`ssh diretta-host`, `ssh diretta-target`) witho
 ---
 
 ### 7. Common System Optimizations
-The default behavior for Arch Linux is to leave the /boot filesystem in an unclean state if the computer is not shutdown cleanly. This is usually safe, but I've found that it can create a race condition when bringing up our private network. That, and users are likely to unplug these devices without shutting them down first. To protect against these issues, we'll add a workaround script that keeps the /boot filesystem (which is only changed during software updates) clean.
 
-Please perform these steps on _both_ the Diretta Host and Target computers.
+Please perform these steps on _both_ the Diretta Host and Target computers. If you do a `menu` update later, you will have to rerun the `sudoers` fix.
 
 #### 7.1. Fix Systemd "Degraded" State
 
@@ -822,6 +821,7 @@ EOT
 ```
 
 #### 7.4. Create the Repair Script
+The default behavior for Arch Linux is to leave the /boot filesystem in an unclean state if the computer is not shutdown cleanly. This is usually safe, but I've found that it can create a race condition when bringing up our private network. That, and users are likely to unplug these devices without shutting them down first. To protect against these issues, we'll add a workaround script that keeps the /boot filesystem (which is only changed during software updates) clean.
 
 This script is safe to run both automatically at boot and manually on a live system.
 ```bash
