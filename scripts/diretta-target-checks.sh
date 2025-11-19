@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.10
+# Diretta Target QA Check Script v1.11
 # (Updated to include Appendix 7 checks)
 #
 
@@ -74,6 +74,7 @@ run_appendix6_checks() {
     check "Diretta app realtime priority is set to 70" "[[ \$(ps -o rtprio -C diretta_app_target | tail -n 1 | tr -d ' ') -eq 70 ]]"
     check "CPU isolation is set to cores 2-3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '2-3' ]]"
     check "Diretta app is running on the isolated core" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'diretta_app_target'"
+    check "Network IRQs (end0) are pinned to cores 2-3 (affinity 'c')" "for irq in \$(grep 'end0' /proc/interrupts | awk '{print \$1}' | tr -d :); do grep -q 'c$' /proc/irq/\$irq/smp_affinity || exit 1; done"
 }
 
 # --- [NEW] Appendix 7 Function ---
