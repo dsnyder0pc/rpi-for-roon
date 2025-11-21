@@ -904,6 +904,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         Please type the card number (0,1,2...) you want to use:
         ?0
         ```
+    * Choose **5) Edit configuration**. Set `AlsaLatency=20` for a Raspberry Pi 5 Target or `AlsaLatency=40` for RPi4.
     * Choose **7) License**. The system will play hi-res (greater than 44.1 kHz PCM audio) for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license for hi-res support. This requires the internet access we configured in step 5.
     * Choose **8) Exit**. Follow prompts to get back to the terminal
 
