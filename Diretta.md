@@ -319,23 +319,7 @@ EOT
 bash -c "$cmd"
 ```
 
-#### 4.3. Workaround for Pacman Update Issue
-
-A [known issue](https://archlinux.org/news/linux-firmware-2025061312fe085f-5-upgrade-requires-manual-intervention/) can prevent the system from updating due to conflicting NVIDIA firmware files (even though the RPi doesn't use them). To progress with the system upgrade, first remove `linux-firmware`, then reinstall it as part of the upgrade:
-
-```bash
-sudo pacman -Rdd --noconfirm linux-firmware
-sudo pacman -Syu --noconfirm linux-firmware
-```
-
-
-#### 4.4. Install DNS Utils
-Install the `dnsutils` package so that the **menu** update will have access to the `dig` command:
-```bash
-sudo pacman -S --noconfirm dnsutils
-```
-
-#### 4.5. Run System and Menu Updates
+#### 4.3. Run System and Menu Updates
 
 Use the AudioLinux menu system to perform all updates. Have your email from Piero with your image download user and password. You'll need these for the menu update. It will ask for **your menu update user**, which is a bit confusing. It's asking for the username and password that you used to download the AudioLinux install image.
 
@@ -348,6 +332,23 @@ Use the AudioLinux menu system to perform all updates. Have your email from Pier
     ```bash
     sudo sync && sudo reboot
     ```
+
+---
+> Note: Workaround for Pacman Update Issue
+>
+> There was a [known issue](https://archlinux.org/news/linux-firmware-2025061312fe085f-5-upgrade-requires-manual-intervention/) that could prevent the system from updating due to conflicting NVIDIA firmware files (even though the RPi doesn't use them). If you encounter this issue, to progress with the system upgrade, first remove `linux-firmware`, then reinstall it as part of the upgrade:
+>
+> ```bash
+> sudo pacman -Rdd --noconfirm linux-firmware
+> sudo pacman -Syu --noconfirm linux-firmware
+> ```
+---
+
+#### 4.4. Install DNS Utils
+Install the `dnsutils` package so that the **menu** update will have access to the `dig` command:
+```bash
+sudo pacman -S --noconfirm dnsutils
+```
 
 ---
 
