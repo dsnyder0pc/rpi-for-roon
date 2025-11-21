@@ -319,7 +319,13 @@ EOT
 bash -c "$cmd"
 ```
 
-#### 4.3. Run System and Menu Updates
+#### 4.3. Install DNS Utils
+Install the `dnsutils` package so that the **menu** update will have access to the `dig` command:
+```bash
+sudo pacman -S --noconfirm dnsutils
+```
+
+#### 4.4. Run System and Menu Updates
 
 Use the AudioLinux menu system to perform all updates. Have your email from Piero with your image download user and password. You'll need these for the menu update. It will ask for **your menu update user**, which is a bit confusing. It's asking for the username and password that you used to download the AudioLinux install image.
 
@@ -339,12 +345,6 @@ Use the AudioLinux menu system to perform all updates. Have your email from Pier
 > sudo pacman -Syu --noconfirm linux-firmware
 > ```
 ---
-
-#### 4.4. Install DNS Utils
-Install the `dnsutils` package so that the **menu** update will have access to the `dig` command:
-```bash
-sudo pacman -S --noconfirm dnsutils
-```
 
 #### 4.5. Reboot
 Reboot to load the kernel and other updates:
