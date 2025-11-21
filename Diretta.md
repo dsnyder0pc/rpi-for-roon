@@ -882,23 +882,23 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     What do you want to do?
 
     0) Install previous stable version
-    1) Install/update
-    2) Install previous version
-    3) Enable/Disable Diretta Target
-    4) Configure Audio card
-    5) Edit configuration
-    6) Copy and edit new default configuration
-    7) License
+    1) Install/update last version
+    2) Enable/Disable Diretta Target
+    3) Configure Audio card
+    4) Edit configuration
+    5) Copy and edit new default configuration
+    6) License
+    7) Diretta Target log
     8) Exit
 
     ?
     ```
 7.  You should perform these actions in sequence:
     * Choose **1) Install/update** to install the software.
-    * Choose **3) Enable/Disable Diretta Target** and enable it.
-    * Choose **4) Configure Audio card**. The system will list your available audio devices. Enter the card number corresponding to your USB DAC.
+    * Choose **2) Enable/Disable Diretta Target** and enable it.
+    * Choose **3) Configure Audio card**. The system will list your available audio devices. Enter the card number corresponding to your USB DAC.
         ```text
-        ?4
+        ?3
         This option will set DIRETTA target to use a specific card
         Your available cards are:
 
@@ -907,8 +907,8 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         Please type the card number (0,1,2...) you want to use:
         ?0
         ```
-    * Choose **5) Edit configuration**. Set `AlsaLatency=20` for a Raspberry Pi 5 Target or `AlsaLatency=40` for RPi4.
-    * Choose **7) License**. The system will play hi-res (greater than 44.1 kHz PCM audio) for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license for hi-res support. This requires the internet access we configured in step 5.
+    * Choose **4) Edit configuration**. Set `AlsaLatency=20` for a Raspberry Pi 5 Target or `AlsaLatency=40` for RPi4.
+    * Choose **6) License**. The system will play hi-res (greater than 44.1 kHz PCM audio) for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license for hi-res support. This requires the internet access we configured in step 5.
     * Choose **8) Exit**. Follow prompts to get back to the terminal
 
 #### 8.2. On the Diretta Host
@@ -928,12 +928,13 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     What do you want to do?
 
     0) Install previous stable version
-    1) Install/update
+    1) Install/update last version
     2) Enable/Disable Diretta daemon
     3) Set Ethernet interface
     4) Edit configuration
     5) Copy and edit new default configuration
-    6) Exit
+    6) Diretta log
+    7) Exit
 
     ?
     ```
@@ -981,7 +982,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         LatencyBuffer=0
         EOT
         ```
-    * Choose **6) Exit**. Follow prompts to get back to the terminal
+    * Choose **7) Exit**. Follow prompts to get back to the terminal
 
 6.  Create an override to make the Diretta service auto-restart on failure
     ```bash
