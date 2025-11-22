@@ -124,7 +124,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [Raspberry Pi 5/2GB](https://www.pishop.us/product/raspberry-pi-5-2gb/) (for the Diretta Target)
 * 1 x [Flirc Raspberry Pi 5 Case](https://www.pishop.us/product/flirc-raspberry-pi-5-case/)
 * 2 x [MicroSD Card Extreme Pro - 32 GB](https://www.pishop.us/product/microsd-card-extreme-pro-32-gb-class-10-blank/)
-* 2 x [Raspberry Pi 27W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-27w-usb-c-power-supply-white-us/)
+* 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
 
 **Required Networking Components:**
 * 1 x [Plugable USB3 to Ethernet Adapter](https://www.amazon.com/dp/B00AQM8586) (for the Diretta Host)
@@ -135,7 +135,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [Raspberry Pi Official Keyboard - Red/White](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 
 **Optional Upgrades:**
-* 1 x [Argon ONE V2 Aluminum Case for Raspberry Pi 4](https://www.pishop.us/product/argon-one-pi-4-raspberry-pi-case/?searchid=0&search_query=Argon+One+v2) (instead of the Flirc case)
+* 1 x [Argon ONE V2 Aluminum Case for Raspberry Pi 4](https://www.amazon.com/Argon-Raspberry-Aluminum-Heatsink-Supports/dp/B07WP8WC3V/) (instead of the Flirc case)
 * 1 x [Argon ONE V3 Raspberry Pi 5 Case](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (instead of the Flirc case)
 * 1 x [Argon IR Remote](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (to add remote control capabilities to the Diretta Host)
 * 1 x [Flirc USB IR Receiver](https://www.pishop.us/product/flirc-rpi-usb-xbmc-ir-remote-receiver/) (to use the Argon IR Remote with the Diretta Host in a Flirc Case)
@@ -145,7 +145,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [DC 5.5mm x 2.1mm to UsB C Adapter](https://www.amazon.com/5-5mm-Adapter-Female-Convert-Connector/dp/B0CRB7N4GH/) (needed to adapt the plug on the iPower Elite to the Diretta Target's USB C power input)
 * 1 x [SMSL PO100 PRO DDC](https://www.amazon.com/dp/B0BLYVZCV5) (a digital-to-digital converter for DACs that lack a good USB input implementation)
 * 1 x [USB Wireless Adapter](https://www.pishop.us/product/raspberry-pi-dual-band-5ghz-2-4ghz-usb-wifi-adapter-with-antenna/) (a wired connection is highly preferable and more reliable, but if adding wired Ethernet near your audio system is impractical, replace the Plugable USB to Ethernet adapter with this Wi-Fi adapter)
-* 1 x [Power Splitter Cord](https://www.amazon.com/dp/B01K3ADXX2?th=1) (plug both 27W power adapters into a single receptacle)
+* 1 x [Power Splitter Cord](https://www.amazon.com/dp/B01K3ADXX2?th=1) (plug both 45W power adapters into a single receptacle)
 
 **Required Audio Component:**
 * 1 x USB DAC or DDC
