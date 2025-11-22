@@ -2593,6 +2593,11 @@ To ensure the **Target QA Script** knows to validate this specific configuration
 sudo touch /etc/diretta-100m
 ```
 
+***
+> **Note on Playback Latency:**
+> You may notice a slight increase in the delay between pressing "Play" and hearing music (up to ~1 second). This is expected behavior. By restricting the link to 100 Mbps, we are intentionally throttling the initial data burst to ensure the connection operates at a lower, quieter frequency. The system is trading instantaneous start times for a steadier, lower-noise steady state during playback.
+***
+
 >
 >
 > -----
