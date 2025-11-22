@@ -2537,8 +2537,6 @@ On the Host, we will disable the `isolated_app.timer` and hook its script into *
 
     For both services, you should see `Active: active (running)` and a `Process:` line for `isolated_app.sh` showing `status=0/SUCCESS`.
 
------
-
 >
 >
 > -----
@@ -2553,7 +2551,7 @@ On the Host, we will disable the `isolated_app.timer` and hook its script into *
 
 **Objective:** Reduce electrical noise and improve OS scheduler precision by limiting the dedicated network link to 100 Mbps.
 
-While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the dedicated link (`end0`) can improve sound quality. The lower operating frequency of 100BASE-TX (31.25 MHz vs 62.5 MHz) generates less RFI, and benchmarks have shown this reduces "Core Jitter" on the Host CPU by \~14%.
+While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the dedicated link (`end0`) can improve sound quality. The lower operating frequency of 100BASE-TX (31.25 MHz vs 62.5 MHz) generates less RFI, and benchmarks have shown this reduces "Core Jitter" on the Host CPU by ~14%.
 
 **Note:** You may see "buffer low" warnings in the Target logs (`LatencyBuffer` dropping to 1). This is normal behavior due to the increased serialization latency of the slower link and does not cause audible dropouts.
 
@@ -2562,7 +2560,6 @@ While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the 
 We will create a systemd service on the **Host** that forces it to advertise *only* 100 Mbps Full Duplex. The Target will automatically detect this and match it.
 
 1.  **Create the restriction service:**
-
     ```bash
     cat <<'EOT' | sudo tee /etc/systemd/system/limit-speed-100m.service
     [Unit]
@@ -2583,7 +2580,6 @@ We will create a systemd service on the **Host** that forces it to advertise *on
     ```
 
 2.  **Enable and start the service:**
-
     ```bash
     sudo systemctl daemon-reload
     sudo systemctl enable --now limit-speed-100m.service
@@ -2597,28 +2593,12 @@ To ensure the **Target QA Script** knows to validate this specific configuration
 ssh target "sudo touch /etc/diretta-100m"
 ```
 
-### Step 3: Verify the Link
-
-1.  **Check the Host:**
-
-    ```bash
-    ethtool end0 | grep -E "Speed|Duplex"
-    ```
-
-    *Expected Output:* `Speed: 100Mb/s`, `Duplex: Full`
-
-2.  **Check the Target:**
-    Run the standard QA script on the Target. It will now detect the marker file and automatically validate that the link is running at 100 Mbps.
-
-### How to Revert
-
-If you wish to return to standard Gigabit speed:
-
-1.  **Host:** Disable the restriction service:
-    ```bash
-    sudo systemctl disable --now limit-speed-100m.service
-    ```
-2.  **Target:** Remove the marker file:
-    ```bash
-    ssh target "sudo rm /etc/diretta-100m"
-    ```
+>
+>
+> -----
+>
+> ### ✅ Checkpoint: Verify Network Configuration
+>
+> Your dedicated network link is now configured for "Purist" 100Mbps operation. To verify that the Host service is active and the Target has correctly negotiated the speed (detected via the marker file), please return to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
+>
+> -----
