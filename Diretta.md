@@ -2559,7 +2559,7 @@ While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the 
 
 We will create a systemd service on the **Host** that forces it to advertise *only* 100 Mbps Full Duplex. The Target will automatically detect this and match it.
 
-1.  **Create the restriction service:**
+1.  **Create the restriction service:** *(Important: on the Host only)*
     ```bash
     cat <<'EOT' | sudo tee /etc/systemd/system/limit-speed-100m.service
     [Unit]
@@ -2590,7 +2590,7 @@ We will create a systemd service on the **Host** that forces it to advertise *on
 To ensure the **Target QA Script** knows to validate this specific configuration, create a marker file on the Target:
 
 ```bash
-ssh target "sudo touch /etc/diretta-100m"
+sudo touch /etc/diretta-100m
 ```
 
 >
