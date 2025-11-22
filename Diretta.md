@@ -86,6 +86,7 @@ If you are located in the US, expect to pay around $295 (plus tax and shipping) 
 14. [Appendix 5: System Health Checks](#14-appendix-5-system-health-checks)
 15. [Appendix 6: Advanced Realtime Performance Tuning](#15-appendix-6-advanced-realtime-performance-tuning)
 16. [Appendix 7: Optimize CPU with Event-Driven Hooks](#16-appendix-7-optimize-cpu-with-event-driven-hooks)
+17. [Appendix 8: Optional Purist 100Mbps Network Mode](#17-appendix-8-optional-purist-100mbps-network-mode)
 
 ---
 
@@ -2547,3 +2548,77 @@ On the Host, we will disable the `isolated_app.timer` and hook its script into *
 > Your system is now optimized to run its tuning scripts only at boot, eliminating periodic CPU spikes. To verify this new configuration is working correctly with the rest of the system, please return to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > -----
+
+## 17. Appendix 8: Optional Purist 100Mbps Network Mode
+
+**Objective:** Reduce electrical noise and improve OS scheduler precision by limiting the dedicated network link to 100 Mbps.
+
+While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the dedicated link (`end0`) can improve sound quality. The lower operating frequency of 100BASE-TX (31.25 MHz vs 62.5 MHz) generates less RFI, and benchmarks have shown this reduces "Core Jitter" on the Host CPU by \~14%.
+
+**Note:** You may see "buffer low" warnings in the Target logs (`LatencyBuffer` dropping to 1). This is normal behavior due to the increased serialization latency of the slower link and does not cause audible dropouts.
+
+### Step 1: Configure the Host
+
+We will create a systemd service on the **Host** that forces it to advertise *only* 100 Mbps Full Duplex. The Target will automatically detect this and match it.
+
+1.  **Create the restriction service:**
+
+    ```bash
+    cat <<'EOT' | sudo tee /etc/systemd/system/limit-speed-100m.service
+    [Unit]
+    Description=Limit end0 advertisement to 100Mbps for Audio Purity
+    After=network-online.target
+    Wants=network-online.target
+
+    [Service]
+    Type=oneshot
+    ExecCondition=/usr/bin/ip link show end0
+    # Enable Auto-Neg but strictly limit advertisement to 100Mbps/Full
+    ExecStart=/usr/bin/ethtool -s end0 speed 100 duplex full autoneg on
+    RemainAfterExit=yes
+
+    [Install]
+    WantedBy=multi-user.target
+    EOT
+    ```
+
+2.  **Enable and start the service:**
+
+    ```bash
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now limit-speed-100m.service
+    ```
+
+### Step 2: Flag the Target (For QA)
+
+To ensure the **Target QA Script** knows to validate this specific configuration, create a marker file on the Target:
+
+```bash
+ssh target "sudo touch /etc/diretta-100m"
+```
+
+### Step 3: Verify the Link
+
+1.  **Check the Host:**
+
+    ```bash
+    ethtool end0 | grep -E "Speed|Duplex"
+    ```
+
+    *Expected Output:* `Speed: 100Mb/s`, `Duplex: Full`
+
+2.  **Check the Target:**
+    Run the standard QA script on the Target. It will now detect the marker file and automatically validate that the link is running at 100 Mbps.
+
+### How to Revert
+
+If you wish to return to standard Gigabit speed:
+
+1.  **Host:** Disable the restriction service:
+    ```bash
+    sudo systemctl disable --now limit-speed-100m.service
+    ```
+2.  **Target:** Remove the marker file:
+    ```bash
+    ssh target "sudo rm /etc/diretta-100m"
+    ```

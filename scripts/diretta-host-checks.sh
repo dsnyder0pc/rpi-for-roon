@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.10
-# (Updated to include Appendix 7 checks)
+# Diretta Host QA Check Script v1.11
+# (Updated to include Appendix 8 checks)
 #
 
 # --- Colors and Formatting ---
@@ -88,8 +88,6 @@ run_appendix6_checks() {
     check "syncAlsa is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'syncAlsa'"
     check "Network IRQs (end0) are pinned to cores 2-3 (affinity 'c')" "(for irq in \$(grep 'end0' /proc/interrupts | awk '{print \$1}' | tr -d :); do grep -q 'c$' /proc/irq/\$irq/smp_affinity || exit 1; done)"
 }
-
-# --- [NEW] Appendix 7 Function ---
 run_appendix7_checks() {
     header "Appendix 7" "Optional: Event-Driven CPU Hooks"
     check "'isolated_app.timer' is disabled" "! systemctl is-enabled isolated_app.timer 2>/dev/null"
@@ -98,7 +96,13 @@ run_appendix7_checks() {
     check "Diretta hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa.service.d/"
     check "Diretta reload hook for 'isolated_app.sh' is set" "grep -qr 'ExecReloadPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa.service.d/"
 }
-# --- End of new function ---
+run_appendix8_checks() {
+    header "Appendix 8" "Optional: Purist 100Mbps Network Mode"
+    check "'limit-speed-100m' service is enabled" "systemctl is-enabled limit-speed-100m.service"
+    check "'limit-speed-100m' service is active" "systemctl is-active limit-speed-100m.service"
+    check "Link speed is 100Mb/s" "ethtool end0 | grep -q 'Speed: 100Mb/s'"
+    check "Duplex is Full" "ethtool end0 | grep -q 'Duplex: Full'"
+}
 
 # --- Main Script ---
 if [ "$EUID" -ne 0 ]; then echo -e "${C_RED}Please run this script with sudo or as root.${C_RESET}"; exit 1; fi
@@ -172,8 +176,7 @@ check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Append
 check_optional_section "[ -d /home/audiolinux/roon-ir-remote ]" "run_appendix2_checks" "Appendix 2 (IR Remote)"
 check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix4_checks" "Appendix 4 (Web UI)"
 check_optional_section "cset set --list 2>/dev/null | grep -q 'isolated1'" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
-# --- [NEW] Appendix 7 Check Call ---
 check_optional_section "[ -d /etc/systemd/system/roonbridge.service.d ]" "run_appendix7_checks" "Appendix 7 (Event-Driven Hooks)"
-# --- End of new call ---
+check_optional_section "systemctl is-enabled limit-speed-100m.service" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}\n"
