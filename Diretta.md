@@ -2570,8 +2570,10 @@ We will create a systemd service on the **Host** that forces it to advertise *on
     [Service]
     Type=oneshot
     ExecCondition=/usr/bin/ip link show end0
-    # Enable Auto-Neg but strictly limit advertisement to 100Mbps/Full
+    # 1. Enable Auto-Neg but strictly limit advertisement to 100Mbps/Full
     ExecStart=/usr/bin/ethtool -s end0 speed 100 duplex full autoneg on
+    # 2. Explicitly disable EEE to prevent link flapping (ignore errors if unsupported)
+    ExecStart=-/usr/bin/ethtool --set-eee end0 eee off
     RemainAfterExit=yes
 
     [Install]
