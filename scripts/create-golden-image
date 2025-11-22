@@ -1,13 +1,14 @@
 #!/bin/bash
 #
-# create_golden_image_nopasswd.sh
+# create_golden_image.sh
 #
-# Interactively creates a golden image from an SD card, then optionally
-# calls the appropriate shrink script based on the image stage.
+# Interactively creates a golden image from an SD card, auto-detects
+# Diretta version, and prompts for specific shrinking options.
 
 # --- Configuration ---
-set -e # Exit immediately if a command exits with a non-zero status.
+set -e          # Exit immediately if a command exits with a non-zero status.
 set -o pipefail # Exit if any command in a pipeline fails.
+
 BLOCK_SIZE_DD="4M"
 BLOCK_SIZE_BYTES=$((4 * 1024 * 1024)) # 4MiB in bytes
 
@@ -19,11 +20,11 @@ mapfile -t mmc_devices < <(lsblk -dno PATH | grep /mmcblk)
 device_count=${#mmc_devices[@]}
 
 if [ "$device_count" -eq 0 ]; then
-    echo "🚫 Error: No microSD card found in the internal slot."
-    exit 1
+  echo "🚫 Error: No microSD card found in the internal slot."
+  exit 1
 elif [ "$device_count" -gt 1 ]; then
-    echo "🚫 Error: Multiple 'mmc' devices detected. Cannot determine the correct one."
-    exit 1
+  echo "🚫 Error: Multiple 'mmc' devices detected. Cannot determine the correct one."
+  exit 1
 fi
 
 # Exactly one device was found, so we can proceed.
@@ -47,28 +48,95 @@ done
 # 2. Prompt for the process stage
 echo
 echo "Select the process stage:"
-options=("Step 9" "Appendix 1" "Appendix 2" "Appendix 3" "Appendix 4" "Appendix 6" "Appendix 7")
+options=("Step 9" "Appendix 1" "Appendix 2" "Appendix 3" "Appendix 4" "Appendix 6" "Appendix 7" "Appendix 8")
 select stage_choice in "${options[@]}"; do
   if [ -n "${stage_choice}" ]; then
     case $stage_choice in
-      "Step 9") IMG_STAGE="step9"; break;;
-      "Appendix 1") IMG_STAGE="apdx1"; break;;
-      "Appendix 2") IMG_STAGE="apdx2"; break;;
-      "Appendix 3") IMG_STAGE="apdx3"; break;;
-      "Appendix 4") IMG_STAGE="apdx4"; break;;
-      "Appendix 6") IMG_STAGE="apdx6"; break;;
-      "Appendix 7") IMG_STAGE="apdx7"; break;;
-      *) echo "Invalid selection. Please try again.";;
+      "Step 9")
+        IMG_STAGE="step9"
+        break
+        ;;
+      "Appendix 1")
+        IMG_STAGE="apdx1"
+        break
+        ;;
+      "Appendix 2")
+        IMG_STAGE="apdx2"
+        break
+        ;;
+      "Appendix 3")
+        IMG_STAGE="apdx3"
+        break
+        ;;
+      "Appendix 4")
+        IMG_STAGE="apdx4"
+        break
+        ;;
+      "Appendix 6")
+        IMG_STAGE="apdx6"
+        break
+        ;;
+      "Appendix 7")
+        IMG_STAGE="apdx7"
+        break
+        ;;
+      "Appendix 8")
+        IMG_STAGE="apdx8"
+        break
+        ;;
+      *) echo "Invalid selection. Please try again." ;;
     esac
   else
     echo "Invalid selection. Please try again."
   fi
 done
 
+# --- Auto-Detect Diretta Version ---
+echo
+echo "🔎 Detecting Diretta version from filesystem..."
+
+# Define Partition and Package Name
+if [[ "${DEVICE}" == *"mmcblk"* ]]; then
+  ROOT_PART="${DEVICE}p2"
+else
+  ROOT_PART="${DEVICE}2"
+fi
+
+if [[ "${IMG_TYPE}" == "host" ]]; then
+  PKG_NAME="diretta-alsa-daemon"
+else
+  PKG_NAME="diretta-alsa-target"
+fi
+
+# Create Temp Mount
+TMP_MOUNT=$(mktemp -d)
+sudo mount "${ROOT_PART}" "${TMP_MOUNT}"
+
+# Find the package directory in Pacman DB
+# Arch stores metadata in /var/lib/pacman/local/pkgname-version-rel/
+PKG_DIR=$(find "${TMP_MOUNT}/var/lib/pacman/local" -maxdepth 1 -type d -name "${PKG_NAME}*" | head -n 1)
+
+if [[ -n "${PKG_DIR}" ]]; then
+  # Extract version from the 'desc' file
+  # The %VERSION% tag is followed by the version string on the next line
+  RAW_VER=$(grep -A 1 "%VERSION%" "${PKG_DIR}/desc" | tail -n 1)
+
+  # Sanitize version string for filename (e.g. 147_12-1 -> _v147_12_1)
+  DIRETTA_VER="_v${RAW_VER//-/_}"
+  echo "✅ Detected ${PKG_NAME} version: ${RAW_VER}"
+else
+  echo "⚠️  Could not detect ${PKG_NAME}. Using generic filename."
+  DIRETTA_VER=""
+fi
+
+# Unmount immediately
+sudo umount "${TMP_MOUNT}"
+rmdir "${TMP_MOUNT}"
+
 # --- Calculation and Execution ---
 
 # 1. Construct the final filename
-FILENAME="diretta-${IMG_TYPE}-${IMG_STAGE}-golden.img"
+FILENAME="diretta-${IMG_TYPE}${DIRETTA_VER}-${IMG_STAGE}-golden.img"
 
 echo
 echo "⚙️  Preparing to create image..."
@@ -79,6 +147,7 @@ echo -n "🔎 Reading partition table from ${DEVICE}... "
 PART_INFO=$(sudo parted -ms "${DEVICE}" unit B print | grep "^2:")
 END_BYTE=$(echo "${PART_INFO}" | cut -d':' -f3 | tr -d 'B')
 echo "Done."
+
 if ! [[ "${END_BYTE}" =~ ^[0-9]+$ ]]; then
   echo "🚫 Error: Could not determine the end sector of the partition."
   exit 1
@@ -104,8 +173,8 @@ echo
 read -p "Do you want to proceed with these settings? (y/N) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Aborting."
-    exit 1
+  echo "Aborting."
+  exit 1
 fi
 
 # 5. Execute the dd command
@@ -117,19 +186,27 @@ sudo chown "${LOGNAME}:${LOGNAME}" "${FILENAME}"
 echo
 echo "✅ Success! Image created: ${FILENAME}"
 
-# --- NEW: Optional Shrink Phase ---
+# --- NEW: Explicit Shrink Selection ---
 echo
-read -p "Do you want to shrink this image now? (y/N) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    # Check if the filename is for the final 'apdx4' stage
-    if [[ "${FILENAME}" == *apdx7* ]]; then
-        echo "Image is 'apdx4'. Running the full shrink script..."
-        shrink "${FILENAME}"
-    else
-        echo "Image is an intermediate step. Running the shrink-8 script..."
-        shrink-8 "${FILENAME}"
-    fi
-else
-    echo "Skipping shrink process."
-fi
+echo "Select post-processing operation:"
+select shrink_opt in "Shrink (Final - Expands on Boot)" "Shrink-8 (Intermediate - Caps at 8GB)" "Skip"; do
+  case $shrink_opt in
+    "Shrink (Final - Expands on Boot)")
+      echo "Running full shrink..."
+      shrink "${FILENAME}"
+      break
+      ;;
+    "Shrink-8 (Intermediate - Caps at 8GB)")
+      echo "Running shrink-8 (Intermediate)..."
+      shrink-8 "${FILENAME}"
+      break
+      ;;
+    "Skip")
+      echo "Skipping shrink process."
+      break
+      ;;
+    *) echo "Invalid option. Please select 1, 2, or 3." ;;
+  esac
+done
+
+echo "Done."
