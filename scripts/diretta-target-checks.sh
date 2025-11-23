@@ -88,6 +88,7 @@ run_appendix7_checks() {
 run_appendix8_checks() {
     header "Appendix 8" "Optional: Purist 100Mbps Network Mode"
     check "'disable-eee' service is enabled" "systemctl is-enabled disable-eee.service"
+    check "'disable-eee' service is active" "systemctl is-active disable-eee.service"
 
     # Physical Link Validation
     check "Link speed is 100Mb/s" "ethtool end0 | grep -q 'Speed: 100Mb/s'"

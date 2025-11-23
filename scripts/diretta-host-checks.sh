@@ -101,6 +101,7 @@ run_appendix8_checks() {
     check "'limit-speed-100m' service is enabled" "systemctl is-enabled limit-speed-100m.service"
     check "'limit-speed-100m' service is active" "systemctl is-active limit-speed-100m.service"
     check "'disable-eee' service is enabled" "systemctl is-enabled disable-eee.service"
+    check "'disable-eee' service is active" "systemctl is-active disable-eee.service"
 
     # Physical Link Validation
     check "Link speed is 100Mb/s" "ethtool end0 | grep -q 'Speed: 100Mb/s'"
