@@ -100,8 +100,18 @@ run_appendix8_checks() {
     header "Appendix 8" "Optional: Purist 100Mbps Network Mode"
     check "'limit-speed-100m' service is enabled" "systemctl is-enabled limit-speed-100m.service"
     check "'limit-speed-100m' service is active" "systemctl is-active limit-speed-100m.service"
+    check "'disable-eee' service is enabled" "systemctl is-enabled disable-eee.service"
+
+    # Physical Link Validation
     check "Link speed is 100Mb/s" "ethtool end0 | grep -q 'Speed: 100Mb/s'"
     check "Duplex is Full" "ethtool end0 | grep -q 'Duplex: Full'"
+    check "Energy Efficient Ethernet (EEE) is disabled" "! ethtool --show-eee end0 | grep -q 'enabled - active'"
+
+    # Stability Check
+    if [ -f /sys/class/net/end0/carrier_changes ]; then
+        CHANGES=$(cat /sys/class/net/end0/carrier_changes)
+        check "Link stability (Carrier Changes: $CHANGES)" "[[ $CHANGES -lt 20 ]]"
+    fi
 }
 
 # --- Main Script ---

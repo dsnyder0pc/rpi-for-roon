@@ -2549,45 +2549,75 @@ On the Host, we will disable the `isolated_app.timer` and hook its script into *
 
 ## 17. Appendix 8: Optional Purist 100Mbps Network Mode
 
-**Objective:** Reduce electrical noise and improve OS scheduler precision by limiting the dedicated network link to 100 Mbps.
+**Objective:** Reduce electrical noise and improve OS scheduler precision by limiting the dedicated network link to 100 Mbps and explicitly disabling Energy Efficient Ethernet (EEE).
 
-While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the dedicated link (`end0`) can improve sound quality. The lower operating frequency of 100BASE-TX (31.25 MHz vs 62.5 MHz) generates less RFI, and benchmarks have shown this reduces "Core Jitter" on the Host CPU by ~14%.
+While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the dedicated link (`end0`) can improve sound quality. The lower operating frequency of 100BASE-TX (31.25 MHz vs 62.5 MHz) generates less RFI. Furthermore, ensuring EEE is disabled prevents the link from entering sleep states, eliminating potential latency spikes (flapping) and ensuring rock-solid stability on Raspberry Pi 5 hardware.
 
-**Note:** You may see "buffer low" warnings in the Target logs (`LatencyBuffer` dropping to 1). This is normal behavior due to the increased serialization latency of the slower link and does not cause audible dropouts.
+> **Note:** You may see "buffer low" warnings in the Target logs (`LatencyBuffer` dropping to 1). This is normal behavior due to the increased serialization latency of the slower link and does not cause audible dropouts.
 
-### Step 1: Configure the Host
+### Step 1: Configure the Host (Speed Limit)
+We will create a service on the **Host** that forces it to advertise *only* 100 Mbps Full Duplex. The Target will automatically detect this and match it.
 
-We will create a systemd service on the **Host** that forces it to advertise *only* 100 Mbps Full Duplex. The Target will automatically detect this and match it.
+**1. Create the restriction service:** *(Perform on Host Only)*
+```bash
+cat <<'EOT' | sudo tee /etc/systemd/system/limit-speed-100m.service
+[Unit]
+Description=Limit end0 advertisement to 100Mbps for Audio Purity
+After=network-online.target
+Wants=network-online.target
 
-1.  **Create the restriction service:** *(Important: on the Host only)*
-    ```bash
-    cat <<'EOT' | sudo tee /etc/systemd/system/limit-speed-100m.service
-    [Unit]
-    Description=Limit end0 advertisement to 100Mbps for Audio Purity
-    After=network-online.target
-    Wants=network-online.target
+[Service]
+Type=oneshot
+ExecCondition=/usr/bin/ip link show end0
+# Enable Auto-Neg but strictly limit advertisement to 100Mbps/Full
+ExecStart=/usr/bin/ethtool -s end0 speed 100 duplex full autoneg on
+RemainAfterExit=yes
 
-    [Service]
-    Type=oneshot
-    ExecCondition=/usr/bin/ip link show end0
-    # 1. Enable Auto-Neg but strictly limit advertisement to 100Mbps/Full
-    ExecStart=/usr/bin/ethtool -s end0 speed 100 duplex full autoneg on
-    # 2. Explicitly disable EEE to prevent link flapping (ignore errors if unsupported)
-    ExecStart=-/usr/bin/ethtool --set-eee end0 eee off
-    RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target
+EOT
+```
 
-    [Install]
-    WantedBy=multi-user.target
-    EOT
-    ```
+**2. Enable and start the service:**
 
-2.  **Enable and start the service:**
-    ```bash
-    sudo systemctl daemon-reload
-    sudo systemctl enable --now limit-speed-100m.service
-    ```
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now limit-speed-100m.service
+```
 
-### Step 2: Flag the Target (For QA)
+### Step 2: Configure Host and Target (Disable EEE)
+
+Energy Efficient Ethernet (EEE) can cause link instability on some hardware combinations. We will create a service to explicitly disable it on **both** the Host and the Target to ensure consistent behavior.
+
+**1. Create the disable service:** *(Perform on BOTH Host and Target)*
+
+```bash
+cat <<'EOT' | sudo tee /etc/systemd/system/disable-eee.service
+[Unit]
+Description=Disable EEE on end0 for Link Stability
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/bin/ip link show end0
+# Explicitly disable EEE (ignore errors if unsupported by driver)
+ExecStart=-/usr/bin/ethtool --set-eee end0 eee off
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOT
+```
+
+**2. Enable and start the service:**
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now disable-eee.service
+```
+
+### Step 3: Flag the Target (For QA)
 
 To ensure the **Target QA Script** knows to validate this specific configuration, create a marker file on the Target:
 
