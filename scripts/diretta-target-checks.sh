@@ -87,8 +87,6 @@ run_appendix7_checks() {
 }
 run_appendix8_checks() {
     header "Appendix 8" "Optional: Purist 100Mbps Network Mode"
-    echo "Note: The Target auto-negotiates speed based on the Host, but EEE is explicitly disabled here."
-
     check "'disable-eee' service is enabled" "systemctl is-enabled disable-eee.service"
 
     # Physical Link Validation
