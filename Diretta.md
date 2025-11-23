@@ -2558,7 +2558,7 @@ While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the 
 ### Step 1: Configure the Host (Speed Limit)
 We will create a service on the **Host** that forces it to advertise *only* 100 Mbps Full Duplex. The Target will automatically detect this and match it.
 
-**1. Create the restriction service:** *(Perform on Host Only)*
+**Create the restriction service:** *(Perform on Host Only)*
 ```bash
 cat <<'EOT' | sudo tee /etc/systemd/system/limit-speed-100m.service
 [Unit]
@@ -2576,11 +2576,8 @@ RemainAfterExit=yes
 [Install]
 WantedBy=multi-user.target
 EOT
-```
 
-**2. Enable and start the service:**
-
-```bash
+echo "Enable and start the service:"
 sudo systemctl daemon-reload
 sudo systemctl enable --now limit-speed-100m.service
 ```
@@ -2589,7 +2586,7 @@ sudo systemctl enable --now limit-speed-100m.service
 
 Energy Efficient Ethernet (EEE) can cause link instability on some hardware combinations. We will create a service to explicitly disable it on **both** the Host and the Target to ensure consistent behavior.
 
-**1. Create the disable service:** *(Perform on BOTH Host and Target)*
+**Create the disable service:** *(Perform on BOTH Host and Target)*
 
 ```bash
 cat <<'EOT' | sudo tee /etc/systemd/system/disable-eee.service
@@ -2608,11 +2605,8 @@ RemainAfterExit=yes
 [Install]
 WantedBy=multi-user.target
 EOT
-```
 
-**2. Enable and start the service:**
-
-```bash
+echo "Enable and start the service:"
 sudo systemctl daemon-reload
 sudo systemctl enable --now disable-eee.service
 ```
