@@ -82,8 +82,6 @@ run_appendix7_checks() {
     check "'rtapp.timer' is disabled" "! systemctl is-enabled rtapp.timer 2>/dev/null"
     check "Hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa_target.service.d/"
     check "Hook for 'rtapp' is set" "grep -qr 'ExecStartPost=-/bin/bash /usr/bin/rtapp' /etc/systemd/system/diretta_alsa_target.service.d/"
-    check "Reload hook for 'isolated_app.sh' is set" "grep -qr 'ExecReloadPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa_target.service.d/"
-    check "Reload hook for 'rtapp' is set" "grep -qr 'ExecReloadPost=-/bin/bash /usr/bin/rtapp' /etc/systemd/system/diretta_alsa_target.service.d/"
 }
 run_appendix8_checks() {
     header "Appendix 8" "Optional: Purist 100Mbps Network Mode"

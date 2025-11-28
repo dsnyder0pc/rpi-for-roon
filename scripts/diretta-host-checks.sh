@@ -92,9 +92,7 @@ run_appendix7_checks() {
     header "Appendix 7" "Optional: Event-Driven CPU Hooks"
     check "'isolated_app.timer' is disabled" "! systemctl is-enabled isolated_app.timer 2>/dev/null"
     check "Roon hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/roonbridge.service.d/"
-    check "Roon reload hook for 'isolated_app.sh' is set" "grep -qr 'ExecReloadPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/roonbridge.service.d/"
     check "Diretta hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa.service.d/"
-    check "Diretta reload hook for 'isolated_app.sh' is set" "grep -qr 'ExecReloadPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa.service.d/"
 }
 run_appendix8_checks() {
     header "Appendix 8" "Optional: Purist 100Mbps Network Mode"
