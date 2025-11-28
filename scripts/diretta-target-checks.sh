@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.12
+# Diretta Target QA Check Script v1.13
 # (Updated to include Appendix 8 checks)
 #
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.11
+# Diretta Host QA Check Script v1.12
 # (Updated to include Appendix 8 checks)
 #
 
