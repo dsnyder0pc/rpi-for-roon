@@ -80,6 +80,7 @@ run_appendix7_checks() {
     header "Appendix 7" "Optional: Event-Driven CPU Hooks"
     check "'isolated_app.timer' is disabled" "! systemctl is-enabled isolated_app.timer 2>/dev/null"
     check "'rtapp.timer' is disabled" "! systemctl is-enabled rtapp.timer 2>/dev/null"
+    check "Isolation grup delay" "grep -qr 'ExecStartPost=sleep"
     check "Hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa_target.service.d/"
     check "Hook for 'rtapp' is set" "grep -qr 'ExecStartPost=-/bin/bash /usr/bin/rtapp' /etc/systemd/system/diretta_alsa_target.service.d/"
 }
