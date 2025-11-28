@@ -2379,7 +2379,7 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     FlexCycle=disable
     CycleTime=514
     CycleMinTime=
-    Debug=stdout
+    Debug=disable
     periodMax=32
     periodMin=16
     periodSizeMax=38400
