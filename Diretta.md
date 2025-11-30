@@ -157,7 +157,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 #### Software & Licensing Costs
 
-* **AudioLinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$139** (prices subject to change). However, it's fine to get started with a one year subscription, currently **$79**. Both options allow for installation on multiple devices within the same location.
+* **AudioLinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$158** (prices subject to change). However, it's fine to get started with a one year subscription, currently **$79**. Both options allow for installation on multiple devices within the same location.
 * **Diretta Target:** A license is required for high-res playback (greater than 44.1 kHz PCM) via the Diretta Target device and currently costs **€100**.
     * You may evaluate the Diretta Target using 44.1 kHz streams for an extended period of time. Therefore, I recommend using Roon's **Sample rate conversion** feature under **MUSE** DSP settings to convert all content to 44.1 kHz during your evaluation period. Once you are satisfied, purchase the Diretta Target license to remove the restriction. Leave sample rate conversion settings engaged until you receive the second email from the Diretta team indicating that your hardware has been activated.
     * **CRITICAL:** This license is locked to the specific hardware of the Raspberry Pi it is purchased for. It is essential that you perform the final licensing step on the exact hardware you intend to use permanently.
