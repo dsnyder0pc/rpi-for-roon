@@ -193,12 +193,12 @@ select shrink_opt in "Shrink (Final - Expands on Boot)" "Shrink-8 (Intermediate 
   case $shrink_opt in
     "Shrink (Final - Expands on Boot)")
       echo "Running full shrink..."
-      shrink "${FILENAME}"
+      shrink-image "${FILENAME}"
       break
       ;;
     "Shrink-8 (Intermediate - Caps at 8GB)")
       echo "Running shrink-8 (Intermediate)..."
-      shrink-8 "${FILENAME}"
+      shrink-image "${FILENAME}" 8
       break
       ;;
     "Skip")
