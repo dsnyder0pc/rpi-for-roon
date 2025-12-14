@@ -1077,6 +1077,26 @@ EOT
 yay -S argonone-c-git
 ```
 
+**Note:** If the above command fails with compiler errors, you can try this manual procedure to fix and install the package:
+```bash
+# Clone the package repository
+git clone https://aur.archlinux.org/argonone-c-git.git
+cd argonone-c-git
+
+# Download source code without building
+makepkg -o
+
+# Apply patch to fix compilation error with GCC 14+
+sed -i 's/_timer_thread()/_timer_thread(void *args)/g' src/argonone-c-git/src/event_timer.c
+
+# Compile and install using the patched source
+makepkg -e -i --noconfirm
+
+# Clean up
+cd ..
+rm -rf argonone-c-git
+```
+
 ### Step 5: Switch Argon ONE case from hardware to software control
 ```bash
 sudo pacman -S --noconfirm --needed i2c-tools libgpiod
