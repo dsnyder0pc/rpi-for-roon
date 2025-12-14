@@ -984,6 +984,8 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         CpuSend=
         CpuOther=
         LatencyBuffer=0
+        disConnectDelay=enable
+        singleMode=
         EOT
         ```
     * Choose **7) Exit**. Follow prompts to get back to the terminal
@@ -2393,6 +2395,8 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     CpuSend=
     CpuOther=
     LatencyBuffer=0
+    disConnectDelay=enable
+    singleMode=
     EOT
     ```
 3.  Restart the Diretta service for the change to take effect:
