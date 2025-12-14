@@ -323,7 +323,7 @@ bash -c "$cmd"
 #### 4.3. Install DNS Utils
 Install the `dnsutils` package so that the **menu** update will have access to the `dig` command:
 ```bash
-sudo pacman -S --noconfirm dnsutils
+sudo pacman -S --noconfirm --needed dnsutils
 ```
 
 #### 4.4. Run System and Menu Updates
@@ -375,7 +375,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
 #### 5.1. Pre-configure the Diretta Host
 
 1.  **Create Network Files:**
-    Create the following two files on the **Diretta Host**. The `end0.network` file sets the static IP for the future point-to-point link. The `enp.network` file ensures the USB Ethernet adapter continues to get an IP from your main LAN.
+    Create the following two files on the **Diretta Host**. The `end0.network` file sets the static IP for the future point-to-point link. The `usb-uplink.network` file ensures the USB Ethernet adapter continues to get an IP from your main LAN.
 
     *File: `/etc/systemd/network/end0.network`*
     ```bash
@@ -388,11 +388,11 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     EOT
     ```
 
-    *File: `/etc/systemd/network/enp.network`*
+    *File: `/etc/systemd/network/usb-uplink.network`*
     ```bash
-    cat <<'EOT' | sudo tee /etc/systemd/network/enp.network
+    cat <<'EOT' | sudo tee /etc/systemd/network/usb-uplink.network
     [Match]
-    Name=enp*
+    Name=en[pu]*
 
     [Network]
     DHCP=yes
@@ -475,8 +475,8 @@ If you just finished updating your Diretta Target, click [here](https://github.c
             type nat hook postrouting priority 100;
 
             # NAT (Masquerade) traffic from your subnet going
-            # out any interface starting with 'enp' or 'wlp'
-            ip saddr 172.20.0.0/24 oifname "enp*" masquerade
+            # out any interface starting with 'enp', 'enu' or 'wlp'
+            ip saddr 172.20.0.0/24 oifname "en[pu]*" masquerade
             ip saddr 172.20.0.0/24 oifname "wlp*" masquerade
         }
     }
@@ -946,7 +946,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     * Choose **3) Set Ethernet interface**. It is critical to select `end0`, the interface for the point-to-point link.
         ```text
         ?3
-        Your available Ethernet interfaces are: end0  enp1s0u1u2
+        Your available Ethernet interfaces are: end0  enu1
         Please type the name of your preferred interface:
         end0
         ```
@@ -2007,8 +2007,8 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     sudo pacman -Syu --noconfirm
     sudo pacman -S --noconfirm avahi
 
-    # Dynamically find the USB Ethernet interface name (e.g., enp1s0u1u2)
-    USB_INTERFACE=$(ip -o link show | awk -F': ' '/enp/{print $2}')
+    # Dynamically find the USB Ethernet interface name (e.g., enp... or enu1...)
+    USB_INTERFACE=$(ip -o link show | awk -F': ' '/en[pu]/{print $2}')
 
     # Create a configuration override for Avahi to isolate it to the USB interface
     echo "--- Configuring Avahi to use interface: $USB_INTERFACE ---"
