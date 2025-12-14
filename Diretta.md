@@ -476,7 +476,8 @@ If you just finished updating your Diretta Target, click [here](https://github.c
 
             # NAT (Masquerade) traffic from your subnet going
             # out any interface starting with 'enp', 'enu' or 'wlp'
-            ip saddr 172.20.0.0/24 oifname "en[pu]*" masquerade
+            ip saddr 172.20.0.0/24 oifname "enp*" masquerade
+            ip saddr 172.20.0.0/24 oifname "enu*" masquerade
             ip saddr 172.20.0.0/24 oifname "wlp*" masquerade
         }
     }
