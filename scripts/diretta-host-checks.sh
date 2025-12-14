@@ -87,6 +87,7 @@ run_appendix6_checks() {
     check "RoonBridge is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'RoonBridge'"
     check "syncAlsa is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'syncAlsa'"
     check "Network IRQs (end0) are pinned to cores 2-3 (affinity 'c')" "(for irq in \$(grep 'end0' /proc/interrupts | awk '{print \$1}' | tr -d :); do grep -q 'c$' /proc/irq/\$irq/smp_affinity || exit 1; done)"
+    check "Uplink IRQs (enu/enp) are NOT on isolated cores" "(for irq in \$(grep -E 'enu|enp' /proc/interrupts | awk '{print \$1}' | tr -d :); do grep -v -q 'c$' /proc/irq/\$irq/smp_affinity || exit 1; done)"
 }
 run_appendix7_checks() {
     header "Appendix 7" "Optional: Event-Driven CPU Hooks"
