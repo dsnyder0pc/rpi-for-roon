@@ -97,7 +97,7 @@ echo "Working on: ${WORK_FILE}"
 
   # Inject the self-expanding service for Arch Linux
   echo "Installing one-shot resize service..."
-  
+
   # Note: Variable expansion happens here before writing the file.
   # If TARGET_SECTOR is empty, fdisk gets a blank line (default).
   # If TARGET_SECTOR is set, fdisk gets the number.
