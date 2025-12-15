@@ -394,6 +394,9 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     [Match]
     Name=en[pu]*
 
+    [Link]
+    MTUBytes=1500
+
     [Network]
     DHCP=yes
     DNSSEC=no
