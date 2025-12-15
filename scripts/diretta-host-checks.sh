@@ -133,6 +133,7 @@ check "P2P network file 'end0.network' exists" "[ -f /etc/systemd/network/end0.n
 check "P2P network file contains correct IP" "grep -q 'Address=172.20.0.1/24' /etc/systemd/network/end0.network"
 check "USB LAN network file 'usb-uplink.network' exists" "[ -f /etc/systemd/network/usb-uplink.network ]"
 check "USB LAN network file is set for DHCP" "grep -q 'DHCP=yes' /etc/systemd/network/usb-uplink.network"
+check "No Jumbo Frames on Uplink" "[[ -z \$(ip link show | awk -F'[: ]+' '\$1 ~ /^[0-9]+/ && \$2 !~ /^lo|^end|^wl/ && \$5 > 1500 {print \$5}') ]]"
 check "Old generic network files are removed" "! [ -f /etc/systemd/network/enp.network ] && ! [ -f /etc/systemd/network/en.network ] && ! [ -f /etc/systemd/network/auto.network ] && ! [ -f /etc/systemd/network/eth.network ]"
 check "/etc/hosts contains 'diretta-target' entry" "grep -q '172.20.0.2.*diretta-target' /etc/hosts"
 check "IP forwarding is enabled in sysctl.d" "grep -q 'net.ipv4.ip_forward=1' /etc/sysctl.d/99-ip-forwarding.conf"
