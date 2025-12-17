@@ -2704,7 +2704,7 @@ EOF
     echo "Configuring Diretta Host..."
     sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
-    sudo systemctl restart diretta_alsa_daemon
+    sudo systemctl restart diretta_alsa
     echo "DONE: Host optimization complete."
   }
 fi
