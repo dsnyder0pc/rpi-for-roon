@@ -384,6 +384,9 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     [Match]
     Name=end0
 
+    [Link]
+    MTUBytes=1500
+
     [Network]
     Address=172.20.0.1/24
     EOT
@@ -532,6 +535,9 @@ On the **Diretta Target**, create the `end0.network` file. This configures its s
 cat <<'EOT' | sudo tee /etc/systemd/network/end0.network
 [Match]
 Name=end0
+
+[Link]
+MTUBytes=1500
 
 [Network]
 Address=172.20.0.2/24
@@ -2665,30 +2671,49 @@ sudo touch /etc/diretta-100m
 ## 18. Appendix 9: Optional: Jumbo Frames Optimization
 This section optimizes the transport for high-bandwidth efficiency.
 
-**Automated Host Configuration**
-SSH into the Host (`diretta-host`) and paste the following block. It will test the link, configure the system network, and update Diretta automatically.
+#### **Step 1:** Prepare Interfaces
+
+We must temporarily force the network interfaces to MTU 9000 to verify kernel support and prepare for the link test.
+
+**Run this on the Target FIRST, then on the Host:**
 
 ```bash
-# 1. Check Kernel Capability
-if ip link show end0 | grep -q "mtu 1500"; then
-  echo "STOP: Kernel MTU is 1500. You must enable Jumbo Frames in the boot config first."
+if ! sudo ip link set end0 mtu 9000 2>/dev/null; then
+  echo "STOP: Your kernel does not appear to support Jumbo frames."
 else
-  # 2. Detect Link Limit (Full vs Baby)
-  echo "Testing Link Capability..."
-  if ping -c 1 -w 1 -M do -s 8972 target &>/dev/null; then
-    NEW_MTU=9000
-    echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
-  elif ping -c 1 -w 1 -M do -s 2004 target &>/dev/null; then
-    NEW_MTU=2032
-    echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
-  else
-    echo "FAIL: Link cannot support Jumbo Frames. Check hardware/cables."
-    # Force a fail-exit to prevent config changes
-    false
-  fi && {
-    # 3. Apply System Network Config
-    echo "Configuring /etc/systemd/network/end0.network..."
-    cat <<EOF | sudo tee /etc/systemd/network/end0.network
+  echo "SUCCESS: Kernel supports Jumbo frames. Proceed to Step 2."
+fi
+
+```
+
+*If you see "STOP", do not proceed. Your kernel is missing the required patch.*
+
+---
+
+#### **Step 2:** Automated Host Configuration
+
+SSH into the Host (`diretta-host`) and paste the following block. It will probe the link, configure the permanent network settings, and update Diretta.
+
+```bash
+# 1. Detect Link Limit (Full vs Baby)
+echo "Testing Link Capability..."
+# Give the link a moment to settle after the manual MTU change
+sleep 2
+
+if ping -c 1 -w 1 -M do -s 8972 target &>/dev/null; then
+  NEW_MTU=9000
+  echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
+elif ping -c 1 -w 1 -M do -s 2004 target &>/dev/null; then
+  NEW_MTU=2032
+  echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
+else
+  echo "FAIL: Link cannot support Jumbo Frames. Reverting to safe defaults."
+  sudo ip link set end0 mtu 1500
+  false
+fi && {
+  # 2. Apply System Network Config
+  echo "Configuring /etc/systemd/network/end0.network..."
+  cat <<EOF | sudo tee /etc/systemd/network/end0.network
 [Match]
 Name=end0
 
@@ -2698,42 +2723,41 @@ MTUBytes=$NEW_MTU
 [Network]
 Address=172.20.0.1/24
 EOF
-    sudo networkctl reload
+  sudo networkctl reload
 
-    # 4. Apply Diretta Config
-    echo "Configuring Diretta Host..."
-    sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
-    sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
-    sudo systemctl restart diretta_alsa
-    echo "DONE: Host optimization complete."
-  }
-fi
+  # 3. Apply Diretta Config
+  echo "Configuring Diretta Host..."
+  sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
+  sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
+  sudo systemctl restart diretta_alsa
+  echo "DONE: Host optimization complete."
+}
 
 ```
 
-**Automated Target Configuration**
+---
+
+#### **Step 3:** Automated Target Configuration
+
 SSH into the Target (`diretta-target`) and paste the following block.
 
 ```bash
-# 1. Check Kernel Capability
-if ip link show end0 | grep -q "mtu 1500"; then
-  echo "STOP: Kernel MTU is 1500. You must enable Jumbo Frames in the boot config first."
+# 1. Detect Link Limit (Full vs Baby)
+echo "Testing Link Capability..."
+if ping -c 1 -w 1 -M do -s 8972 host &>/dev/null; then
+  NEW_MTU=9000
+  echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
+elif ping -c 1 -w 1 -M do -s 2004 host &>/dev/null; then
+  NEW_MTU=2032
+  echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
 else
-  # 2. Detect Link Limit (Full vs Baby)
-  echo "Testing Link Capability..."
-  if ping -c 1 -w 1 -M do -s 8972 host &>/dev/null; then
-    NEW_MTU=9000
-    echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
-  elif ping -c 1 -w 1 -M do -s 2004 host &>/dev/null; then
-    NEW_MTU=2032
-    echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
-  else
-    echo "FAIL: Link cannot support Jumbo Frames. Check hardware/cables."
-    false
-  fi && {
-    # 3. Apply System Network Config
-    echo "Configuring /etc/systemd/network/end0.network..."
-    cat <<EOF | sudo tee /etc/systemd/network/end0.network
+  echo "FAIL: Link cannot support Jumbo Frames. Reverting to safe defaults."
+  sudo ip link set end0 mtu 1500
+  false
+fi && {
+  # 2. Apply System Network Config
+  echo "Configuring /etc/systemd/network/end0.network..."
+  cat <<EOF | sudo tee /etc/systemd/network/end0.network
 [Match]
 Name=end0
 
@@ -2745,25 +2769,24 @@ Address=172.20.0.2/24
 Gateway=172.20.0.1
 DNS=1.1.1.1
 EOF
-    sudo networkctl reload
+  sudo networkctl reload
 
-    # 4. Apply Diretta Config
-    echo "Configuring Diretta Target..."
-    CONF="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
-    sudo sed -i '/^ExtEtherMTU=/d' $CONF
-    sudo sed -i '/^EtherMTU=/d' $CONF
+  # 3. Apply Diretta Config
+  echo "Configuring Diretta Target..."
+  CONF="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
+  sudo sed -i '/^ExtEtherMTU=/d' $CONF
+  sudo sed -i '/^EtherMTU=/d' $CONF
 
-    if [ "$NEW_MTU" -eq 9000 ]; then
-      echo "ExtEtherMTU=9014" | sudo tee -a $CONF
-      echo "EtherMTU=9000" | sudo tee -a $CONF
-    else
-      echo "ExtEtherMTU=2046" | sudo tee -a $CONF
-      echo "EtherMTU=2032" | sudo tee -a $CONF
-    fi
-    sudo systemctl restart diretta_alsa_target
-    echo "DONE: Target optimization complete."
-  }
-fi
+  if [ "$NEW_MTU" -eq 9000 ]; then
+    echo "ExtEtherMTU=9014" | sudo tee -a $CONF
+    echo "EtherMTU=9000" | sudo tee -a $CONF
+  else
+    echo "ExtEtherMTU=2046" | sudo tee -a $CONF
+    echo "EtherMTU=2032" | sudo tee -a $CONF
+  fi
+  sudo systemctl restart diretta_alsa_target
+  echo "DONE: Target optimization complete."
+}
 
 ```
 
