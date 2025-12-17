@@ -113,6 +113,38 @@ run_appendix8_checks() {
         check "Link stability (Carrier Changes: $CHANGES)" "[[ $CHANGES -lt 20 ]]"
     fi
 }
+run_appendix9_checks() {
+    header "Appendix 9" "Optional: Jumbo Frames Optimization"
+
+    # 1. OS Configuration Check
+    if ip link show end0 | grep -qE 'mtu (2032|9000)'; then
+        CURRENT_MTU=$(ip link show end0 | grep -o 'mtu [0-9]*' | awk '{print $2}')
+        check "Interface end0 configured for Jumbo (MTU $CURRENT_MTU)" "true"
+    else
+        check "Interface end0 configured for Jumbo (MTU 2032 or 9000)" "false"
+        return
+    fi
+
+    # 2. Systemd Check
+    if grep -qE '^MTUBytes=(2032|9000)' /etc/systemd/network/end0.network; then
+        check "Systemd network config contains MTUBytes setting" "true"
+    else
+        check "Systemd network config contains MTUBytes setting" "false"
+    fi
+
+    # 3. Link Capability Check
+    if [ "$CURRENT_MTU" -eq 9000 ]; then
+        check "Link passes Full Jumbo Ping (8972 bytes)" "ping -c 1 -w 1 -M do -s 8972 target"
+    elif [ "$CURRENT_MTU" -eq 2032 ]; then
+        check "Link passes Baby Jumbo Ping (2004 bytes)" "ping -c 1 -w 1 -M do -s 2004 target"
+    fi
+
+    # 4. Diretta Config
+    CONFIG="/opt/diretta-alsa/setting.inf"
+    check "FlexCycle is enabled" "grep -q '^FlexCycle=enable' $CONFIG"
+    check "CycleTime is optimized (700us)" "grep -q '^CycleTime=700' $CONFIG"
+}
+
 
 # --- Main Script ---
 if [ "$EUID" -ne 0 ]; then echo -e "${C_RED}Please run this script with sudo or as root.${C_RESET}"; exit 1; fi
@@ -189,5 +221,6 @@ check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix
 check_optional_section "cset set --list 2>/dev/null | grep -q 'isolated1'" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
 check_optional_section "[ -d /etc/systemd/system/roonbridge.service.d ]" "run_appendix7_checks" "Appendix 7 (Event-Driven Hooks)"
 check_optional_section "systemctl is-enabled limit-speed-100m.service" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
+check_optional_section "grep -q '^FlexCycle=enable' /opt/diretta-alsa/setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}\n"

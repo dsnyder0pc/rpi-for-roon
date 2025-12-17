@@ -100,6 +100,38 @@ run_appendix8_checks() {
         check "Link stability (Carrier Changes: $CHANGES)" "[[ $CHANGES -lt 20 ]]"
     fi
 }
+run_appendix9_checks() {
+    header "Appendix 9" "Optional: Jumbo Frames Optimization"
+
+    # 1. OS Configuration Check
+    if ip link show end0 | grep -qE 'mtu (2032|9000)'; then
+        CURRENT_MTU=$(ip link show end0 | grep -o 'mtu [0-9]*' | awk '{print $2}')
+        check "Interface end0 configured for Jumbo (MTU $CURRENT_MTU)" "true"
+    else
+        check "Interface end0 configured for Jumbo (MTU 2032 or 9000)" "false"
+        return
+    fi
+
+    # 2. Systemd Check
+    if grep -qE '^MTUBytes=(2032|9000)' /etc/systemd/network/end0.network; then
+        check "Systemd network config contains MTUBytes setting" "true"
+    else
+        check "Systemd network config contains MTUBytes setting" "false"
+    fi
+
+    # 3. Link Capability & Config Validation
+    CONFIG="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
+
+    if [ "$CURRENT_MTU" -eq 9000 ]; then
+        check "Link passes Full Jumbo Ping (8972 bytes)" "ping -c 1 -w 1 -M do -s 8972 host"
+        check "ExtEtherMTU is 9014" "grep -q '^ExtEtherMTU=9014' $CONFIG"
+        check "EtherMTU is 9000" "grep -q '^EtherMTU=9000' $CONFIG"
+    elif [ "$CURRENT_MTU" -eq 2032 ]; then
+        check "Link passes Baby Jumbo Ping (2004 bytes)" "ping -c 1 -w 1 -M do -s 2004 host"
+        check "ExtEtherMTU is 2046" "grep -q '^ExtEtherMTU=2046' $CONFIG"
+        check "EtherMTU is 2032" "grep -q '^EtherMTU=2032' $CONFIG"
+    fi
+}
 
 # --- Main Script ---
 if [ "$EUID" -ne 0 ]; then echo -e "${C_RED}Please run this script with sudo or as root.${C_RESET}"; exit 1; fi
@@ -154,7 +186,7 @@ check_optional_section "[ -f /usr/local/bin/purist-mode ]" "run_appendix3_checks
 check_optional_section "id purist-app" "run_appendix4_checks" "Appendix 4 (Web UI Backend)"
 check_optional_section "cset set --list 2>/dev/null | grep -q 'isolated1'" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
 check_optional_section "[ -d /etc/systemd/system/diretta_alsa_target.service.d ]" "run_appendix7_checks" "Appendix 7 (Event-Driven Hooks)"
-# Target only checks result, so we always run if the interface exists
 check_optional_section "[ -f /etc/diretta-100m ]" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
+check_optional_section "grep -q '^ExtEtherMTU=' /opt/diretta-alsa-target/diretta_app_target_setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}\n"
