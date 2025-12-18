@@ -2691,7 +2691,7 @@ fi
 
 ---
 
-#### **Step 3:** Automated Target Configuration
+#### **Step 2:** Automated Target Configuration
 
 SSH into the Target (`diretta-target`) and paste the following block.
 
