@@ -452,7 +452,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
         # === Rule 2: Port Forwarding (DNAT) ===
         # This chain hooks into the 'prerouting' path for NAT
         chain prerouting {
-            type nat hook prerouting priority -100;
+            type nat hook prerouting priority dstnat;
 
             # Forward Host port 5101 to Target port 172.20.0.2:5001
             tcp dport 5101 dnat to 172.20.0.2:5001
