@@ -2675,77 +2675,19 @@ This section optimizes the transport for high-bandwidth efficiency.
 
 We must temporarily force the network interfaces to MTU 9000 to verify kernel support and prepare for the link test.
 
-**Run this on the Target:**
+**Run this on the Target first, then the Host:**
 
 ```bash
-if ! sudo ip link set end0 mtu 9000 2>/dev/null; then
-  echo "STOP: Your kernel does not appear to support Jumbo frames."
-else
+sudo sh -c 'ip link set end0 down; sleep 2; ip link set end0 mtu 9000; ip link set end0 up'
+end0_mtu=$(ip link show dev end0 | awk '/mtu/ {print $5}')
+if [[ "9000" == "$end0_mtu" ]]; then
   echo "SUCCESS: Kernel supports Jumbo frames. Proceed to Step 2."
-fi
-```
-
-**Run this on the Host:**
-
-```bash
-sudo ip link set end0 down
-if ! sudo ip link set end0 mtu 9000 2>/dev/null; then
-  echo "STOP: Your kernel does not appear to support Jumbo frames."
 else
-  echo "SUCCESS: Kernel supports Jumbo frames. Proceed to Step 2."
+  echo "STOP: Your kernel does not appear to support Jumbo frames."
 fi
-sudo ip link set end0 up
 ```
 
 *If you see "STOP", do not proceed. Your kernel is missing the required patch.*
-
----
-
-#### **Step 2:** Automated Host Configuration
-
-SSH into the Host (`diretta-host`) and paste the following block. It will probe the link, configure the permanent network settings, and update Diretta.
-
-```bash
-# 1. Detect Link Limit (Full vs Baby)
-echo "Testing Link Capability..."
-# Give the link a moment to settle after the manual MTU change
-sleep 2
-
-if ping -c 1 -w 1 -M do -s 8972 target &>/dev/null; then
-  NEW_MTU=9000
-  echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
-elif ping -c 1 -w 1 -M do -s 2004 target &>/dev/null; then
-  NEW_MTU=2032
-  echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
-else
-  echo "FAIL: Link cannot support Jumbo Frames. Reverting to safe defaults."
-  sudo ip link set end0 mtu 1500
-  false
-fi && {
-  # 2. Apply System Network Config
-  echo "Configuring /etc/systemd/network/end0.network..."
-  cat <<EOF | sudo tee /etc/systemd/network/end0.network
-[Match]
-Name=end0
-
-[Link]
-MTUBytes=$NEW_MTU
-
-[Network]
-Address=172.20.0.1/24
-EOF
-  sudo ip link set end0 down
-  sudo networkctl reload
-
-  # 3. Apply Diretta Config
-  echo "Configuring Diretta Host..."
-  sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
-  sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
-  sudo systemctl restart diretta_alsa
-  echo "DONE: Host optimization complete."
-}
-
-```
 
 ---
 
@@ -2798,6 +2740,53 @@ EOF
   fi
   sudo systemctl restart diretta_alsa_target
   echo "DONE: Target optimization complete."
+}
+
+```
+
+---
+
+#### **Step 3:** Automated Host Configuration
+
+SSH into the Host (`diretta-host`) and paste the following block. It will probe the link, configure the permanent network settings, and update Diretta.
+
+```bash
+# 1. Detect Link Limit (Full vs Baby)
+echo "Testing Link Capability..."
+# Give the link a moment to settle after the manual MTU change
+sleep 2
+
+if ping -c 1 -w 1 -M do -s 8972 target &>/dev/null; then
+  NEW_MTU=9000
+  echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
+elif ping -c 1 -w 1 -M do -s 2004 target &>/dev/null; then
+  NEW_MTU=2032
+  echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
+else
+  echo "FAIL: Link cannot support Jumbo Frames. Reverting to safe defaults."
+  sudo ip link set end0 mtu 1500
+  false
+fi && {
+  # 2. Apply System Network Config
+  echo "Configuring /etc/systemd/network/end0.network..."
+  cat <<EOF | sudo tee /etc/systemd/network/end0.network
+[Match]
+Name=end0
+
+[Link]
+MTUBytes=$NEW_MTU
+
+[Network]
+Address=172.20.0.1/24
+EOF
+  sudo networkctl reload
+
+  # 3. Apply Diretta Config
+  echo "Configuring Diretta Host..."
+  sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
+  sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
+  sudo systemctl restart diretta_alsa
+  echo "DONE: Host optimization complete."
 }
 
 ```
