@@ -2744,6 +2744,11 @@ EOF
 
 ```
 
+**Reboot the Target** to make sure the MTU changes take effect.
+```bash
+sudo sync && sudo reboot
+```
+
 ---
 
 #### **Step 3:** Automated Host Configuration
@@ -2788,7 +2793,11 @@ EOF
   sudo systemctl restart diretta_alsa
   echo "DONE: Host optimization complete."
 }
+```
 
+**Reboot the Host** to make sure the MTU changes take effect.
+```bash
+sudo sync && sudo reboot
 ```
 
 >
