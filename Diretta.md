@@ -2734,6 +2734,7 @@ MTUBytes=$NEW_MTU
 [Network]
 Address=172.20.0.1/24
 EOF
+  sudo ip link set end0 down
   sudo networkctl reload
 
   # 3. Apply Diretta Config
