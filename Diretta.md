@@ -2744,11 +2744,6 @@ EOF
 
 ```
 
-**Reboot the Target** to make sure the MTU changes take effect.
-```bash
-sudo sync && sudo reboot
-```
-
 ---
 
 #### **Step 3:** Automated Host Configuration
@@ -2795,7 +2790,8 @@ EOF
 }
 ```
 
-**Reboot the Host** to make sure the MTU changes take effect.
+#### **Step 4:** Reboot to Pick up MTU Changes
+Reboot the Target first, then the Host:
 ```bash
 sudo sync && sudo reboot
 ```
