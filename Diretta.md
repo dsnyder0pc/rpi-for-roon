@@ -2189,7 +2189,7 @@ After completing major sections of this guide, it's a good idea to run a quick q
 
 We've created a smart script that automatically detects whether you are running it on the **Diretta Host** or the **Diretta Target** and performs the appropriate set of checks.
 
-**How to Run the Check**
+### **How to Run the Check**
 
 On either the Host or the Target, run the following single command. It will download and execute the QA script, providing a detailed report of your system's status.
 
