@@ -2687,7 +2687,7 @@ else
 fi
 ```
 
-*If you see "STOP", do not proceed. Your kernel is missing the required patch.*
+*If you see "STOP" on **either** Host or Target, do not proceed. Your kernel is missing the required patch.*
 
 ---
 
