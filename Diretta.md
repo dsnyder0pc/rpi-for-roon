@@ -2675,7 +2675,7 @@ This section optimizes the transport for high-bandwidth efficiency.
 
 We must temporarily force the network interfaces to MTU 9000 to verify kernel support and prepare for the link test.
 
-**Run this on the Target FIRST, then on the Host:**
+**Run this on the Target:**
 
 ```bash
 if ! sudo ip link set end0 mtu 9000 2>/dev/null; then
@@ -2683,7 +2683,18 @@ if ! sudo ip link set end0 mtu 9000 2>/dev/null; then
 else
   echo "SUCCESS: Kernel supports Jumbo frames. Proceed to Step 2."
 fi
+```
 
+**Run this on the Host:**
+
+```bash
+sudo ip link set end0 down
+if ! sudo ip link set end0 mtu 9000 2>/dev/null; then
+  echo "STOP: Your kernel does not appear to support Jumbo frames."
+else
+  echo "SUCCESS: Kernel supports Jumbo frames. Proceed to Step 2."
+fi
+sudo ip link set end0 up
 ```
 
 *If you see "STOP", do not proceed. Your kernel is missing the required patch.*

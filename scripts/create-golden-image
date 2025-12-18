@@ -48,7 +48,17 @@ done
 # 2. Prompt for the process stage
 echo
 echo "Select the process stage:"
-options=("Step 9" "Appendix 1" "Appendix 2" "Appendix 3" "Appendix 4" "Appendix 6" "Appendix 7" "Appendix 8")
+options=(
+  "Step 9"
+  "Appendix 1"
+  "Appendix 2"
+  "Appendix 3"
+  "Appendix 4"
+  "Appendix 6"
+  "Appendix 7"
+  "Appendix 8"
+  "Appendix 9"
+)
 select stage_choice in "${options[@]}"; do
   if [ -n "${stage_choice}" ]; then
     case $stage_choice in
@@ -82,6 +92,10 @@ select stage_choice in "${options[@]}"; do
         ;;
       "Appendix 8")
         IMG_STAGE="apdx8"
+        break
+        ;;
+      "Appendix 9")
+        IMG_STAGE="apdx9"
         break
         ;;
       *) echo "Invalid selection. Please try again." ;;
