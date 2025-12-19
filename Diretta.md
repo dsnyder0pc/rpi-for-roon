@@ -2783,8 +2783,19 @@ EOF
 
   # 3. Apply Diretta Config
   echo "Configuring Diretta Host..."
+
+  # Always enable FlexCycle for Jumbo Frames to ensure stability
   sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
-  sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
+
+  # Conditional CycleTime Optimization
+  if [ "$NEW_MTU" -eq 9000 ]; then
+    echo "Optimization: Full Jumbo Frames detected. Relaxing CycleTime to 1000us."
+    sudo sed -i 's/^CycleTime=.*/CycleTime=1000/' /opt/diretta-alsa/setting.inf
+  else
+    echo "Optimization: Baby Jumbo Frames detected. Setting CycleTime to 700us."
+    sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
+  fi
+
   sudo systemctl restart diretta_alsa
   echo "DONE: Host optimization complete."
 }
