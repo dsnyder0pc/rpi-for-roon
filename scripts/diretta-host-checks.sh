@@ -142,9 +142,16 @@ run_appendix9_checks() {
     # 4. Diretta Config
     CONFIG="/opt/diretta-alsa/setting.inf"
     check "FlexCycle is enabled" "grep -q '^FlexCycle=enable' $CONFIG"
-    check "CycleTime is optimized (700us)" "grep -q '^CycleTime=700' $CONFIG"
-}
 
+    # Conditional CycleTime Check based on MTU
+    if [ "$CURRENT_MTU" -eq 9000 ]; then
+        check "CycleTime is optimized (1000us for Full Jumbo)" "grep -q '^CycleTime=1000' $CONFIG"
+    elif [ "$CURRENT_MTU" -eq 2032 ]; then
+        check "CycleTime is optimized (700us for Baby Jumbo)" "grep -q '^CycleTime=700' $CONFIG"
+    else
+        check "CycleTime is optimized" "false"
+    fi
+}
 
 # --- Main Script ---
 if [ "$EUID" -ne 0 ]; then echo -e "${C_RED}Please run this script with sudo or as root.${C_RESET}"; exit 1; fi

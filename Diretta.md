@@ -120,10 +120,9 @@ Here's a link to a series of short videos walking through this process:
 A complete bill of materials is provided below. While other parts can be substituted, using these specific components improves the chances of a successful build.
 
 **Core Components (from [pishop.us](https://www.pishop.us/) or similar supplier):**
-* 1 x [Raspberry Pi 4 Model B/4GB](https://www.pishop.us/product/raspberry-pi-4-model-b-4gb/) (for the Diretta Host)
-* 1 x [Flirc Raspberry Pi 4 Case](https://www.pishop.us/product/flirc-raspberry-pi-4-case/)
-* 1 x [Raspberry Pi 5/2GB](https://www.pishop.us/product/raspberry-pi-5-2gb/) (for the Diretta Target)
-* 1 x [Flirc Raspberry Pi 5 Case](https://www.pishop.us/product/flirc-raspberry-pi-5-case/)
+* 1 x [Raspberry Pi 5/1GB](https://www.pishop.us/product/raspberry-pi-5-1gb/) (for the Diretta Target)
+* 1 x [Raspberry Pi 5/2GB](https://www.pishop.us/product/raspberry-pi-5-2gb/) (for the Diretta Host)
+* 2 x [Flirc Raspberry Pi 5 Case](https://www.pishop.us/product/flirc-raspberry-pi-5-case/)
 * 2 x [MicroSD Card Extreme Pro - 32 GB](https://www.pishop.us/product/microsd-card-extreme-pro-32-gb-class-10-blank/)
 * 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
 
@@ -136,8 +135,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [Raspberry Pi Official Keyboard - Red/White](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 
 **Optional Upgrades:**
-* 1 x [Argon ONE V2 Aluminum Case for Raspberry Pi 4](https://www.amazon.com/Argon-Raspberry-Aluminum-Heatsink-Supports/dp/B07WP8WC3V/) (instead of the Flirc case)
-* 1 x [Argon ONE V3 Raspberry Pi 5 Case](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (instead of the Flirc case)
+* 2 x [Argon ONE V3 Raspberry Pi 5 Case](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (instead of the Flirc cases)
 * 1 x [Argon IR Remote](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (to add remote control capabilities to the Diretta Host)
 * 1 x [Flirc USB IR Receiver](https://www.pishop.us/product/flirc-rpi-usb-xbmc-ir-remote-receiver/) (to use the Argon IR Remote with the Diretta Host in a Flirc Case)
 * 1 x [Blue Jeans BJC CAT6a Belden Bonded Pairs 500 MHz](https://www.bluejeanscable.com/store/data-cables/index.htm) (for the point-to-point connection between Host and Target)
@@ -179,9 +177,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 After flashing, you must configure each Raspberry Pi individually to avoid network conflicts.
 
-For the best performance, this guide uses the more powerful Raspberry Pi 5 as the Diretta Target (the device connected to your DAC) and the Raspberry Pi 4 as the Diretta Host. You will configure the Host first.
-
-**Note:** While this is the optimal configuration, great results are possible using RPi4 computers for both. However, using RPi5 for both Host and Target could create problems due to the RPi5's more aggressive use of Energy Efficient Ethernet (EEE) on its onboard network interface. Two RPi5s may result in flapping on the point-to-point link. And, since the Diretta protocol does not support retransmits when packets are lost, you may experience audio dropouts with a RPi5 to RPi5 configuration.
+For the best performance, this guide uses the Raspberry Pi 5 for both the Diretta Target (the device connected to your DAC) and Diretta Host. You will configure the Host first.
 
 > **CRITICAL WARNING:** Because both devices are flashed from the exact same image, they will have identical `machine-id` values. If you power both devices on at the same time while connected to the same LAN, your DHCP server will likely assign them the same IP address, causing a network conflict.
 >
@@ -2209,7 +2205,7 @@ This is achieved by using **CPU isolation** to dedicate specific processor cores
 
 ---
 
-### **Part 1: Optimizing the Diretta Target (RPi5)**
+### **Part 1: Optimizing the Diretta Target**
 
 The goal for the Target is to make it a pure, low-latency audio endpoint. We will isolate the Diretta application on a single, dedicated CPU core and give it a high, but not excessive, realtime priority.
 
@@ -2323,7 +2319,7 @@ Next, we will give the Diretta application a "not too high" priority, ensuring i
 
 ---
 
-### **Part 2: Optimizing the Diretta Host (RPi4)**
+### **Part 2: Optimizing the Diretta Host**
 
 The goal for the Host is to give Roon Bridge and the Diretta service dedicated processing resources, but without using high realtime priorities. CPU isolation is a more powerful tool here, as it prevents the processes from being interrupted in the first place.
 
