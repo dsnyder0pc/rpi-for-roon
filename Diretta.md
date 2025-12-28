@@ -123,7 +123,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [Raspberry Pi 5/1GB](https://www.pishop.us/product/raspberry-pi-5-1gb/) (for the Diretta Target)
 * 1 x [Raspberry Pi 5/2GB](https://www.pishop.us/product/raspberry-pi-5-2gb/) (for the Diretta Host)
 * 2 x [Flirc Raspberry Pi 5 Case](https://www.pishop.us/product/flirc-raspberry-pi-5-case/)
-* 2 x [MicroSD Card Extreme Pro - 64 GB](https://shop.sandisk.com/products/memory-cards/microsd-cards/sandisk-extreme-pro-uhs-i-microsd?sku=SDSQXCU-064G-GN6MA)
+* 2 x [64 GB A2 microSDXC Card](https://www.amazon.com/Kingston-Canvas-64GB-microSD-SDCG4/dp/B0F2B123P2)
 * 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
 
 **Required Networking Components:**
