@@ -136,6 +136,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 **Optional Upgrades:**
 * 2 x [Argon ONE V3 Raspberry Pi 5 Case](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (instead of the Flirc cases)
+* 2 x [64 GB A2 microSDXC Card (Lexar alternative)](https://www.bhphotovideo.com/c/product/1830849-REG/lexar_lmssipl064g_bnanu_64gb_silver_plus_microsdxc.html)
 * 1 x [Argon IR Remote](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (to add remote control capabilities to the Diretta Host)
 * 1 x [Flirc USB IR Receiver](https://www.pishop.us/product/flirc-rpi-usb-xbmc-ir-remote-receiver/) (to use the Argon IR Remote with the Diretta Host in a Flirc Case)
 * 1 x [Blue Jeans BJC CAT6a Belden Bonded Pairs 500 MHz](https://www.bluejeanscable.com/store/data-cables/index.htm) (for the point-to-point connection between Host and Target)
