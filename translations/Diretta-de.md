@@ -232,7 +232,7 @@ sudo hostnamectl set-hostname diretta-host
 sudo hostnamectl set-hostname diretta-target
 ```
 
-**Fahren Sie das Gerät an diesem Punkt herunter. Wiederholen Sie die [oben genannten Schritte](https://www.google.com/search?q=%233-core-system-configuration-perform-on-both-devices) für den zweiten Raspberry Pi.**
+**Fahren Sie das Gerät an diesem Punkt herunter. Wiederholen Sie die [oben genannten Schritte](#3-kernsystem-konfiguration-auf-beiden-ger%C3%A4ten-durchf%C3%BChren) für den zweiten Raspberry Pi.**
 ```bash
 sudo sync && sudo poweroff
 ```
@@ -261,7 +261,7 @@ Die Systemuhr muss genau gehen, bevor wir Updates installieren können. Der Rasp
 
 ```bash
 sudo id
-curl -fsSL [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_chrony.sh](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_chrony.sh) | sudo bash
+curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_chrony.sh | sudo bash
 sleep 5
 chronyc sources
 ```
@@ -508,7 +508,7 @@ Wenn Sie gerade das Update Ihres Diretta-Targets abgeschlossen haben, klicken Si
     ```bash
     [ -f /opt/scripts/update/update_motd.sh.dist ] || \
     sudo mv /opt/scripts/update/update_motd.sh /opt/scripts/update/update_motd.sh.dist
-    curl -LO [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh)
+    curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh
     sudo install -m 0755 update_motd.sh /opt/scripts/update/
     rm update_motd.sh
     ```
@@ -520,7 +520,7 @@ Wenn Sie gerade das Update Ihres Diretta-Targets abgeschlossen haben, klicken Si
 
 #### 5.2. Den Diretta-Target vorkonfigurieren
 
-**Hinweis:** Wenn Sie [Schritt 4](https://www.google.com/search?q=%234-system-updates-perform-on-both-devices) auf dem Diretta-Target noch nicht durchgeführt haben, tun Sie das [jetzt](https://www.google.com/search?q=%234-system-updates-perform-on-both-devices) und kehren Sie dann hierher zurück.
+**Hinweis:** Wenn Sie [Schritt 4](#4-system-updates-auf-beiden-ger%C3%A4ten-durchf%C3%BChren) auf dem Diretta-Target noch nicht durchgeführt haben, tun Sie das [jetzt](#4-system-updates-auf-beiden-ger%C3%A4ten-durchf%C3%BChren) und kehren Sie dann hierher zurück.
 
 Erstellen Sie auf dem **Diretta-Target** die Datei `end0.network`. Dies konfiguriert seine statische IP und weist es an, den Diretta-Host als Gateway für den gesamten Internetverkehr zu nutzen.
 
@@ -834,7 +834,7 @@ Das Standardverhalten von Arch Linux ist es, das /boot Dateisystem in einem unsa
 
 Dieses Skript kann sowohl automatisch beim Booten als auch manuell auf einem laufenden System sicher ausgeführt werden.
 ```bash
-curl -LO [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh)
+curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh
 sudo install -m 0755 check-and-repair-boot.sh /usr/local/sbin/
 rm check-and-repair-boot.sh
 ```
@@ -878,7 +878,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 2.  Verbinden Sie sich per SSH mit dem Target: `ssh diretta-target`.
 3.  Kompatible Compiler-Toolchain konfigurieren:
     ```bash
-    curl -fsSL [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_diretta_compiler.sh](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_diretta_compiler.sh) | sudo bash
+    curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_diretta_compiler.sh | sudo bash
     source /etc/profile.d/llvm_diretta.sh
     ```
 4.  Führen Sie `menu` aus.
@@ -923,7 +923,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 2.  Kompatible Compiler-Toolchain konfigurieren:
     ```bash
-    curl -fsSL [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_diretta_compiler.sh](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_diretta_compiler.sh) | sudo bash
+    curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_diretta_compiler.sh | sudo bash
     source /etc/profile.d/llvm_diretta.sh
     ```
 
@@ -1038,7 +1038,7 @@ Ihre dedizierte Diretta-Verbindung ist nun vollständig für eine unverfälschte
 > ---
 > ### ✅ Checkpoint: Überprüfen Sie Ihr Kernsystem
 >
-> Ihr Diretta- und Roon-Kernsystem sollte nun voll funktionsfähig sein. Um alle Dienste und Verbindungen zu überprüfen, fahren Sie bitte mit [**Anhang 5**](#14-appendix-5-system-health-checks) fort und führen Sie den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target aus.
+> Ihr Diretta- und Roon-Kernsystem sollte nun voll funktionsfähig sein. Um alle Dienste und Verbindungen zu überprüfen, fahren Sie bitte mit [**Anhang 5**](#14-anhang-5-system-gesundheitschecks) fort und führen Sie den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target aus.
 >
 > ---
 
@@ -1080,7 +1080,7 @@ yay -S argonone-c-git
 **Hinweis:** Wenn der obige Befehl mit Compiler-Fehlern fehlschlägt, können Sie dieses manuelle Verfahren versuchen, um das Paket zu reparieren und zu installieren:
 ```bash
 # Clone the package repository
-git clone [https://aur.archlinux.org/argonone-c-git.git](https://aur.archlinux.org/argonone-c-git.git)
+git clone https://aur.archlinux.org/argonone-c-git.git
 cd argonone-c-git
 
 # Download source code without building
@@ -1192,7 +1192,7 @@ Dieser Leitfaden enthält Anweisungen zur Installation und Konfiguration einer I
 #### **Option 1: Flirc USB IR-Empfänger Einrichtung**
 
 1.  **Kauf und Programmierung des Flirc-Geräts:**
-    Sie benötigen den Flirc USB IR-Empfänger, der auf deren Website erworben werden kann: [https://flirc.tv/products/flirc-usb-receiver](https://flirc.tv/products/flirc-usb-receiver)
+    Sie benötigen den Flirc USB IR-Empfänger, der auf deren Website erworben werden kann: https://flirc.tv/products/flirc-usb-receiver
 
     Das Flirc-Gerät muss an einem Desktop-Computer mit der Flirc GUI-Software programmiert werden.
 
@@ -1346,7 +1346,7 @@ sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi op
 # pyenv nur installieren, wenn es noch nicht installiert ist
 if [ ! -d "$HOME/.pyenv" ]; then
   echo "--- Installing pyenv ---"
-  curl -fsSL [https://pyenv.run](https://pyenv.run) | bash
+  curl -fsSL https://pyenv.run | bash
 else
   echo "--- pyenv is already installed. Skipping installation. ---"
 fi
@@ -1392,7 +1392,7 @@ Klonen Sie das Skript-Repository und rufen Sie einen Patch ab, um Tastencodes ko
 cd
 # Repo klonen, falls es nicht existiert, sonst aktualisieren
 if [ ! -d "roon-ir-remote" ]; then
-  git clone [https://github.com/dsnyder0pc/roon-ir-remote.git](https://github.com/dsnyder0pc/roon-ir-remote.git)
+  git clone https://github.com/dsnyder0pc/roon-ir-remote.git
 else
   (cd roon-ir-remote && git pull)
 fi
@@ -1428,7 +1428,7 @@ cat <<EOD > roon-ir-remote/app_info.json
       "display_version": "1.1.0",
       "publisher": "dsnyder",
       "email": "dsnyder0cnn@gmail.com",
-      "website": "[https://github.com/dsnyder0pc/roon-ir-remote](https://github.com/dsnyder0pc/roon-ir-remote)"
+      "website": "https://github.com/dsnyder0pc/roon-ir-remote"
     },
     "zone": {
       "name": "${MY_ROON_ZONE}"
@@ -1529,7 +1529,7 @@ Tippen Sie `CTRL-C`, sobald Sie zufrieden sind, dass alles wie erwartet funktion
 ### **Schritt 8: `set-roon-zone` Skript installieren**
 Es ist gut, ein Skript zu haben, mit dem Sie den Roon-Zonennamen später bei Bedarf aktualisieren können. So installieren Sie es:
 ```bash
-curl -LO [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone)
+curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone
 sudo install -m 0755 set-roon-zone /usr/local/bin/
 rm set-roon-zone
 ```
@@ -1541,14 +1541,14 @@ set-roon-zone
 Folgen Sie den Aufforderungen, um den neuen Namen für Ihre Roon-Zone einzugeben. Möglicherweise müssen Sie das Root-Passwort eingeben, damit die Änderungen wirksam werden.
 
 **Hinweis: Ein besserer Weg, die Zone festzulegen**
-Obwohl dieses Skript perfekt funktioniert, ist die empfohlene Methode zum Ändern der Roon-Zone die Verwendung der AnCaolas Link System Control Web-Anwendung, die in [Anhang 4](https://www.google.com/search?q=%2313-appendix-4-optional-system-control-web-ui) detailliert beschrieben wird. Die Web-Oberfläche bietet eine dedizierte Seite zum Anzeigen und Bearbeiten des Zonennamens von Ihrem Telefon oder Browser aus.
+Obwohl dieses Skript perfekt funktioniert, ist die empfohlene Methode zum Ändern der Roon-Zone die Verwendung der AnCaolas Link System Control Web-Anwendung, die in [Anhang 4](#13-anhang-4-optionale-web-oberfl%C3%A4che-zur-systemsteuerung) detailliert beschrieben wird. Die Web-Oberfläche bietet eine dedizierte Seite zum Anzeigen und Bearbeiten des Zonennamens von Ihrem Telefon oder Browser aus.
 
 ### **Schritt 9: Profit! 📈**
 
 > ---
 > ### ✅ Checkpoint: Überprüfen Sie Ihre IR-Fernbedienungseinrichtung
 >
-> Ihre IR-Fernbedienungshardware und -software sollten nun konfiguriert sein. Um die Einrichtung zu überprüfen, fahren Sie mit **[Anhang 5](https://www.google.com/search?q=%2314-appendix-5-system-health-checks)** fort und führen Sie den universellen **System Health Check** auf dem Diretta-Host aus.
+> Ihre IR-Fernbedienungshardware und -software sollten nun konfiguriert sein. Um die Einrichtung zu überprüfen, fahren Sie mit **[Anhang 5](#14-anhang-5-system-gesundheitschecks)** fort und führen Sie den universellen **System Health Check** auf dem Diretta-Host aus.
 >
 > ---
 
@@ -1569,7 +1569,7 @@ Auf dem Diretta-Target-Computer gibt es minimale Netzwerk- und Hintergrundaktivi
 
 ### Schritt 1: Das `purist-mode` Skript installieren **(nur auf dem Diretta-Target Computer)**
 ```bash
-curl -LO [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode)
+curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode
 sudo install -m 0755 purist-mode /usr/local/bin
 rm purist-mode
 
@@ -1880,7 +1880,7 @@ Auf dem **Diretta-Target** erstellen wir einen neuen Benutzer mit sehr eingeschr
     Das Abrufen der Diretta-Lizenz-URL erfordert eine Internetverbindung. Wenn wir den Purist-Modus standardmäßig aktiviert haben, wird das Target nie in der Lage sein, die URL abzurufen. Beim Booten haben wir jedoch den Purist-Modus für 60 Sekunden deaktiviert, um die Uhr zu stellen und auf eine Diretta-Lizenzaktivierung zu prüfen. Wir können dieses Zeitfenster nutzen, um auch die URL abzurufen.
     ```bash
     # Skript herunterladen, korrekte Rechte setzen und im Systempfad platzieren
-    curl -LO [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh)
+    curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh
     sudo install -m 0755 create-diretta-cache.sh /usr/local/bin/
     rm create-diretta-cache.sh
 
@@ -1981,7 +1981,7 @@ Nun führen wir auf dem **Diretta-Host** alle Schritte zur Installation und Konf
     # pyenv nur installieren, wenn es noch nicht installiert ist
     if [ ! -d "$HOME/.pyenv" ]; then
       echo "--- Installing pyenv ---"
-      curl -fsSL [https://pyenv.run](https://pyenv.run) | bash
+      curl -fsSL https://pyenv.run | bash
     else
       echo "--- pyenv is already installed. Skipping installation. ---"
     fi
@@ -2068,7 +2068,7 @@ Nun führen wir auf dem **Diretta-Host** alle Schritte zur Installation und Konf
 8.  **Die Flask-App installieren:**
     Laden Sie das Python-Skript direkt von GitHub in das Anwendungsverzeichnis auf dem **Diretta-Host** herunter.
     ```bash
-    curl -L [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py) -o ~/purist-mode-webui/app.py
+    curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py -o ~/purist-mode-webui/app.py
     ```
 
 9.  **Port-Binding-Fähigkeit gewähren**
@@ -2103,7 +2103,7 @@ Nun führen wir auf dem **Diretta-Host** alle Schritte zur Installation und Konf
     pyenv activate purist-webui
     python app.py
     ```
-    Sie sollten eine Ausgabe sehen, die anzeigt, dass der Flask-Server auf Port **8080** gestartet wurde. Greifen Sie von einem anderen Gerät auf [http://diretta-host.local:8080](https://www.google.com/search?q=http://diretta-host.local:8080) zu. Wenn es funktioniert, kehren Sie zum SSH-Terminal zurück und drücken Sie `Ctrl+C`, um den Server zu stoppen.
+    Sie sollten eine Ausgabe sehen, die anzeigt, dass der Flask-Server auf Port **8080** gestartet wurde. Greifen Sie von einem anderen Gerät auf [http://diretta-host.local:8080](http://diretta-host.local:8080) zu. Wenn es funktioniert, kehren Sie zum SSH-Terminal zurück und drücken Sie `Ctrl+C`, um den Server zu stoppen.
 
 12. **Den `systemd` Service erstellen:**
     Dieser Dienst führt die Web-App automatisch auf dem **Diretta-Host** aus und verwendet dabei die korrekte Python-Ausführungsdatei aus unserer `pyenv` virtuellen Umgebung.
@@ -2140,7 +2140,7 @@ Nun führen wir auf dem **Diretta-Host** alle Schritte zur Installation und Konf
     ```
 
 15. **Die Web-Oberfläche mit der finalen URL testen:**
-    Öffnen Sie einen Browser unter [http://diretta-host.local](https://www.google.com/search?q=http://diretta-host.local) und beobachten Sie die Logs auf Fehler.
+    Öffnen Sie einen Browser unter [http://diretta-host.local](http://diretta-host.local) und beobachten Sie die Logs auf Fehler.
 
 Tippen Sie `CTRL-C`, sobald Sie zufrieden sind, dass alles wie erwartet funktioniert.
 
@@ -2150,11 +2150,11 @@ Tippen Sie `CTRL-C`, sobald Sie zufrieden sind, dass alles wie erwartet funktion
 
 Sie sind fertig! Öffnen Sie einen Webbrowser auf Ihrem Telefon, Tablet oder Computer, der mit demselben Netzwerk wie der Diretta-Host verbunden ist. Navigieren Sie zur Hauptseite:
 
-[http://diretta-host.local](https://www.google.com/search?q=http://diretta-host.local)
+[http://diretta-host.local](http://diretta-host.local)
 
 ---
 > **Ein Hinweis zu Browser-Sicherheitswarnungen**
-> Wenn Sie https://www.google.com/search?q=http://diretta-host.local zum ersten Mal besuchen, zeigt Ihr Browser wahrscheinlich eine Sicherheitswarnung an, dass die Verbindung nicht sicher ist. Dies ist erwartet und kann sicher umgangen werden. Die Warnung erscheint, weil die Verbindung Standard-`HTTP` anstelle von verschlüsseltem `HTTPS` verwendet, eine bewusste Entscheidung, um den Rechenaufwand auf dem Audiogerät zu minimieren. Da die App nur in Ihrem privaten Heimnetzwerk läuft und keine sensiblen Daten verarbeitet, können Sie getrost auf "Weiter zur Seite" klicken.
+> Wenn Sie http://diretta-host.local zum ersten Mal besuchen, zeigt Ihr Browser wahrscheinlich eine Sicherheitswarnung an, dass die Verbindung nicht sicher ist. Dies ist erwartet und kann sicher umgangen werden. Die Warnung erscheint, weil die Verbindung Standard-`HTTP` anstelle von verschlüsseltem `HTTPS` verwendet, eine bewusste Entscheidung, um den Rechenaufwand auf dem Audiogerät zu minimieren. Da die App nur in Ihrem privaten Heimnetzwerk läuft und keine sensiblen Daten verarbeitet, können Sie getrost auf "Weiter zur Seite" klicken.
 ---
 
 Von der Hauptseite aus führt Sie eine Navigationsleiste oben zu den verschiedenen Bedienfeldern:
@@ -2168,7 +2168,7 @@ Von der Hauptseite aus führt Sie eine Navigationsleiste oben zu den verschieden
 > ---
 > ### ✅ Checkpoint: Überprüfen Sie Ihre Web-Oberflächen-Einrichtung
 >
-> Die Purist-Modus Web-Oberfläche sollte nun betriebsbereit sein. Um alle Komponenten dieser komplexen Funktion zu überprüfen, fahren Sie mit **[Anhang 5](https://www.google.com/search?q=%2314-appendix-5-system-health-checks)** fort und führen Sie den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target aus.
+> Die Purist-Modus Web-Oberfläche sollte nun betriebsbereit sein. Um alle Komponenten dieser komplexen Funktion zu überprüfen, fahren Sie mit **[Anhang 5](#14-anhang-5-system-gesundheitschecks)** fort und führen Sie den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target aus.
 >
 > ---
 
@@ -2183,7 +2183,7 @@ Wir haben ein intelligentes Skript erstellt, das automatisch erkennt, ob Sie es 
 Führen Sie auf dem Host oder dem Target den folgenden Einzelbefehl aus. Er lädt das QS-Skript herunter, führt es aus und liefert einen detaillierten Bericht über den Status Ihres Systems.
 
 ```bash
-curl -fsSL [https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh](https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh) | sudo bash
+curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh | sudo bash
 ```
 
 ---
@@ -2428,7 +2428,7 @@ Mit den installierten Echtzeit-Kernel-Optimierungen kann der Diretta-Host nun ei
 > ---
 > ### ✅ Checkpoint: Überprüfen Sie Ihr Echtzeit-Tuning
 >
-> Ihr erweitertes Echtzeit-Tuning sollte nun abgeschlossen sein. Um alle Komponenten dieser neuen Konfiguration zu überprüfen, kehren Sie bitte zu **[Anhang 5](https://www.google.com/search?q=%2314-appendix-5-system-health-checks)** zurück und führen Sie den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target aus.
+> Ihr erweitertes Echtzeit-Tuning sollte nun abgeschlossen sein. Um alle Komponenten dieser neuen Konfiguration zu überprüfen, kehren Sie bitte zu **[Anhang 5](#14-anhang-5-system-gesundheitschecks)** zurück und führen Sie den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target aus.
 >
 > ---
 
@@ -2566,7 +2566,7 @@ Auf dem Host deaktivieren wir den `isolated_app.timer` und hängen sein Skript s
 >
 > ### ✅ Checkpoint: Überprüfen Sie Ihre CPU-Optimierungen
 >
-> Ihr System ist nun optimiert, um seine Tuning-Skripte nur beim Booten auszuführen, wodurch periodische CPU-Spitzen eliminiert werden. Um zu verifizieren, dass diese neue Konfiguration korrekt mit dem Rest des Systems zusammenarbeitet, kehren Sie bitte zu **[Anhang 5](https://www.google.com/search?q=%2314-appendix-5-system-health-checks)** zurück und führen Sie den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target aus.
+> Ihr System ist nun optimiert, um seine Tuning-Skripte nur beim Booten auszuführen, wodurch periodische CPU-Spitzen eliminiert werden. Um zu verifizieren, dass diese neue Konfiguration korrekt mit dem Rest des Systems zusammenarbeitet, kehren Sie bitte zu **[Anhang 5](#14-anhang-5-system-gesundheitschecks)** zurück und führen Sie den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target aus.
 >
 > ---
 
@@ -2653,7 +2653,7 @@ sudo touch /etc/diretta-100m
 >
 > ### ✅ Checkpoint: Überprüfen Sie die Netzwerkkonfiguration
 >
-> Ihre dedizierte Netzwerkverbindung ist nun für den "puristischen" 100Mbps-Betrieb konfiguriert. Um zu verifizieren, dass der Host-Dienst aktiv ist und das Target die Geschwindigkeit korrekt ausgehandelt hat (erkannt durch die Marker-Datei), kehren Sie bitte zu **[Anhang 5](https://www.google.com/search?q=%2314-appendix-5-system-health-checks)** zurück und führen Sie den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target aus.
+> Ihre dedizierte Netzwerkverbindung ist nun für den "puristischen" 100Mbps-Betrieb konfiguriert. Um zu verifizieren, dass der Host-Dienst aktiv ist und das Target die Geschwindigkeit korrekt ausgehandelt hat (erkannt durch die Marker-Datei), kehren Sie bitte zu **[Anhang 5](#14-anhang-5-system-gesundheitschecks)** zurück und führen Sie den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target aus.
 >
 > ---
 
@@ -2802,6 +2802,6 @@ sudo sync && sudo reboot
 >
 > ### ✅ Checkpoint: Überprüfen Sie die Netzwerkkonfiguration
 >
-> Wenn Sie in der Lage waren, die Unterstützung für Jumbo-Frames für Ihre Konfiguration zu aktivieren, ist jetzt ein guter Zeitpunkt, um zu **[Anhang 5](https://www.google.com/search?q=%2314-appendix-5-system-health-checks)** zurückzukehren und den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target auszuführen.
+> Wenn Sie in der Lage waren, die Unterstützung für Jumbo-Frames für Ihre Konfiguration zu aktivieren, ist jetzt ein guter Zeitpunkt, um zu **[Anhang 5](#14-anhang-5-system-gesundheitschecks)** zurückzukehren und den universellen **System Health Check** sowohl auf dem Host als auch auf dem Target auszuführen.
 >
 > ---
