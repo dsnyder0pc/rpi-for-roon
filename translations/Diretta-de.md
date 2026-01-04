@@ -673,7 +673,7 @@ EOT_HOSTS
 fi
 
 # --- Bereinigung von StrictHostKeyChecking aus älteren Versionen dieses Leitfadens ---
-# This is no longer needed with the recommended SSH key setup
+# Dies ist mit dem empfohlenen SSH-Key-Setup nicht mehr erforderlich
 if command -v sed >/dev/null; then
     sed -i.bak -e '/StrictHostKeyChecking/d' "$SSH_CONFIG_FILE"
     # Leere Zeilen entfernen, die übrig geblieben sein könnten
@@ -1211,7 +1211,7 @@ Dieser Leitfaden enthält Anweisungen zur Installation und Konfiguration einer I
 
     Wählen Sie das "Flirc"-Gerät aus dem Menü. Wenn Sie Tasten auf Ihrer Fernbedienung drücken, sollten Sie Tastaturereignisse auf dem Bildschirm sehen.
 
-3.  Springen Sie zu [Teil 2: Einrichtung des Steuerungs-Skripts](#part-2-control-script-software-setup)
+3.  Springen Sie zu [Teil 2: Einrichtung des Steuerungs-Skripts](#teil-2-einrichtung-des-steuerungs-skripts)
 
 ---
 
@@ -1409,10 +1409,10 @@ bash <<'EOF'
 # --- Start of Script ---
 
 # Roon Zone abfragen und in Variable speichern
-echo "Enter the name of your Roon zone."
-echo "IMPORTANT: This must match the zone name in the Roon app exactly (case-sensitive)."
+echo "Geben Sie den Namen Ihrer Roon-Zone ein."
+echo "WICHTIG: Dieser muss exakt mit dem Zonennamen in der Roon-App übereinstimmen (Groß-/Kleinschreibung beachten)."
 # Diese Zeile ist der Fix: < /dev/tty weist read an, das Terminal zu nutzen
-read -rp "Enter your Roon Zone name: " MY_ROON_ZONE < /dev/tty
+read -rp "Geben Sie Ihren Roon-Zonennamen ein: " MY_ROON_ZONE < /dev/tty
 
 # Zielverzeichnis sicherstellen
 mkdir -p roon-ir-remote
