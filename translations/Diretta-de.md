@@ -183,7 +183,7 @@ Für die beste Leistung verwendet dieser Leitfaden den Raspberry Pi 5 sowohl fü
 >
 > **Sie müssen den ersten Start und die Konfiguration für jedes Gerät nacheinander durchführen.**
 
-1.  Stecken Sie die microSD-Karte in den **ersten** Raspberry Pi, verbinden Sie ihn mit Ihrem Netzwerk und schalten Sie ihn ein. **Hinweis:** Wenn Sie das Argon ONE Gehäuse verwenden, hören Sie möglicherweise Geräusche vom Lüfter. Keine Sorge. Sobald Sie mit der Diretta-Einrichtung fertig sind, finden Sie in [Anhang 1](#10-appendix-1-optional-argon-one-fan-control) Anweisungen zur Behandlung des Lüftergeräuschs.
+1.  Stecken Sie die microSD-Karte in den **ersten** Raspberry Pi, verbinden Sie ihn mit Ihrem Netzwerk und schalten Sie ihn ein. **Hinweis:** Wenn Sie das Argon ONE Gehäuse verwenden, hören Sie möglicherweise Geräusche vom Lüfter. Keine Sorge. Sobald Sie mit der Diretta-Einrichtung fertig sind, finden Sie in [Anhang 1](#10-anhang-1-optionale-argon-one-l%C3%BCftersteuerung) Anweisungen zur Behandlung des Lüftergeräuschs.
 2.  Führen Sie **alle Schritte von Abschnitt 3** für dieses erste Gerät durch.
 3.  Sobald das erste Gerät mit seiner neuen, einzigartigen Konfiguration neu gestartet wurde, fahren Sie es herunter.
 4.  Schalten Sie nun den **zweiten** Raspberry Pi ein und wiederholen Sie **alle Schritte von Abschnitt 3** für ihn.
@@ -354,7 +354,7 @@ sudo sync && sudo reboot
 
 In diesem Abschnitt erstellen wir die Netzwerkkonfigurationsdateien, die die dedizierte private Verbindung aktivieren. Um keinen physischen Monitor und Tastatur (Konsolenzugriff) zu benötigen, führen wir diese Schritte durch, während beide Geräte noch mit Ihrem Haupt-LAN verbunden und per SSH erreichbar sind.
 
-Wenn Sie gerade das Update Ihres Diretta-Targets abgeschlossen haben, klicken Sie [hier](https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md#52-pre-configure-the-diretta-target), um zu den Konfigurationsschritten für das Target zu springen.
+Wenn Sie gerade das Update Ihres Diretta-Targets abgeschlossen haben, klicken Sie [hier](#52-den-diretta-target-vorkonfigurieren), um zu den Konfigurationsschritten für das Target zu springen.
 
 ---
 > #### **Ein Hinweis zur Netzwerkkonfiguration: Warum keine einfache Bridge?**
