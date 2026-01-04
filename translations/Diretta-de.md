@@ -70,19 +70,19 @@ Wenn Sie sich in den USA befinden, rechnen Sie mit etwa 299 $ (plus Steuern und 
 - Diretta-Target-Lizenz (€100)
 
 ## Inhaltsverzeichnis
-1.  [Voraussetzungen](#1-prerequisites)
-2.  [Vorbereitung des Installations-Images](#2-initial-image-preparation)
-3.  [Kernsystem-Konfiguration (Auf beiden Geräten durchführen)](#3-core-system-configuration-perform-on-both-devices)
-4.  [System-Updates (Auf beiden Geräten durchführen)](#4-system-updates-perform-on-both-devices)
-5.  [Punkt-zu-Punkt Netzwerk-Konfiguration](#5-point-to-point-network-configuration)
-6.  [Komfortabler & Sicherer SSH-Zugriff](#6-convenient--secure-ssh-access)
-7.  [Allgemeine Systemoptimierungen](#7-common-system-optimizations)
-8.  [Installation & Konfiguration der Diretta-Software](#8-diretta-software-installation--configuration)
-9.  [Abschließende Schritte & Roon-Integration](#9-final-steps--roon-integration)
-10. [Anhang 1: Optionale Lüftersteuerung für Argon ONE](#10-appendix-1-optional-argon-one-fan-control)
-11. [Anhang 2: Optionale IR-Fernbedienung](#11-appendix-2-optional-ir-remote-control)
-12. [Anhang 3: Optionaler Purist-Modus](#12-appendix-3-optional-purist-mode)
-13. [Anhang 4: Optionale Web-Oberfläche zur Systemsteuerung](#13-appendix-4-optional-system-control-web-ui)
+1.  [Voraussetzungen](#1-voraussetzungen)
+2.  [Vorbereitung des Installations-Images](#2-vorbereitung-des-installations-images)
+3.  [Kernsystem-Konfiguration (Auf beiden Geräten durchführen)](#3-kernsystem-konfiguration-auf-beiden-ger%C3%A4ten-durchf%C3%BChren)
+4.  [System-Updates (Auf beiden Geräten durchführen)](#4-system-updates-auf-beiden-ger%C3%A4ten-durchf%C3%BChren)
+5.  [Punkt-zu-Punkt Netzwerk-Konfiguration](#5-punkt-zu-punkt-netzwerk-konfiguration)
+6.  [Komfortabler & Sicherer SSH-Zugriff](#6-komfortabler--sicherer-ssh-zugriff)
+7.  [Allgemeine Systemoptimierungen](#7-allgemeine-systemoptimierungen)
+8.  [Installation & Konfiguration der Diretta-Software](#8-installation--konfiguration-der-diretta-software)
+9.  [Abschließende Schritte & Roon-Integration](#9-abschlie%C3%9Fende-schritte--roon-integration)
+10. [Anhang 1: Optionale Lüftersteuerung für Argon ONE](#10-anhang-1-optionale-argon-one-l%C3%BCftersteuerung)
+11. [Anhang 2: Optionale IR-Fernbedienung](#11-anhang-2-optionale-ir-fernbedienung)
+12. [Anhang 3: Optionaler Purist-Modus](#12-anhang-3-optionaler-purist-modus)
+13. [Anhang 4: Optionale Web-Oberfläche zur Systemsteuerung](#13-anhang-4-optionale-web-oberfl%C3%A4che-zur-systemsteuerung)
 14. [Anhang 5: System-Gesundheitschecks](#14-appendix-5-system-health-checks)
 15. [Anhang 6: Erweitertes Echtzeit-Leistungstuning](#15-appendix-6-advanced-realtime-performance-tuning)
 16. [Anhang 7: CPU-Optimierung mit ereignisgesteuerten Hooks](#16-appendix-7-optimize-cpu-with-event-driven-hooks)
@@ -2019,7 +2019,7 @@ Nun führen wir auf dem **Diretta-Host** alle Schritte zur Installation und Konf
 
 7.  **Avahi und Python-Abhängigkeiten auf dem Diretta-Host installieren:**
 
-**Hinweis:** OPTIONAL - Wenn Sie mehr als einen Diretta-Host in Ihrem Netzwerk haben, stellen Sie bitte sicher, dass sie eindeutige Namen haben. Sie können einen Befehl wie den folgenden verwenden, um diesen umzubenennen, bevor Sie fortfahren:
+    **Hinweis:** OPTIONAL - Wenn Sie mehr als einen Diretta-Host in Ihrem Netzwerk haben, stellen Sie bitte sicher, dass sie eindeutige Namen haben. Sie können einen Befehl wie den folgenden verwenden, um diesen umzubenennen, bevor Sie fortfahren:
 
     ```bash
     # Optional den Diretta-Host umbenennen, wenn dies Ihr zweiter Aufbau im selben Netzwerk ist
