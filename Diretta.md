@@ -742,7 +742,7 @@ While you can use passwords, the most secure and convenient method is public key
 
       * **On Linux:** Thanks to the `AddKeysToAgent yes` setting, your key will be added to the SSH agent for your current terminal session. You won't be prompted for the passphrase again until you reboot or start a new login session.
 
------
+---
 
 ### (Optional) For an Improved Linux Experience
 
@@ -1056,10 +1056,7 @@ If you are using Argon ONE cases for both Diretta Host and Target, you'll need t
 The manual says to download the argon1.sh script from download.argon40.com and pipe it to `bash`. This won't work on Audiolinux since the script assumes a Debian-based O/S, so skip this step and follow the steps below instead.
 
 ### Step 2: Configure your system:
-These commands will enable the I2C interface and add the specific `dtoverlay`
-for the Argon ONE case. The script first attempts to uncomment the `i2c_arm`
-parameter if it's commented out and then adds the `argonone` overlay if it's
-missing, preventing errors and duplicate entries.
+These commands will enable the I2C interface and add the specific `dtoverlay` for the Argon ONE case. The script first attempts to uncomment the `i2c_arm` parameter if it's commented out and then adds the `argonone` overlay if it's missing, preventing errors and duplicate entries.
 ```bash
 BOOT_CONFIG="/boot/config.txt"
 I2C_PARAM="dtparam=i2c_arm=on"
@@ -2178,7 +2175,6 @@ From the landing page, a navigation bar at the top will guide you to the differe
 >
 > ---
 
-
 ## 14. Appendix 5: System Health Checks
 
 After completing major sections of this guide, it's a good idea to run a quick quality assurance (QA) check to verify that everything is configured correctly.
@@ -2501,7 +2497,7 @@ On the Target, we will disable both `isolated_app.timer` and `rtapp.timer` and h
 
     In the output, you should see that the service is `Active: active (running)`. You should also see two `Process:` lines, one for `isolated_app.sh` (which should show `status=0/SUCCESS`) and one for `rtapp` (which will likely show `status=1/FAILURE`). This is the correct and expected outcome.
 
------
+---
 
 ### **Part 2: Optimizing the Diretta Host**
 
@@ -2656,13 +2652,13 @@ sudo touch /etc/diretta-100m
 
 >
 >
-> -----
+> ---
 >
 > ### ✅ Checkpoint: Verify Network Configuration
 >
 > Your dedicated network link is now configured for "Purist" 100Mbps operation. To verify that the Host service is active and the Target has correctly negotiated the speed (detected via the marker file), please return to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
-> -----
+> ---
 
 ## 18. Appendix 9: Optional: Jumbo Frames Optimization
 This section optimizes the transport for high-bandwidth efficiency.
@@ -2805,10 +2801,10 @@ sudo sync && sudo reboot
 
 >
 >
-> -----
+> ---
 >
 > ### ✅ Checkpoint: Verify Network Configuration
 >
 > If you were able to enable Jumbo frames support for your configuration, now is a good time to return to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
-> -----
+> ---
