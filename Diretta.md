@@ -243,9 +243,7 @@ sudo sync && sudo poweroff
 
 For the steps in this section, it's usually most efficient (and least confusing) to complete all of Section 4 on the Diretta Host and then repeat the entire section on the Diretta Target.
 
-Each RPi has its own machine ID, so you may power them up now. If you have two network cables, it's more
-convenient to connect both of them to your home network at the same time for the next few steps, but you can
-proceed one-at-a-time otherwise. **Note**: your router will likely assign them different IP addresses from the one you used to login initially. Be sure to use the new IP address with your SSH commands. Here's a reminder:
+Each RPi has its own machine ID, so you may power them up now. If you have two network cables, it's more convenient to connect both of them to your home network at the same time for the next few steps, but you can proceed one-at-a-time otherwise. **Note**: your router will likely assign them different IP addresses from the one you used to login initially. Be sure to use the new IP address with your SSH commands. Here's a reminder:
 
 ```bash
 cmd=$(cat <<'EOT'
@@ -1017,7 +1015,6 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     * Select **INSTALL/UPDATE menu**.
     * Select **INSTALL/UPDATE Roonbridge**.
     * The installation will proceed. The installation may take a minute or two.
-
 
 3.  **Enable Roon Bridge (on the Host):**
     * Select **Audio menu** from the Main menu

@@ -12,6 +12,7 @@ Hier einige Links für weitere Informationen (in Englisch):
 * https://help.diretta.link/support/solutions/articles/73000661018-146
 * https://help.diretta.link/support/solutions/articles/73000661171-dds-diretta-direct-stream
 
+
 ## Eine Einführung in die Referenz-Roon-Architektur
 
 Willkommen zum definitiven Leitfaden für den Aufbau eines hochmodernen Roon-Streaming-Endpunkts. Obwohl AudioLinux auch andere Protokolle unterstützt, verwende ich für diesen Aufbau Roon als Beispiel. Sie können über das Menüsystem des Diretta-Hosts Unterstützung für andere Protokolle installieren, darunter HQPlayer, Audirvana, DLNA, AirPlay usw. Bevor wir in die schrittweisen Anweisungen eintauchen, ist es wichtig, das "Warum" hinter diesem Projekt zu verstehen. Diese Einführung erklärt das Problem, das diese Architektur löst, warum sie vielen hochpreisigen kommerziellen Alternativen grundlegend überlegen ist und wie dieses DIY-Projekt einen direkten und lohnenden Weg darstellt, um die ultimative Klangqualität aus Ihrem Roon-System herauszuholen.
@@ -232,7 +233,6 @@ sudo hostnamectl set-hostname diretta-target
 ```
 
 **Fahren Sie das Gerät an diesem Punkt herunter. Wiederholen Sie die [oben genannten Schritte](https://www.google.com/search?q=%233-core-system-configuration-perform-on-both-devices) für den zweiten Raspberry Pi.**
-
 ```bash
 sudo sync && sudo poweroff
 ```
@@ -566,7 +566,6 @@ fi
     ```bash
     sudo sync && sudo poweroff
     ```
-
 2.  Trennen Sie beide Geräte von Ihrem Haupt-LAN Switch/Router.
 3.  Verbinden Sie den **Onboard-Ethernet-Port** des Diretta-Hosts direkt mit dem **Onboard-Ethernet-Port** des Diretta-Targets unter Verwendung eines einzelnen Ethernet-Kabels.
 4.  Stecken Sie den **USB-zu-Ethernet-Adapter** in einen der blauen USB 3.0 Ports am Diretta-Host Computer.
@@ -674,6 +673,7 @@ EOT_HOSTS
 fi
 
 # --- Bereinigung von StrictHostKeyChecking aus älteren Versionen dieses Leitfadens ---
+# This is no longer needed with the recommended SSH key setup
 if command -v sed >/dev/null; then
     sed -i.bak -e '/StrictHostKeyChecking/d' "$SSH_CONFIG_FILE"
     # Leere Zeilen entfernen, die übrig geblieben sein könnten
@@ -716,12 +716,14 @@ Obwohl Sie Passwörter verwenden können, ist die sicherste und bequemste Method
 
 1.  **Einen SSH-Schlüssel erstellen (falls Sie noch keinen haben):**
     Es ist bewährte Praxis, einen modernen Algorithmus wie `ed25519` zu verwenden. Wenn Sie gefragt werden, geben Sie eine starke, einprägsame **Passphrase** ein. Dies ist nicht Ihr Login-Passwort; es ist ein Passwort, das Ihre private Schlüsseldatei selbst schützt.
+
     ```bash
     ssh-keygen -t ed25519 -C "audiolinux"
     ```
 
 2.  **Ihren öffentlichen Schlüssel auf die Geräte kopieren:**
     Diese Befehle gewähren Ihrem Schlüssel sicheren Zugriff auf jedes Gerät. Der erste Befehl fragt nach dem Passwort des Diretta-Hosts. Da dies die Verbindung zum Host passwortlos macht, fragt der zweite Befehl nur noch nach dem Passwort des Diretta-Targets.
+
     ```bash
     echo ""
     ssh-copy-id diretta-host
@@ -731,6 +733,7 @@ Obwohl Sie Passwörter verwenden können, ist die sicherste und bequemste Method
 
 3.  **Sicher einloggen:**
     Sie können nun per SSH auf Ihre Geräte zugreifen. Beim ersten Verbindungsaufbau zu jedem Gerät werden Sie nach der **Passphrase** gefragt, die Sie in Schritt 1 erstellt haben.
+
     ```bash
     ssh diretta-host
     ```
@@ -1558,7 +1561,9 @@ Auf dem Diretta-Target-Computer gibt es minimale Netzwerk- und Hintergrundaktivi
 
 ---
 > KRITISCHE WARNUNG: NUR für das Diretta-Target
+>
 > Das `purist-mode` Skript und alle Anweisungen in diesem Anhang sind ausschließlich für das Diretta-Target bestimmt.
+>
 > Installieren oder führen Sie dieses Skript NICHT auf dem Diretta-Host aus. Dies würde die Verbindung des Hosts zu Ihrem Hauptnetzwerk trennen, ihn unerreichbar machen und die Kommunikation mit Ihrem Roon Core oder Streaming-Diensten verhindern. Dies würde das gesamte System funktionsunfähig machen, bis Sie Konsolenzugriff (mit physischer Tastatur und Monitor) erhalten, um die Änderungen rückgängig zu machen.
 ---
 
@@ -1720,6 +1725,7 @@ Diese Zustände werden auf zwei Arten verwaltet: **automatisch** beim Booten und
 Der Bootvorgang ist sicher und vorhersehbar gestaltet, mit einer optionalen automatischen Umschaltung in den Purist-Modus.
 
 1.  **Zwingender Revert beim Booten:** Unabhängig vom Zustand beim Herunterfahren bootet das Diretta-Target **immer** zuerst in den **Standard-Modus**. Dies ist eine wichtige Funktion, die sicherstellt, dass wesentliche Dienste wie die Netzwerkzeitsynchronisation korrekt ausgeführt werden können.
+
 2.  **Optionale Auto-Aktivierung:** Wenn Sie die automatische Funktion aktiviert haben, wartet das System 60 Sekunden nach dem Booten und schaltet dann automatisch in den **Purist-Modus**. Dies bietet eine "Set it and forget it"-Erfahrung für Benutzer, die immer im optimierten Zustand hören möchten.
 
 #### Manuelle Steuerung (Interaktive Nutzung)
@@ -1739,6 +1745,7 @@ Sie haben jederzeit volle interaktive Kontrolle über das System.
     ```
 
   * Um das **automatische Bootverhalten** zu steuern, verwenden Sie die Komfort-Aliase auf dem Diretta-Target:
+
     ```bash
     # Dies aktiviert die 60-Sekunden-Auto-Aktivierung beim nächsten Boot
     purist-mode-auto-enable
@@ -1768,7 +1775,6 @@ Auf dem **Diretta-Target** erstellen wir einen neuen Benutzer mit sehr eingeschr
     ```bash
     ssh diretta-target
     ```
-
 
 2.  **Einen neuen Benutzer für die App erstellen:**
     Dieser Befehl erstellt einen neuen Benutzer namens `purist-app` und dessen Home-Verzeichnis. Eine gültige Shell ist erforderlich, damit nicht-interaktive SSH-Befehle funktionieren.
@@ -2323,6 +2329,7 @@ Dieser Schritt reserviert zwei CPU-Kerne für die Behandlung von sowohl Roon Bri
     menu
     ```
 3.  Navigieren Sie zum Menü **ISOLATED CPU CORES configuration** (unter **SYSTEM menu**).
+
 4.  Deaktivieren Sie alle vorherigen Einstellungen wie unten gezeigt:
     ```text
     Please chose your option:
@@ -2469,10 +2476,8 @@ Auf dem Target deaktivieren wir sowohl `isolated_app.timer` als auch `rtapp.time
     EOF'
     ```
 
-
     > **Hinweis zum Bindestrich (`-`):**
     > Das Präfix `-` vor dem Befehl `/bin/bash /usr/bin/rtapp` ist beabsichtigt. Das `rtapp`-Skript könnte in diesem Kontext fehlschlagen (mit einem Status ungleich Null beenden). Der Bindestrich weist `systemd` an, "Fehler zu ignorieren" für diesen spezifischen Befehl, sodass der Hauptdienst `diretta_alsa_target.service` weiterlaufen kann.
-
 
 4.  **Systemd neu laden und den Dienst neu starten:**
 
@@ -2538,6 +2543,7 @@ Auf dem Host deaktivieren wir den `isolated_app.timer` und hängen sein Skript s
     ```
 
 4.  **Systemd neu laden und die Dienste neu starten:**
+
     ```bash
     sudo systemctl daemon-reload
     sudo systemctl restart roonbridge.service
