@@ -83,11 +83,11 @@ Wenn Sie sich in den USA befinden, rechnen Sie mit etwa 299 $ (plus Steuern und 
 11. [Anhang 2: Optionale IR-Fernbedienung](#11-anhang-2-optionale-ir-fernbedienung)
 12. [Anhang 3: Optionaler Purist-Modus](#12-anhang-3-optionaler-purist-modus)
 13. [Anhang 4: Optionale Web-Oberfläche zur Systemsteuerung](#13-anhang-4-optionale-web-oberfl%C3%A4che-zur-systemsteuerung)
-14. [Anhang 5: System-Gesundheitschecks](#14-appendix-5-system-health-checks)
-15. [Anhang 6: Erweitertes Echtzeit-Leistungstuning](#15-appendix-6-advanced-realtime-performance-tuning)
-16. [Anhang 7: CPU-Optimierung mit ereignisgesteuerten Hooks](#16-appendix-7-optimize-cpu-with-event-driven-hooks)
-17. [Anhang 8: Optionaler puristischer 100Mbps Netzwerk-Modus](#17-appendix-8-optional-purist-100mbps-network-mode)
-18. [Anhang 9: Optionale Jumbo-Frames-Optimierung](#18-appendix-9-optional-jumbo-frames-optimization)
+14. [Anhang 5: System-Gesundheitschecks](#14-anhang-5-system-gesundheitschecks)
+15. [Anhang 6: Erweitertes Echtzeit-Leistungstuning](#15-anhang-6-erweitertes-echtzeit-leistungstuning)
+16. [Anhang 7: CPU-Optimierung mit ereignisgesteuerten Hooks](#16-anhang-7-cpu-optimierung-mit-ereignisgesteuerten-hooks)
+17. [Anhang 8: Optionaler puristischer 100Mbps Netzwerk-Modus](#17-anhang-8-optionaler-puristischer-100mbps-netzwerk-modus)
+18. [Anhang 9: Optionale Jumbo-Frames-Optimierung](#18-anhang-9-optional-jumbo-frames-optimierung)
 
 ---
 
