@@ -3,11 +3,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+import argparse
 
 def analyze_capture(csv_file):
     print(f"Loading {csv_file}...")
     try:
-        # Load CSV with stripped column names to handle whitespace
         df = pd.read_csv(csv_file)
         df.columns = df.columns.str.strip().str.lower()
     except Exception as e:
@@ -15,8 +15,6 @@ def analyze_capture(csv_file):
         return
 
     # --- 1. Stream Identification ---
-    # We look for the dominant flow to automatically filter out unrelated traffic
-    # Common Wireshark/TShark column names
     src_col = 'eth.src'
     dst_col = 'eth.dst'
     time_col = 'frame.time_relative' if 'frame.time_relative' in df.columns else 'time'
@@ -26,7 +24,7 @@ def analyze_capture(csv_file):
         print("Error: Could not find a timestamp column (frame.time_relative or time).")
         return
 
-    # Find the pair of MAC addresses with the most packets
+    # Find Dominant Flow
     if src_col in df.columns:
         flow_counts = df.groupby([src_col, dst_col]).size().reset_index(name='count')
         if flow_counts.empty:
@@ -36,194 +34,155 @@ def analyze_capture(csv_file):
         host_mac = dominant_flow[src_col]
         target_mac = dominant_flow[dst_col]
 
-        # Filter: Audio Stream vs Noise
-        audio_full_df = df[(df[src_col] == host_mac) & (df[dst_col] == target_mac)].copy()
-        noise_df = df[~((df[src_col] == host_mac) & (df[dst_col] == target_mac))].copy()
+        # Filter DF
+        df = df[(df[src_col] == host_mac) & (df[dst_col] == target_mac)].copy()
+        print(f"\n--- Stream Summary ---")
+        print(f"Flow:                  {host_mac} -> {target_mac}")
     else:
-        print("Warning: No MAC address columns found. Analyzing all packets as audio.")
-        audio_full_df = df.copy()
-        noise_df = pd.DataFrame() # Empty
         host_mac = "Unknown"
         target_mac = "Unknown"
+        print("Warning: MAC address columns not found. Assuming single stream.")
 
-    # --- 2. Phase Separation (Startup vs Steady State) ---
-    STARTUP_TIME = 1.0 # Ignore the first 1.0 seconds for Core Jitter stats
+    # Calculate Deltas
+    df['delta_s'] = df[time_col].diff()
+    df['delta_us'] = df['delta_s'] * 1e6
+    df = df.iloc[1:].copy() # Drop first NaN
 
-    # Ensure time is sorted
-    audio_full_df = audio_full_df.sort_values(by=time_col)
+    # --- PASS 1: Detect CycleTime (Steady State) ---
+    # We assume 'steady state' is after the first 1.0 seconds
+    steady_df = df[df[time_col] > 1.0].copy()
 
-    # Startup Phase Data
-    startup_df = audio_full_df[audio_full_df[time_col] <= STARTUP_TIME].copy()
-    startup_df['delta'] = startup_df[time_col].diff()
-    startup_deltas = startup_df['delta'] * 1e6 # microseconds
-
-    # Steady State Data (The "Real" Benchmark)
-    steady_df = audio_full_df[audio_full_df[time_col] > STARTUP_TIME].copy()
-    steady_df['delta'] = steady_df[time_col].diff()
-
-    # Fallback if capture is too short
     if steady_df.empty:
-        print(f"Warning: Capture is shorter than {STARTUP_TIME}s. Using full data for stats.")
-        steady_df = audio_full_df.copy()
-        steady_df['delta'] = steady_df[time_col].diff()
+        print("Warning: Recording too short to detect steady state (>1.0s). Using all data.")
+        steady_df = df
 
-    deltas_us = steady_df['delta'] * 1e6 # microseconds (Steady State)
+    # Detect Cycle Time (Median is robust against outliers)
+    detected_cycle = steady_df['delta_us'].median()
 
-    # --- 3. Metric Calculations ---
+    # Define Dynamic Thresholds based on detection
+    # A "Gap" is defined as any packet arriving significantly later than the cycle time.
+    # Using 1.5x as the threshold allows for some jitter but catches missed cycles.
+    gap_threshold = detected_cycle * 1.5
 
-    # Throughput & Duration
-    if len(steady_df) > 1:
-        duration = steady_df[time_col].iloc[-1] - steady_df[time_col].iloc[0]
-        throughput_mbps = (steady_df[len_col].sum() * 8) / duration / 1e6 if duration > 0 else 0
-    else:
-        duration = 0
-        throughput_mbps = 0
+    # Stability tolerance: Packet is "Good" if within +/- 20% of cycle
+    stability_margin = 0.20
+    stability_lower = detected_cycle * (1.0 - stability_margin)
+    stability_upper = detected_cycle * (1.0 + stability_margin)
 
-    # Timing Stats
-    mean_gap = deltas_us.mean()
-    median_gap = deltas_us.median()
-    std_dev = deltas_us.std() # Total Jitter (Steady State)
+    print(f"Mode:                  Auto-Detected Cycle")
+    print(f"Detected CycleTime:    {detected_cycle:.2f} µs")
+    print(f"Dynamic Gap Threshold: > {gap_threshold:.2f} µs (1.5x Cycle)")
 
-    # Packet Sizes
-    avg_frame = steady_df[len_col].mean()
-    min_frame = steady_df[len_col].min()
-    max_frame = steady_df[len_col].max()
+    # --- PASS 2: Analysis ---
 
-    # Robust Core Jitter (1% - 99% percentile of Steady State)
-    # This filters out the random OS noise to find the engine's true precision
-    p01 = deltas_us.quantile(0.01)
-    p99 = deltas_us.quantile(0.99)
-    core_deltas = deltas_us[(deltas_us >= p01) & (deltas_us <= p99)]
-    robust_std = core_deltas.std()
+    # Duration and Throughput
+    duration = df[time_col].max() - df[time_col].min()
+    total_bytes = df[len_col].sum()
+    throughput_mbps = (total_bytes * 8) / (duration * 1e6)
 
-    # Stability Score (Steady State)
-    total_packets = len(deltas_us)
-    stable_packets = len(deltas_us[deltas_us <= 1000])
-    stability_score = (stable_packets / total_packets) * 100 if total_packets > 0 else 0
+    print(f"Duration (Total):      {duration:.2f} s")
+    print(f"Packets (Total):       {len(df):,}")
+    print(f"Throughput:            {throughput_mbps:.2f} Mbps")
 
-    # Mode Detection (Burst vs Single Frame)
-    # If >10% of packets arrive instantly (<100us), it's Burst Mode
-    burst_count = len(deltas_us[deltas_us < 100])
-    is_burst_mode = burst_count > (len(steady_df) * 0.1)
+    # Timing Stats (Steady State)
+    mean_interval = steady_df['delta_us'].mean()
+    std_dev = steady_df['delta_us'].std()
 
-    # --- 4. Console Output ---
-    def p_row(label, val, unit, desc):
-        print(f"{label:<22} {val:>12} {unit:<4} {desc}")
+    # Jitter Calculation (Robust against outliers using IQR)
+    q75, q25 = np.percentile(steady_df['delta_us'], [75 ,25])
+    iqr = q75 - q25
 
-    print(f"\n{'--- Stream Summary ---':<45}")
-    print(f"{'Flow:':<22} {host_mac} -> {target_mac}")
-    print(f"{'Mode:':<22} {'BURST (High-Res)' if is_burst_mode else 'SINGLE FRAME (Standard)'}")
-    p_row("Duration (Steady):", f"{duration:.2f}", "s", f"(Excludes first {STARTUP_TIME}s)")
-    p_row("Packets (Steady):", f"{len(steady_df):,}", "", "")
-    p_row("Throughput:", f"{throughput_mbps:.2f}", "Mbps", "")
+    print(f"\n--- Timing Precision (Steady State) ---")
+    print(f"Mean Interval:         {mean_interval:.2f} µs")
+    print(f"Median Interval:       {detected_cycle:.2f} µs")
+    print(f"Standard Deviation:    {std_dev:.2f} µs")
+    print(f"Jitter (IQR):          {iqr:.2f} µs          (Core Stability)")
 
-    print(f"\n{'--- Timing Precision (Steady State) ---':<45}")
-    p_row("Mean Interval:", f"{mean_gap:.2f}", "µs", "(Clock Sync)")
-    p_row("Median Interval:", f"{median_gap:.2f}", "µs", "(Typical Gap)")
-    p_row("Core Jitter:", f"{robust_std:.2f}", "µs", "(Excl. Outliers)")
-    p_row("Total Jitter:", f"{std_dev:.2f}", "µs", "(Incl. Outliers)")
+    # Startup Analysis (First 1s)
+    startup_df = df[df[time_col] <= 1.0]
+    startup_gaps = startup_df[startup_df['delta_us'] > gap_threshold]
+    startup_peak = startup_df['delta_us'].max() / 1000.0
 
-    print(f"\n{'--- Startup Phase (First 1s) ---':<45}")
-    if not startup_df.empty:
-        max_startup_pause = startup_deltas.max() / 1000
-        # Count gaps > 1ms (1000us)
-        startup_gaps = len(startup_deltas[startup_deltas > 1000])
-        p_row("Startup Peak Pause:", f"{max_startup_pause:.2f}", "ms", "")
-        p_row("Startup Gaps:", f"{startup_gaps}", "", "(Packets > 1000µs)")
-    else:
-        print("No startup data found.")
+    print(f"\n--- Startup Phase (First 1s) ---")
+    print(f"Startup Peak Pause:    {startup_peak:.2f} ms")
+    print(f"Startup Gaps:          {len(startup_gaps):<8} (Packets > {gap_threshold:.0f}µs)")
 
-    print(f"\n{'--- Stability Events (Steady State) ---':<45}")
-    p_row("Stability Score:", f"{stability_score:.5f}", "%", "(Packets < 1ms)")
-    p_row("Max Pause:", f"{deltas_us.max()/1000:.2f}", "ms", "")
-    long_gaps = len(deltas_us[deltas_us > 1000])
-    p_row("Major Gaps:", f"{long_gaps}", "", "(Packets > 1000µs)")
+    # Stability Events (Steady State)
+    major_gaps = steady_df[steady_df['delta_us'] > gap_threshold]
+    max_pause_steady = steady_df['delta_us'].max() / 1000.0
 
-    print(f"\n{'--- Isolation / Noise (Full Run) ---':<45}")
-    noise_pct = (len(noise_df)/len(df))*100
-    p_row("Noise Packets:", f"{len(noise_df):,}", "", f"({noise_pct:.2f}%)")
+    # Calculate "Stability Score" (Percentage of packets inside the target window)
+    stable_packets = steady_df[
+        (steady_df['delta_us'] >= stability_lower) &
+        (steady_df['delta_us'] <= stability_upper)
+    ]
+    stability_score = (len(stable_packets) / len(steady_df)) * 100.0
 
-    if not noise_df.empty:
-        print("\nTop Noise Sources:")
-        # Try to use eth.type if available
-        if 'eth.type' in noise_df.columns:
-             print(noise_df['eth.type'].value_counts().head(3).to_string())
-        else:
-             print("(eth.type column missing, cannot identify protocols)")
+    print(f"\n--- Stability Events (Steady State) ---")
+    print(f"Stability Score:       {stability_score:.5f} %  (Packets within ±{int(stability_margin*100)}% of Cycle)")
+    print(f"Max Pause:             {max_pause_steady:.2f} ms")
+    print(f"Major Gaps:            {len(major_gaps):<8} (Packets > {gap_threshold:.0f}µs)")
 
-    # --- 5. Plotting ---
-    plt.figure(figsize=(14, 12))
+    # --- Plotting ---
+    plt.figure(figsize=(12, 10))
 
-    # Plot 1: Precision Histogram (Steady State ONLY)
-    plt.subplot(3, 1, 1)
-    if is_burst_mode:
-        plt.hist(core_deltas, bins=200, range=(0, 600), color='#2ecc71', edgecolor='none', alpha=0.8)
-        plt.title(f"Burst Mode Timing Distribution (Steady State Jitter: {robust_std:.2f}µs)")
-    else:
-        # Zoom in on the target interval
-        plt.hist(core_deltas, bins=100, range=(450, 580), color='#2ecc71', edgecolor='black', alpha=0.7)
-        plt.title(f"Single-Frame Timing Distribution (Steady State Jitter: {robust_std:.2f}µs)")
-        plt.axvline(x=514, color='red', linestyle='--', label='Target 514µs')
-        plt.legend()
-    plt.ylabel("Count")
-    plt.grid(True, alpha=0.3)
+    # Plot 1: Interval Stability
+    plt.subplot(2, 1, 1)
 
-    # Plot 2: Stability Timeline (Full Run)
-    plt.subplot(3, 1, 2)
+    # Downsample for plotting if huge
+    plot_df = df
+    if len(df) > 100000:
+        plot_df = df.iloc[::10]
 
-    # Plot Startup Phase in Gray (Subsampled for speed)
-    if not startup_df.empty:
-        startup_sub = startup_df.iloc[::50]
-        plt.plot(startup_sub[time_col], startup_sub['delta'] * 1e6,
-                 color='gray', alpha=0.4, linewidth=0.5, label='Startup Phase')
+    # Color code: Startup vs Steady
+    mask_startup = plot_df[time_col] <= 1.0
 
-        # Highlight startup gaps
-        startup_outliers = startup_df[startup_df['delta'] * 1e6 > 1000]
-        if not startup_outliers.empty:
-             plt.scatter(startup_outliers[time_col], startup_outliers['delta'] * 1e6,
-                        color='orange', s=15, zorder=5, label='Startup Gap')
+    plt.scatter(plot_df[mask_startup][time_col], plot_df[mask_startup]['delta_us'],
+               color='gray', alpha=0.5, s=2, label='Startup')
+    plt.scatter(plot_df[~mask_startup][time_col], plot_df[~mask_startup]['delta_us'],
+               color='#3498db', alpha=0.5, s=2, label='Steady State')
 
-    # Plot Steady State in Blue (Subsampled)
-    steady_sub = steady_df.iloc[::50]
-    plt.plot(steady_sub[time_col], steady_sub['delta'] * 1e6,
-             color='#2980b9', alpha=0.6, linewidth=0.5, label='Steady State Audio')
+    # Add Dynamic Threshold Line
+    plt.axhline(y=gap_threshold, color='r', linestyle='--', alpha=0.5, label=f'Gap Threshold ({gap_threshold:.0f}µs)')
+    plt.axhline(y=detected_cycle, color='g', linestyle='-', alpha=0.3, label=f'Cycle ({detected_cycle:.0f}µs)')
 
-    # Highlight Steady State Gaps in Red
-    steady_outliers = steady_df[steady_df['delta'] * 1e6 > 1000]
-    if not steady_outliers.empty:
-        plt.scatter(steady_outliers[time_col], steady_outliers['delta'] * 1e6,
-                    color='red', s=30, zorder=10, label='Steady State Gap')
+    # Dynamic Y-Limit: Focus on the stream, but allow seeing some gaps
+    # Set Y limit to 4x cycle time to show context, but don't let massive startup spikes squish the graph
+    limit_y = detected_cycle * 4
+    if limit_y < 100: limit_y = 100 # Minimum floor
 
-    plt.axvline(x=STARTUP_TIME, color='black', linestyle=':', label='1s Threshold')
-
-    plt.ylim(0, 1500)
-    plt.title(f"Stream Stability (Gray = Startup, Blue = Steady State)")
+    plt.ylim(0, limit_y)
+    plt.title(f"Stream Stability (Target Cycle: {detected_cycle:.0f} µs)")
     plt.ylabel("Interval (µs)")
     plt.legend(loc='upper right')
     plt.grid(True, alpha=0.3)
-
-    # Plot 3: Noise Forensics (Full Run)
-    plt.subplot(3, 1, 3)
-    if not noise_df.empty:
-        plt.scatter(noise_df[time_col], noise_df[len_col],
-                   color='#e74c3c', alpha=0.4, s=10, label='Noise Packet')
-        plt.title(f"Noise Forensics: Packet Size vs Time (Total: {len(noise_df)})")
-        plt.ylabel("Packet Size (Bytes)")
-        plt.ylim(0, 1600)
-    else:
-        plt.text(0.5, 0.5, "Perfect Isolation (0 Noise)", ha='center', fontsize=12)
-        plt.title("Noise Floor")
-
     plt.xlabel("Time (seconds)")
-    plt.grid(True, alpha=0.3)
+
+    # Plot 2: Jitter Histogram (Zoomed in)
+    plt.subplot(2, 1, 2)
+    # Filter out massive gaps for the histogram to see the "core" jitter
+    core_data = steady_df[steady_df['delta_us'] < (detected_cycle * 1.2)]
+
+    if not core_data.empty:
+        plt.hist(core_data['delta_us'], bins=100, color='#2ecc71', alpha=0.7)
+        plt.title(f"Jitter Distribution (Zoomed to Cycle Time)")
+        plt.xlabel("Interval (µs)")
+        plt.ylabel("Packet Count")
+        plt.grid(True, alpha=0.3)
+        # Center X axis around detected cycle
+        plt.xlim(detected_cycle * 0.8, detected_cycle * 1.2)
+    else:
+        plt.text(0.5, 0.5, "No stable packets found", ha='center')
 
     plt.tight_layout()
     output_img = csv_file.replace('.csv', '_report.png')
     plt.savefig(output_img)
     print(f"\n✅ Graph generated: {output_img}")
+    # plt.show() # Uncomment if running locally with UI
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: ./analyze_benchmark.py <file.csv>")
-        sys.exit(1)
-    analyze_capture(sys.argv[1])
+    parser = argparse.ArgumentParser(description='Analyze Diretta CSV Capture with Dynamic Thresholds')
+    parser.add_argument('csv_file', help='Path to the Wireshark CSV export')
+    args = parser.parse_args()
+
+    analyze_capture(args.csv_file)
