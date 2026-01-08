@@ -64,8 +64,8 @@ Now, let's get started.
 
 ---
 
-If you are located in the US, expect to pay around $299 (plus tax and shipping) to complete the basic build, limited to 44.1 kHz playback (for evaluation), plus another €100 to enable hi-res playback (prices subject to change):
-- Hardware ($220)
+If you are located in the US, expect to pay around $329 (plus tax and shipping) to complete the basic build, limited to 44.1 kHz playback (for evaluation), plus another €100 to enable hi-res playback (prices subject to change):
+- Hardware ($250)
 - One year AudioLinux subscription ($79)
 - Diretta Target license (€100)
 
@@ -123,7 +123,7 @@ A complete bill of materials is provided below. While other parts can be substit
 * 1 x [Raspberry Pi 5/1GB](https://www.pishop.us/product/raspberry-pi-5-1gb/) (for the Diretta Target)
 * 1 x [Raspberry Pi 5/2GB](https://www.pishop.us/product/raspberry-pi-5-2gb/) (for the Diretta Host)
 * 2 x [Flirc Raspberry Pi 5 Case](https://www.pishop.us/product/flirc-raspberry-pi-5-case/)
-* 2 x [64 GB A2 microSDXC Card](https://www.amazon.com/Kingston-Canvas-64GB-microSD-SDCG4/dp/B0F2B123P2)
+* 2 x [64 GB A2 microSDXC Card](https://www.bhphotovideo.com/c/product/1830849-REG/lexar_lmssipl064g_bnanu_64gb_silver_plus_microsdxc.html)
 * 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
 
 **Required Networking Components:**
@@ -136,7 +136,6 @@ A complete bill of materials is provided below. While other parts can be substit
 
 **Optional Upgrades:**
 * 2 x [Argon ONE V3 Raspberry Pi 5 Case](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (instead of the Flirc cases)
-* 2 x [64 GB A2 microSDXC Card (Lexar alternative)](https://www.bhphotovideo.com/c/product/1830849-REG/lexar_lmssipl064g_bnanu_64gb_silver_plus_microsdxc.html)
 * 1 x [Argon IR Remote](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (to add remote control capabilities to the Diretta Host)
 * 1 x [Flirc USB IR Receiver](https://www.pishop.us/product/flirc-rpi-usb-xbmc-ir-remote-receiver/) (to use the Argon IR Remote with the Diretta Host in a Flirc Case)
 * 1 x [Blue Jeans BJC CAT6a Belden Bonded Pairs 500 MHz](https://www.bluejeanscable.com/store/data-cables/index.htm) (for the point-to-point connection between Host and Target)

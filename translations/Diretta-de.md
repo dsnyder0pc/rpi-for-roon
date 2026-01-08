@@ -64,8 +64,8 @@ Lassen Sie uns beginnen.
 
 ---
 
-Wenn Sie sich in den USA befinden, rechnen Sie mit etwa 299 $ (plus Steuern und Versand), um den Basisaufbau zu vervollständigen (zunächst limitiert auf 44,1 kHz Wiedergabe zur Evaluierung), plus weitere 100 €, um die Hi-Res-Wiedergabe zu aktivieren (Preise können sich ändern):
-- Hardware ($220)
+Wenn Sie sich in den USA befinden, rechnen Sie mit etwa 329 $ (plus Steuern und Versand), um den Basisaufbau zu vervollständigen (zunächst limitiert auf 44,1 kHz Wiedergabe zur Evaluierung), plus weitere 100 €, um die Hi-Res-Wiedergabe zu aktivieren (Preise können sich ändern):
+- Hardware ($250)
 - Ein Jahr AudioLinux-Abonnement ($79)
 - Diretta-Target-Lizenz (€100)
 
@@ -123,7 +123,7 @@ Eine vollständige Stückliste finden Sie unten. Während andere Teile ersetzt w
 * 1 x [Raspberry Pi 5/1GB](https://www.pishop.us/product/raspberry-pi-5-1gb/) (für das Diretta-Target)
 * 1 x [Raspberry Pi 5/2GB](https://www.pishop.us/product/raspberry-pi-5-2gb/) (für den Diretta-Host)
 * 2 x [Flirc Raspberry Pi 5 Gehäuse](https://www.pishop.us/product/flirc-raspberry-pi-5-case/)
-* 2 x [64 GB A2 microSDXC Karte](https://www.amazon.com/Kingston-Canvas-64GB-microSD-SDCG4/dp/B0F2B123P2)
+* 2 x [64 GB A2 microSDXC Karte (Lexar Alternative)](https://www.bhphotovideo.com/c/product/1830849-REG/lexar_lmssipl064g_bnanu_64gb_silver_plus_microsdxc.html)
 * 2 x [Raspberry Pi 45W USB-C Netzteil - Weiß](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
 
 **Erforderliche Netzwerkkomponenten:**
@@ -136,7 +136,6 @@ Eine vollständige Stückliste finden Sie unten. Während andere Teile ersetzt w
 
 **Optionale Upgrades:**
 * 2 x [Argon ONE V3 Raspberry Pi 5 Gehäuse](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (anstelle der Flirc-Gehäuse)
-* 2 x [64 GB A2 microSDXC Karte (Lexar Alternative)](https://www.bhphotovideo.com/c/product/1830849-REG/lexar_lmssipl064g_bnanu_64gb_silver_plus_microsdxc.html)
 * 1 x [Argon IR Fernbedienung](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (um dem Diretta-Host Fernbedienungsfunktionen hinzuzufügen)
 * 1 x [Flirc USB IR Empfänger](https://www.pishop.us/product/flirc-rpi-usb-xbmc-ir-remote-receiver/) (um die Argon IR Fernbedienung mit dem Diretta-Host in einem Flirc-Gehäuse zu verwenden)
 * 1 x [Blue Jeans BJC CAT6a Belden Bonded Pairs 500 MHz](https://www.bluejeanscable.com/store/data-cables/index.htm) (für die Punkt-zu-Punkt-Verbindung zwischen Host und Target)
