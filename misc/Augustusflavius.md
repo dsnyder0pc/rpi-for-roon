@@ -1,4 +1,4 @@
-Based on Matthew Arndt's tuning guide and this project infrastructure, here is the prioritized, one-by-one testing plan. This sequence focuses on establishing a "Reference Foundation" first, followed by spatial tuning, then tonal density.
+Based on Augustusflavius Arndt's tuning guide and this project infrastructure, here is the prioritized, one-by-one testing plan. This sequence focuses on establishing a "Reference Foundation" first, followed by spatial tuning, then tonal density.
 
 ---
 
@@ -8,7 +8,7 @@ This phase moves your system from "Fully Adaptive" timing to "Controlled Adaptiv
 
 ### 1.1 Testing Objectives
 
-* **FlexCycle=semi**: Provides a damped, stable feedback loop that Matthew considers the reference for high-end systems.
+* **FlexCycle=semi**: Provides a damped, stable feedback loop that Augustusflavius considers the reference for high-end systems.
 * **Preset=Fix**: Prioritizes determinism and tonal saturation for consistent tuning.
 * **ThredMode=2048**: Minimizes "thread chatter" and jitter at buffer boundaries.
 
@@ -76,7 +76,7 @@ This phase adjusts the "harmonic stability" and the physical "weight" of the mus
 
 ### 3.1 Testing Objectives
 
-* **syncBufferCount=12**: Increases host-side smoothing. Matthew notes this specifically increases vocal body and reduces harsh edges.
+* **syncBufferCount=12**: Increases host-side smoothing. Augustusflavius notes this specifically increases vocal body and reduces harsh edges.
 * **LatencyBuffer=76000**: Sets the target-side elastic buffer. This determines how firmly the music "lands" at the DAC, increasing emotional presence.
 
 ### 3.2 Implementation (Stage 3)
