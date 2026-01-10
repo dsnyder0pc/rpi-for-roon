@@ -1,4 +1,4 @@
-Based on Augustusflavius Arndt's tuning guide and this project infrastructure, here is the prioritized, one-by-one testing plan. This sequence focuses on establishing a "Reference Foundation" first, followed by spatial tuning, then tonal density.
+Based on Augustusflavius's tuning guide and this project infrastructure, here is the prioritized, one-by-one testing plan. This sequence focuses on establishing a "Reference Foundation" first, followed by spatial tuning, then tonal density.
 
 ---
 
