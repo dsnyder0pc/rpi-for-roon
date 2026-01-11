@@ -16,19 +16,19 @@ This phase moves your system from "Fully Adaptive" timing to "Controlled Adaptiv
 
 ```bash
 # 1. Backup baseline configuration
-sudo cp /etc/diretta-alsa.conf /etc/diretta-alsa.conf.bak.stage0_baseline
+sudo cp /opt/diretta-alsa/setting.inf /opt/diretta-alsa/setting.inf.bak.stage0_baseline
 
 # 2. Update FlexCycle from 'enable' to 'semi'
-sudo sed -i 's/^FlexCycle=enable/FlexCycle=semi/' /etc/diretta-alsa.conf
+sudo sed -i 's/^FlexCycle=enable/FlexCycle=semi/' /opt/diretta-alsa/setting.inf
 
 # 3. Update ThredMode from '1' to '2048'
-sudo sed -i 's/^ThredMode=1/ThredMode=2048/' /etc/diretta-alsa.conf
+sudo sed -i 's/^ThredMode=1/ThredMode=2048/' /opt/diretta-alsa/setting.inf
 
 # 4. Add or update Preset to 'Fix'
-if ! grep -q "^Preset=" /etc/diretta-alsa.conf; then
-    sudo sed -i '/\[global\]/a Preset=Fix' /etc/diretta-alsa.conf
+if ! grep -q "^Preset=" /opt/diretta-alsa/setting.inf; then
+    sudo sed -i '/\[global\]/a Preset=Fix' /opt/diretta-alsa/setting.inf
 else
-    sudo sed -i 's/^Preset=.*/Preset=Fix/' /etc/diretta-alsa.conf
+    sudo sed -i 's/^Preset=.*/Preset=Fix/' /opt/diretta-alsa/setting.inf
 fi
 
 # 5. Restart service
@@ -51,16 +51,16 @@ This phase target's the "Spatial Axis" by increasing the frequency of host-targe
 
 ```bash
 # 1. Backup Stage 1 configuration
-sudo cp /etc/diretta-alsa.conf /etc/diretta-alsa.conf.bak.stage1_foundation
+sudo cp /opt/diretta-alsa/setting.inf /opt/diretta-alsa/setting.inf.bak.stage1_foundation
 
 # 2. Update InfoCycle to 12000
-sudo sed -i 's/^InfoCycle=100000/InfoCycle=12000/' /etc/diretta-alsa.conf
+sudo sed -i 's/^InfoCycle=100000/InfoCycle=12000/' /opt/diretta-alsa/setting.inf
 
 # 3. Add or update Fragment to 'Balanced'
-if ! grep -q "^Fragment=" /etc/diretta-alsa.conf; then
-    sudo sed -i '/\[global\]/a Fragment=Balanced' /etc/diretta-alsa.conf
+if ! grep -q "^Fragment=" /opt/diretta-alsa/setting.inf; then
+    sudo sed -i '/\[global\]/a Fragment=Balanced' /opt/diretta-alsa/setting.inf
 else
-    sudo sed -i 's/^Fragment=.*/Fragment=Balanced/' /etc/diretta-alsa.conf
+    sudo sed -i 's/^Fragment=.*/Fragment=Balanced/' /opt/diretta-alsa/setting.inf
 fi
 
 # 4. Restart service
@@ -83,13 +83,13 @@ This phase adjusts the "harmonic stability" and the physical "weight" of the mus
 
 ```bash
 # 1. Backup Stage 2 configuration
-sudo cp /etc/diretta-alsa.conf /etc/diretta-alsa.conf.bak.stage2_spatial
+sudo cp /opt/diretta-alsa/setting.inf /opt/diretta-alsa/setting.inf.bak.stage2_spatial
 
 # 2. Update syncBufferCount from 8 to 12
-sudo sed -i 's/^syncBufferCount=8/syncBufferCount=12/' /etc/diretta-alsa.conf
+sudo sed -i 's/^syncBufferCount=8/syncBufferCount=12/' /opt/diretta-alsa/setting.inf
 
 # 3. Update LatencyBuffer from 0 to 76000
-sudo sed -i 's/^LatencyBuffer=0/LatencyBuffer=76000/' /etc/diretta-alsa.conf
+sudo sed -i 's/^LatencyBuffer=0/LatencyBuffer=76000/' /opt/diretta-alsa/setting.inf
 
 # 4. Restart service
 sudo systemctl restart diretta_alsa
@@ -112,27 +112,27 @@ This final phase aligns Diretta's threads to your isolated cores for maximum det
 
 ```bash
 # 1. Backup Stage 3 configuration
-sudo cp /etc/diretta-alsa.conf /etc/diretta-alsa.conf.bak.stage3_density
+sudo cp /opt/diretta-alsa/setting.inf /opt/diretta-alsa/setting.inf.bak.stage3_density
 
 # 2. Update CpuSend
-if ! grep -q "^CpuSend=" /etc/diretta-alsa.conf; then
-    sudo sed -i '/\[global\]/a CpuSend=2' /etc/diretta-alsa.conf
+if ! grep -q "^CpuSend=" /opt/diretta-alsa/setting.inf; then
+    sudo sed -i '/\[global\]/a CpuSend=2' /opt/diretta-alsa/setting.inf
 else
-    sudo sed -i 's/^CpuSend=.*/CpuSend=2/' /etc/diretta-alsa.conf
+    sudo sed -i 's/^CpuSend=.*/CpuSend=2/' /opt/diretta-alsa/setting.inf
 fi
 
 # 3. Update CpuOther
-if ! grep -q "^CpuOther=" /etc/diretta-alsa.conf; then
-    sudo sed -i '/\[global\]/a CpuOther=3' /etc/diretta-alsa.conf
+if ! grep -q "^CpuOther=" /opt/diretta-alsa/setting.inf; then
+    sudo sed -i '/\[global\]/a CpuOther=3' /opt/diretta-alsa/setting.inf
 else
-    sudo sed -i 's/^CpuOther=.*/CpuOther=3/' /etc/diretta-alsa.conf
+    sudo sed -i 's/^CpuOther=.*/CpuOther=3/' /opt/diretta-alsa/setting.inf
 fi
 
 # 4. Update CPULOW
-if ! grep -q "^CPULOW=" /etc/diretta-alsa.conf; then
-    sudo sed -i '/\[global\]/a CPULOW=3' /etc/diretta-alsa.conf
+if ! grep -q "^CPULOW=" /opt/diretta-alsa/setting.inf; then
+    sudo sed -i '/\[global\]/a CPULOW=3' /opt/diretta-alsa/setting.inf
 else
-    sudo sed -i 's/^CPULOW=.*/CPULOW=3/' /etc/diretta-alsa.conf
+    sudo sed -i 's/^CPULOW=.*/CPULOW=3/' /opt/diretta-alsa/setting.inf
 fi
 
 # 5. Restart service
