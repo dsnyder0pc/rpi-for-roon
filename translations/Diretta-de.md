@@ -2197,7 +2197,17 @@ Dies wird durch **CPU-Isolierung** erreicht, um spezifische Prozessorkerne für 
 
 ---
 
-### **Teil 1: Optimierung des Diretta-Targets**
+### **Teil 1: Vorbereiten der Python-Umgebung für `cset`**
+
+Da AudioLinux/Arch auf Python 3.14 umstellt, ist das `cpuset`-Dienstprogramm (das für die CPU-Isolierung erforderlich ist) möglicherweise in einem veralteten Bibliothekspfad installiert. Dieses Skript ermittelt die aktuelle Python-Version und stellt sicher, dass das `cpuset`-Modul dort verfügbar ist, wo das System es erwartet. Führen Sie das folgende Skript sowohl auf dem Target als auch auf dem Host aus.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/fix-cset-python.sh | sudo bash
+```
+
+---
+
+### **Teil 2: Optimierung des Diretta-Targets**
 
 Das Ziel für das Target ist es, es zu einem reinen Audio-Endpunkt mit niedriger Latenz zu machen. Wir werden die Diretta-Anwendung auf einem einzelnen, dedizierten CPU-Kern isolieren und ihr eine hohe, aber nicht übermäßige Echtzeit-Priorität geben.
 
@@ -2311,7 +2321,7 @@ Als Nächstes geben wir der Diretta-Anwendung eine "nicht zu hohe" Priorität, u
 
 ---
 
-### **Teil 2: Optimierung des Diretta-Hosts**
+### **Teil 3: Optimierung des Diretta-Hosts**
 
 Das Ziel für den Host ist es, Roon Bridge und dem Diretta-Dienst dedizierte Verarbeitungsressourcen zu geben, jedoch ohne hohe Echtzeit-Prioritäten zu verwenden. CPU-Isolierung ist hier ein mächtigeres Werkzeug, da sie verhindert, dass die Prozesse überhaupt unterbrochen werden.
 
@@ -2346,7 +2356,7 @@ Dieser Schritt reserviert zwei CPU-Kerne für die Behandlung von sowohl Roon Bri
     PRESS RETURN TO EXIT
     ```
 
-5.  Navigieren Sie zurück zum Menü **ISOLATED CPU CORES configuration** (unter **SYSTEM menu**). Folgen Sie den Aufforderungen, um **Kerne 2 und 3** zu isolieren und die relevanten Anwendungen zuzuweisen.
+5.  Navigieren Sie zurück zum Menü **ISOLATED CPU CORES configuration** (unter **SYSTEM menu**). Folgen Sie den Aufforderungen, um **Kerne 2 und 3** zu isolieren und sie Diretta ALSA zuzuweisen.
 
     ```text
     Please chose your option:
@@ -2361,7 +2371,7 @@ Dieser Schritt reserviert zwei CPU-Kerne für die Behandlung von sowohl Roon Bri
     ?2,3
 
     Type the application(s) that should be confined to group 1...:
-    ?RoonBridge syncAlsa
+    ?syncAlsa
 
     Please type the Address (iSerial) number of your card(s)...:
     (Press ENTER if you don't want to assign IRQ to this group):
@@ -2398,7 +2408,7 @@ Mit den installierten Echtzeit-Kernel-Optimierungen kann der Diretta-Host nun ei
     Interface=end0
     TargetProfileLimitTime=0
     ThredMode=1
-    InfoCycle=100000
+    InfoCycle=51400
     FlexCycle=disable
     CycleTime=514
     CycleMinTime=
@@ -2410,8 +2420,9 @@ Mit den installierten Echtzeit-Kernel-Optimierungen kann der Diretta-Host nun ei
     syncBufferCount=8
     alsaUnderrun=enable
     unInitMemDet=disable
-    CpuSend=
-    CpuOther=
+    CpuSend=2
+    CpuOther=3
+    CPUFLOW=3
     LatencyBuffer=0
     disConnectDelay=enable
     singleMode=
@@ -2513,22 +2524,6 @@ Auf dem Host deaktivieren wir den `isolated_app.timer` und hängen sein Skript s
     ```
 
 3.  **Die Systemd Drop-in Hooks erstellen:**
-    Wir müssen zwei separate Drop-in-Dateien erstellen, eine für jeden Dienst.
-
-    **Für `roonbridge.service`:**
-
-    ```bash
-    # Das Verzeichnis erstellen
-    sudo mkdir -p /etc/systemd/system/roonbridge.service.d/
-
-    # Die Drop-in Datei erstellen
-    sudo bash -c 'cat <<EOF > /etc/systemd/system/roonbridge.service.d/10-local-hooks.conf
-    [Service]
-    ExecStartPost=/opt/scripts/system/isolated_app.sh
-    EOF'
-    ```
-
-    **Für `diretta_alsa.service`:**
 
     ```bash
     # Das Verzeichnis erstellen
@@ -2544,8 +2539,8 @@ Auf dem Host deaktivieren wir den `isolated_app.timer` und hängen sein Skript s
 4.  **Systemd neu laden und die Dienste neu starten:**
 
     ```bash
+    sudo rm -rf /etc/systemd/system/roonbridge.service.d  # clean-up previous settings
     sudo systemctl daemon-reload
-    sudo systemctl restart roonbridge.service
     sudo systemctl restart diretta_alsa.service
     ```
 
@@ -2553,11 +2548,10 @@ Auf dem Host deaktivieren wir den `isolated_app.timer` und hängen sein Skript s
     Überprüfen Sie den Status beider Dienste.
 
     ```bash
-    systemctl status roonbridge.service
     systemctl status diretta_alsa.service
     ```
 
-    Für beide Dienste sollten Sie `Active: active (running)` und eine `Process:`-Zeile für `isolated_app.sh` sehen, die `status=0/SUCCESS` zeigt.
+    Sie sollten `Active: active (running)` und eine `Process:`-Zeile für `isolated_app.sh` sehen, die `status=0/SUCCESS` zeigt.
 
 >
 >
@@ -2779,9 +2773,11 @@ EOF
   if [ "$NEW_MTU" -eq 9000 ]; then
     echo "Optimization: Full Jumbo Frames detected. Relaxing CycleTime to 1000us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=1000/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=100000/' /opt/diretta-alsa/setting.inf
   else
     echo "Optimization: Baby Jumbo Frames detected. Setting CycleTime to 700us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=70000/' /opt/diretta-alsa/setting.inf
   fi
 
   sudo systemctl restart diretta_alsa

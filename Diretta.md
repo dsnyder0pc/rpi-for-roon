@@ -2551,7 +2551,7 @@ On the Host, we will disable the `isolated_app.timer` and hook its script into `
     systemctl status diretta_alsa.service
     ```
 
-    For both services, you should see `Active: active (running)` and a `Process:` line for `isolated_app.sh` showing `status=0/SUCCESS`.
+    You should see `Active: active (running)` and a `Process:` line for `isolated_app.sh` showing `status=0/SUCCESS`.
 
 >
 >
