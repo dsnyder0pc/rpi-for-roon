@@ -72,7 +72,7 @@ run_appendix4_checks() {
 run_appendix6_checks() {
     header "Appendix 6" "Advanced Realtime Performance Tuning"
     SYS_PY=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-    check "cset shebang matches system Python ($SYS_PY)" "head -n 1 /usr/bin/cset | grep -q \"python$SYS_PY\""
+    check "cpuset module installed for Python $SYS_PY" "[ -d /usr/lib/python$SYS_PY/site-packages/cpuset ]"
     check "Diretta app realtime priority is set to 70" "[[ \$(ps -o rtprio -C diretta_app_target | tail -n 1 | tr -d ' ') -eq 70 ]]"
     check "CPU isolation is set to cores 2-3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '2-3' ]]"
     check "Diretta app is running on the isolated core" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'diretta_app_target'"
