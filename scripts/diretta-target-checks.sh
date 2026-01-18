@@ -71,6 +71,8 @@ run_appendix4_checks() {
 }
 run_appendix6_checks() {
     header "Appendix 6" "Advanced Realtime Performance Tuning"
+    SYS_PY=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+    check "cset shebang matches system Python ($SYS_PY)" "head -n 1 /usr/bin/cset | grep -q \"python$SYS_PY\""
     check "Diretta app realtime priority is set to 70" "[[ \$(ps -o rtprio -C diretta_app_target | tail -n 1 | tr -d ' ') -eq 70 ]]"
     check "CPU isolation is set to cores 2-3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '2-3' ]]"
     check "Diretta app is running on the isolated core" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'diretta_app_target'"
@@ -88,13 +90,9 @@ run_appendix8_checks() {
     header "Appendix 8" "Optional: Purist 100Mbps Network Mode"
     check "'disable-eee' service is enabled" "systemctl is-enabled disable-eee.service"
     check "'disable-eee' service is active" "systemctl is-active disable-eee.service"
-
-    # Physical Link Validation
     check "Link speed is 100Mb/s" "ethtool end0 | grep -q 'Speed: 100Mb/s'"
     check "Duplex is Full" "ethtool end0 | grep -q 'Duplex: Full'"
     check "Energy Efficient Ethernet (EEE) is disabled" "! ethtool --show-eee end0 | grep -q 'enabled - active'"
-
-    # Stability Check
     if [ -f /sys/class/net/end0/carrier_changes ]; then
         CHANGES=$(cat /sys/class/net/end0/carrier_changes)
         check "Link stability (Carrier Changes: $CHANGES)" "[[ $CHANGES -lt 20 ]]"
@@ -102,8 +100,6 @@ run_appendix8_checks() {
 }
 run_appendix9_checks() {
     header "Appendix 9" "Optional: Jumbo Frames Optimization"
-
-    # 1. OS Configuration Check
     if ip link show end0 | grep -qE 'mtu (2032|9000)'; then
         CURRENT_MTU=$(ip link show end0 | grep -o 'mtu [0-9]*' | awk '{print $2}')
         check "Interface end0 configured for Jumbo (MTU $CURRENT_MTU)" "true"
@@ -111,15 +107,11 @@ run_appendix9_checks() {
         check "Interface end0 configured for Jumbo (MTU 2032 or 9000)" "false"
         return
     fi
-
-    # 2. Systemd Check
     if grep -qE '^MTUBytes=(2032|9000)' /etc/systemd/network/end0.network; then
         check "Systemd network config contains MTUBytes setting" "true"
     else
         check "Systemd network config contains MTUBytes setting" "false"
     fi
-
-    # 3. Link Capability & Config Validation
     CONFIG="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
 
     if [ "$CURRENT_MTU" -eq 9000 ]; then

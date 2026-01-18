@@ -2356,7 +2356,7 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     PRESS RETURN TO EXIT
     ```
 
-5.  Navigate back to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**). Follow the prompts to isolate **cores 2 and 3** and assign the relevant applications.
+5.  Navigate back to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**). Follow the prompts to isolate **cores 2 and 3** and allocate them to Diretta ALSA.
 
     ```text
     Please chose your option:
@@ -2371,7 +2371,7 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     ?2,3
 
     Type the application(s) that should be confined to group 1...:
-    ?RoonBridge syncAlsa
+    ?syncAlsa
 
     Please type the Address (iSerial) number of your card(s)...:
     (Press ENTER if you don't want to assign IRQ to this group):
@@ -2408,7 +2408,7 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     Interface=end0
     TargetProfileLimitTime=0
     ThredMode=1
-    InfoCycle=100000
+    InfoCycle=51400
     FlexCycle=disable
     CycleTime=514
     CycleMinTime=
@@ -2420,8 +2420,9 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     syncBufferCount=8
     alsaUnderrun=enable
     unInitMemDet=disable
-    CpuSend=
-    CpuOther=
+    CpuSend=2
+    CpuOther=3
+    CPUFLOW=3
     LatencyBuffer=0
     disConnectDelay=enable
     singleMode=
@@ -2507,7 +2508,7 @@ On the Target, we will disable both `isolated_app.timer` and `rtapp.timer` and h
 
 ### **Part 2: Optimizing the Diretta Host**
 
-On the Host, we will disable the `isolated_app.timer` and hook its script into *both* the `roonbridge.service` and `diretta_alsa.service`. This ensures the optimizations are applied regardless of which service starts first.
+On the Host, we will disable the `isolated_app.timer` and hook its script into `diretta_alsa.service`. This ensures the optimizations are applied regardless of which service starts first.
 
 1.  SSH to the Diretta Host:
 
@@ -2522,23 +2523,7 @@ On the Host, we will disable the `isolated_app.timer` and hook its script into *
     sudo systemctl disable isolated_app.timer
     ```
 
-3.  **Create the Systemd Drop-in Hooks:**
-    We must create two separate drop-in files, one for each service.
-
-    **For `roonbridge.service`:**
-
-    ```bash
-    # Create the directory
-    sudo mkdir -p /etc/systemd/system/roonbridge.service.d/
-
-    # Create the drop-in file
-    sudo bash -c 'cat <<EOF > /etc/systemd/system/roonbridge.service.d/10-local-hooks.conf
-    [Service]
-    ExecStartPost=/opt/scripts/system/isolated_app.sh
-    EOF'
-    ```
-
-    **For `diretta_alsa.service`:**
+3.  **Create the Systemd Drop-in Hook:**
 
     ```bash
     # Create the directory
@@ -2554,8 +2539,8 @@ On the Host, we will disable the `isolated_app.timer` and hook its script into *
 4.  **Reload Systemd and Restart the Services:**
 
     ```bash
+    sudo rm -rf /etc/systemd/system/roonbridge.service.d  # clean-up previous settings
     sudo systemctl daemon-reload
-    sudo systemctl restart roonbridge.service
     sudo systemctl restart diretta_alsa.service
     ```
 
@@ -2563,7 +2548,6 @@ On the Host, we will disable the `isolated_app.timer` and hook its script into *
     Check the status of both services.
 
     ```bash
-    systemctl status roonbridge.service
     systemctl status diretta_alsa.service
     ```
 
@@ -2785,13 +2769,15 @@ EOF
   # Always enable FlexCycle for Jumbo Frames to ensure stability
   sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
 
-  # Conditional CycleTime Optimization
+  # Conditional CycleTime and InfoCycle Optimization
   if [ "$NEW_MTU" -eq 9000 ]; then
     echo "Optimization: Full Jumbo Frames detected. Relaxing CycleTime to 1000us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=1000/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=100000/' /opt/diretta-alsa/setting.inf
   else
     echo "Optimization: Baby Jumbo Frames detected. Setting CycleTime to 700us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=70000/' /opt/diretta-alsa/setting.inf
   fi
 
   sudo systemctl restart diretta_alsa

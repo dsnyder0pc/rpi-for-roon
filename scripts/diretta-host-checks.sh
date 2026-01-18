@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.12
-# (Updated to include Appendix 8 checks)
+# Diretta Host QA Check Script v1.13
+# (Updated for Python 3.14, Roon de-isolation, and dynamic InfoCycle)
 #
 
 # --- Colors and Formatting ---
@@ -82,17 +82,23 @@ run_appendix4_checks() {
 }
 run_appendix6_checks() {
     header "Appendix 6" "Advanced Realtime Performance Tuning"
+    SYS_PY=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+    check "cset shebang matches system Python ($SYS_PY)" "head -n 1 /usr/bin/cset | grep -q \"python$SYS_PY\""
     check "'rtapp.timer' service is disabled" "! systemctl is-enabled rtapp.timer"
     check "CPU isolation is set to cores 2-3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '2-3' ]]"
-    check "RoonBridge is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'RoonBridge'"
+    check "RoonBridge is running on system cores (NOT isolated)" "! cset proc --list --set=isolated1 2>/dev/null | grep -q 'RoonBridge'"
     check "syncAlsa is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'syncAlsa'"
+    CONFIG="/opt/diretta-alsa/setting.inf"
+    check "Diretta 'CpuSend' pinned to Core 2" "grep -q '^CpuSend=2' $CONFIG"
+    check "Diretta 'CpuOther' pinned to Core 3" "grep -q '^CpuOther=3' $CONFIG"
+    check "Diretta 'CPUFLOW' optimization enabled" "grep -q '^CPUFLOW=3' $CONFIG"
     check "Network IRQs (end0) are pinned to cores 2-3 (affinity 'c')" "(for irq in \$(grep 'end0' /proc/interrupts | awk '{print \$1}' | tr -d :); do grep -q 'c$' /proc/irq/\$irq/smp_affinity || exit 1; done)"
     check "Uplink IRQs (enu/enp) are NOT on isolated cores" "(for irq in \$(grep -E 'enu|enp' /proc/interrupts | awk '{print \$1}' | tr -d :); do grep -v -q 'c$' /proc/irq/\$irq/smp_affinity || exit 1; done)"
 }
 run_appendix7_checks() {
     header "Appendix 7" "Optional: Event-Driven CPU Hooks"
     check "'isolated_app.timer' is disabled" "! systemctl is-enabled isolated_app.timer 2>/dev/null"
-    check "Roon hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/roonbridge.service.d/"
+    check "Roon hook for 'isolated_app.sh' is REMOVED" "! [ -d /etc/systemd/system/roonbridge.service.d ]"
     check "Diretta hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa.service.d/"
 }
 run_appendix8_checks() {
@@ -101,13 +107,9 @@ run_appendix8_checks() {
     check "'limit-speed-100m' service is active" "systemctl is-active limit-speed-100m.service"
     check "'disable-eee' service is enabled" "systemctl is-enabled disable-eee.service"
     check "'disable-eee' service is active" "systemctl is-active disable-eee.service"
-
-    # Physical Link Validation
     check "Link speed is 100Mb/s" "ethtool end0 | grep -q 'Speed: 100Mb/s'"
     check "Duplex is Full" "ethtool end0 | grep -q 'Duplex: Full'"
     check "Energy Efficient Ethernet (EEE) is disabled" "! ethtool --show-eee end0 | grep -q 'enabled - active'"
-
-    # Stability Check
     if [ -f /sys/class/net/end0/carrier_changes ]; then
         CHANGES=$(cat /sys/class/net/end0/carrier_changes)
         check "Link stability (Carrier Changes: $CHANGES)" "[[ $CHANGES -lt 20 ]]"
@@ -115,8 +117,6 @@ run_appendix8_checks() {
 }
 run_appendix9_checks() {
     header "Appendix 9" "Optional: Jumbo Frames Optimization"
-
-    # 1. OS Configuration Check
     if ip link show end0 | grep -qE 'mtu (2032|9000)'; then
         CURRENT_MTU=$(ip link show end0 | grep -o 'mtu [0-9]*' | awk '{print $2}')
         check "Interface end0 configured for Jumbo (MTU $CURRENT_MTU)" "true"
@@ -124,26 +124,25 @@ run_appendix9_checks() {
         check "Interface end0 configured for Jumbo (MTU 2032 or 9000)" "false"
         return
     fi
-
-    # 2. Systemd Check
     if grep -qE '^MTUBytes=(2032|9000)' /etc/systemd/network/end0.network; then
         check "Systemd network config contains MTUBytes setting" "true"
     else
         check "Systemd network config contains MTUBytes setting" "false"
     fi
-
-    # 3. Link Capability Check
     if [ "$CURRENT_MTU" -eq 9000 ]; then
         check "Link passes Full Jumbo Ping (8972 bytes)" "ping -c 1 -w 1 -M do -s 8972 target"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
         check "Link passes Baby Jumbo Ping (2004 bytes)" "ping -c 1 -w 1 -M do -s 2004 target"
     fi
-
-    # 4. Diretta Config
     CONFIG="/opt/diretta-alsa/setting.inf"
     check "FlexCycle is enabled" "grep -q '^FlexCycle=enable' $CONFIG"
-
-    # Conditional CycleTime Check based on MTU
+    if [ -f "$CONFIG" ]; then
+        CT=$(grep '^CycleTime=' "$CONFIG" | cut -d= -f2)
+        IC=$(grep '^InfoCycle=' "$CONFIG" | cut -d= -f2)
+        if [[ -n "$CT" && -n "$IC" ]]; then
+            check "InfoCycle ($IC) is 100x CycleTime ($CT)" "[[ $((CT * 100)) -eq $IC ]]"
+        fi
+    fi
     if [ "$CURRENT_MTU" -eq 9000 ]; then
         check "CycleTime is optimized (1000us for Full Jumbo)" "grep -q '^CycleTime=1000' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
@@ -226,7 +225,8 @@ check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Append
 check_optional_section "[ -d /home/audiolinux/roon-ir-remote ]" "run_appendix2_checks" "Appendix 2 (IR Remote)"
 check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix4_checks" "Appendix 4 (Web UI)"
 check_optional_section "cset set --list 2>/dev/null | grep -q 'isolated1'" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
-check_optional_section "[ -d /etc/systemd/system/roonbridge.service.d ]" "run_appendix7_checks" "Appendix 7 (Event-Driven Hooks)"
+# Updated trigger: Roon directory is removed, so we check for Diretta service hooks instead
+check_optional_section "[ -d /etc/systemd/system/diretta_alsa.service.d ]" "run_appendix7_checks" "Appendix 7 (Event-Driven Hooks)"
 check_optional_section "systemctl is-enabled limit-speed-100m.service" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 check_optional_section "grep -q '^FlexCycle=enable' /opt/diretta-alsa/setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
 
