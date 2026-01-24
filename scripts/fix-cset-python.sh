@@ -1,10 +1,16 @@
 #!/bin/bash
-# Identify the active system Python version
-PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+
+# Explicitly use the system Python via absolute path to bypass pyenv/shims
+SYSTEM_PYTHON="/usr/bin/python3"
+
+# Identify the active system Python version and actual executable path
+PYTHON_VERSION=$($SYSTEM_PYTHON -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+PYTHON_BIN=$($SYSTEM_PYTHON -c 'import sys; print(sys.executable)')
 TARGET_DIR="/usr/lib/python${PYTHON_VERSION}/site-packages"
 FOUND_MODULE=false
 
 echo "Current System Python: $PYTHON_VERSION"
+echo "Python Executable: $PYTHON_BIN"
 
 # Check if the module is already in the correct place
 if [ -d "${TARGET_DIR}/cpuset" ]; then
@@ -16,6 +22,13 @@ else
     if [ -d "$old_path" ]; then
       OLD_DIR=$(dirname "$old_path")
       echo "📦 Found stranded cpuset module in $OLD_DIR"
+
+      # Ensure the target directory exists before rsync
+      if [ ! -d "$TARGET_DIR" ]; then
+        echo "📂 Creating target directory: $TARGET_DIR"
+        sudo mkdir -p "$TARGET_DIR"
+      fi
+
       echo "🚀 Migrating module to $TARGET_DIR..."
       sudo rsync -av "$OLD_DIR/cpuset"* "$TARGET_DIR/"
       FOUND_MODULE=true
@@ -25,9 +38,9 @@ else
 fi
 
 if [ "$FOUND_MODULE" = true ]; then
-  # Ensure the cset script uses the correct system python
+  # Use the identified executable path for the shebang
   echo "🛠️  Updating /usr/bin/cset shebang..."
-  sudo sed -i "1s|.*|#!/usr/bin/python${PYTHON_VERSION}|" /usr/bin/cset
+  sudo sed -i "1s|.*|#!${PYTHON_BIN}|" /usr/bin/cset
   echo "✅ cset is ready."
   cset --version
 else
