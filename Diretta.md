@@ -2197,7 +2197,7 @@ This is achieved by using **CPU isolation** to dedicate specific processor cores
 
 ---
 
-### **Part 1: Prepare the Python Environment for `cset**`
+### **Part 1: Prepare the Python Environment for `cset`**
 
 Because AudioLinux/Arch is transitioning to Python 3.14, the `cpuset` utility (required for core isolation) may be installed in an older library path. This script identifies the current Python version and ensures the `cpuset` module is available where the system expects it. Run the script below on both the Target and the Host.
 
