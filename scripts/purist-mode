@@ -61,7 +61,7 @@ revert_mode() {
 # --- Main Script Logic ---
 
 # Failsafe check to prevent running on the wrong machine.
-if (( $(ip -br addr | wc -l) > 2 )); then
+if (( $(ip -br addr | grep -v ^w | wc -l) > 2 )); then
     echo -e "\n\e[1;31mERROR: Detected multiple network interfaces.\e[0m" >&2
     echo "This script is designed for the single-interface 'Diretta Target' ONLY." >&2
     exit 1
