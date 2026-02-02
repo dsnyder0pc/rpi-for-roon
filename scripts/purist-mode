@@ -19,17 +19,6 @@ activate_mode() {
     echo "  -> Stopping time synchronization service (chronyd)..."
     sudo systemctl stop chronyd &>/dev/null
 
-    # Disable HDMI output to reduce electrical noise
-    # RPi 5 uses vcgencmd; older models may use tvservice
-    echo "  -> Disabling HDMI output..."
-    if command -v vcgencmd &>/dev/null; then
-        sudo vcgencmd display_power 0 &>/dev/null || echo "     (vcgencmd command failed)"
-    elif [ -x /usr/bin/tvservice ]; then
-        sudo /usr/bin/tvservice -o &>/dev/null
-    else
-        echo "     (HDMI control tools not found. Install 'raspberrypi-utils' if needed.)"
-    fi
-
     # Create backup file before making changes
     sudo cp "$NSSWITCH_CONF" "$BACKUP_FILE"
 
@@ -59,19 +48,6 @@ revert_mode() {
     # If no default route exists, restart networking.
     if ! ip route | grep -q default; then
         sudo systemctl restart systemd-networkd &>/dev/null
-    fi
-
-    # Enable HDMI output for troubleshooting
-    echo "  -> Enabling HDMI output..."
-    if command -v vcgencmd &>/dev/null; then
-        # Attempt to enable. If it returns display_power=0, it failed to wake.
-        if sudo vcgencmd display_power 1 | grep -q "display_power=0"; then
-            echo "     (Warning: HDMI failed to wake. A reboot may be required.)"
-        fi
-    elif [ -x /usr/bin/tvservice ]; then
-        sudo /usr/bin/tvservice -p &>/dev/null
-    else
-        echo "     (HDMI control tools not found)"
     fi
 
     # Always restart services when this script is called.
