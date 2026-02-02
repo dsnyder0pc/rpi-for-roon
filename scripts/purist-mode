@@ -19,6 +19,14 @@ activate_mode() {
     echo "  -> Stopping time synchronization service (chronyd)..."
     sudo systemctl stop chronyd &>/dev/null
 
+    # Disable HDMI output to reduce electrical noise
+    echo "  -> Disabling HDMI output..."
+    if [ -x /usr/bin/tvservice ]; then
+        sudo /usr/bin/tvservice -o &>/dev/null
+    else
+        echo "     (tvservice not found, skipping HDMI disable)"
+    fi
+
     # Create backup file before making changes
     sudo cp "$NSSWITCH_CONF" "$BACKUP_FILE"
 
@@ -48,6 +56,14 @@ revert_mode() {
     # If no default route exists, restart networking.
     if ! ip route | grep -q default; then
         sudo systemctl restart systemd-networkd &>/dev/null
+    fi
+
+    # Enable HDMI output for troubleshooting
+    echo "  -> Enabling HDMI output..."
+    if [ -x /usr/bin/tvservice ]; then
+        sudo /usr/bin/tvservice -p &>/dev/null
+    else
+        echo "     (tvservice not found, skipping HDMI enable)"
     fi
 
     # Always restart services when this script is called.
