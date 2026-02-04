@@ -349,15 +349,10 @@ Audiolinux LTS RT LTO 16k (only Pi 5)    6.12.59-1
 Audiolinux last RT LTO 16k (only Pi 5)   6.18.7-1
 ```
 
-5. **For the Diretta Target (RPi 5):**
-Select option **3** (`Audiolinux LTS RT LTO 16k`).
-* *Verify the version is `6.12.59-1`.*
+5. Select option **1** (`Audiolinux LTS RT LTO`).
+   *Verify the version is `6.12.59-1`.*
 
-6. **For the Diretta Host (RPi 4):**
-Select option **1** (`Audiolinux LTS RT LTO`).
-* *Verify the version is `6.12.59-1`.*
-
-7. **Reboot immediately** after the kernel installation completes:
+6. **Reboot immediately** after the kernel installation completes:
 ```bash
 sudo sync && sudo reboot
 ```
