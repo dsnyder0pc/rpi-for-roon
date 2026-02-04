@@ -331,6 +331,38 @@ Use the AudioLinux menu system to perform all updates. Have your email from Pier
 5.  Exit the menu system to get back to the terminal.
 
 ---
+#### **4.4.1 Critical: Select the LTS Kernel (Downgrade Required)**
+
+> **⚠️ WARNING: Do Not Use the Default Kernel (6.18+)**
+> The latest AudioLinux images ship with Kernel `6.18.x`. This version contains a known regression in the Raspberry Pi 5 Ethernet driver (`macb`) that causes the connection to permanently drop if the Host reboots.
+> **You MUST switch to the LTS (Long Term Support) kernel to ensure stability.**
+
+1. Run `menu` in the terminal.
+2. Select **Update/Install**.
+3. Select **Kernel update**.
+4. You will see a menu similar to this:
+```text
+Your kernel                              6.18.7-1-rpi RT LTO
+Audiolinux LTS RT LTO                    6.12.59-1
+Audiolinux last RT LTO                   6.18.7-1
+Audiolinux LTS RT LTO 16k (only Pi 5)    6.12.59-1
+Audiolinux last RT LTO 16k (only Pi 5)   6.18.7-1
+```
+
+5. **For the Diretta Target (RPi 5):**
+Select option **3** (`Audiolinux LTS RT LTO 16k`).
+* *Verify the version is `6.12.59-1`.*
+
+6. **For the Diretta Host (RPi 4):**
+Select option **1** (`Audiolinux LTS RT LTO`).
+* *Verify the version is `6.12.59-1`.*
+
+7. **Reboot immediately** after the kernel installation completes:
+```bash
+sudo sync && sudo reboot
+```
+
+---
 > Note: Workaround for Pacman Update Issue
 >
 > There was a [known issue](https://archlinux.org/news/linux-firmware-2025061312fe085f-5-upgrade-requires-manual-intervention/) that could prevent the system from updating due to conflicting NVIDIA firmware files (even though the RPi doesn't use them). If you encounter this issue, to progress with the system upgrade, first remove `linux-firmware`, then reinstall it as part of the upgrade:
@@ -882,7 +914,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ```
 4.  Run `menu`.
 5.  Select **AUDIO extra menu**.
-6.  Select **DIRETTA target installation**. You will see the following menu:
+6.  Select **DIRETTA target installation/configuration**. You will see the following menu:
     ```text
     What do you want to do?
 
@@ -958,7 +990,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         ```
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient; however, here are some tuned settings you may wish to try:
         ```text
-        TargetProfileLimitTime=0
+        TargetProfileLimitTime=200
         FlexCycle=disable
         CycleTime=800
         periodMin=16
@@ -970,7 +1002,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         cat <<'EOT' | sudo tee /opt/diretta-alsa/setting.inf
         [global]
         Interface=end0
-        TargetProfileLimitTime=0
+        TargetProfileLimitTime=200
         ThredMode=1
         InfoCycle=100000
         FlexCycle=disable
@@ -2406,7 +2438,7 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     cat <<'EOT' | sudo tee /opt/diretta-alsa/setting.inf
     [global]
     Interface=end0
-    TargetProfileLimitTime=0
+    TargetProfileLimitTime=200
     ThredMode=1
     InfoCycle=51400
     FlexCycle=disable

@@ -882,7 +882,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ```
 4.  Führen Sie `menu` aus.
 5.  Wählen Sie **AUDIO extra menu**.
-6.  Wählen Sie **DIRETTA target installation**. Sie sehen das folgende Menü:
+6.  Wählen Sie **DIRETTA target installation/configuration**. Sie sehen das folgende Menü:
     ```text
     What do you want to do?
 
@@ -958,7 +958,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         ```
     * Wählen Sie **4) Edit configuration** nur, wenn Sie fortgeschrittene Änderungen vornehmen müssen. Die vorherigen Schritte sollten ausreichen; hier sind jedoch einige optimierte Einstellungen, die Sie vielleicht ausprobieren möchten:
         ```text
-        TargetProfileLimitTime=0
+        TargetProfileLimitTime=200
         FlexCycle=disable
         CycleTime=800
         periodMin=16
@@ -970,7 +970,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         cat <<'EOT' | sudo tee /opt/diretta-alsa/setting.inf
         [global]
         Interface=end0
-        TargetProfileLimitTime=0
+        TargetProfileLimitTime=200
         ThredMode=1
         InfoCycle=100000
         FlexCycle=disable
@@ -2406,7 +2406,7 @@ Mit den installierten Echtzeit-Kernel-Optimierungen kann der Diretta-Host nun ei
     cat <<'EOT' | sudo tee /opt/diretta-alsa/setting.inf
     [global]
     Interface=end0
-    TargetProfileLimitTime=0
+    TargetProfileLimitTime=200
     ThredMode=1
     InfoCycle=51400
     FlexCycle=disable
