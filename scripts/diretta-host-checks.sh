@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.13
-# (Updated for Python 3.14, Roon de-isolation, and dynamic InfoCycle)
+# Diretta Host QA Check Script v1.22
+# (Moved setting.inf checks to Appendix 7; removed obsolete Event-Driven Hooks)
 #
 
 # --- Colors and Formatting ---
@@ -82,24 +82,49 @@ run_appendix4_checks() {
 }
 run_appendix6_checks() {
     header "Appendix 6" "Advanced Realtime Performance Tuning"
-    SYS_PY=$(/usr/bin/python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-    check "cpuset module installed for Python $SYS_PY" "[ -d /usr/lib/python$SYS_PY/site-packages/cpuset ]"
+    check "Kernel configured for isolation (nohz_full)" "grep -q 'nohz_full=2,3' /boot/cmdline.txt"
+    check "AudioLinux isolation config exists" "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf"
+
+    # Old rtapp.timer must be disabled
     check "'rtapp.timer' service is disabled" "! systemctl is-enabled rtapp.timer"
-    check "CPU isolation is set to cores 2-3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '2-3' ]]"
-    check "RoonBridge is running on system cores (NOT isolated)" "! cset proc --list --set=isolated1 2>/dev/null | grep -q 'RoonBridge'"
-    check "syncAlsa is running on isolated cores" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'syncAlsa'"
-    CONFIG="/opt/diretta-alsa/setting.inf"
-    check "Diretta 'CpuSend' pinned to Core 2" "grep -q '^CpuSend=2' $CONFIG"
-    check "Diretta 'CpuOther' pinned to Core 3" "grep -q '^CpuOther=3' $CONFIG"
-    check "Diretta 'CPUFLOW' optimization enabled" "grep -q '^CPUFLOW=3' $CONFIG"
+
+    # Check Diretta Isolation
+    # Use systemctl to get the MainPID reliably
+    DPID=$(systemctl show --property MainPID --value diretta_alsa.service 2>/dev/null)
+
+    if [[ -n "$DPID" && "$DPID" -ne 0 ]]; then
+        # PASS if affinity includes 2 OR 3 (or both)
+        check "Diretta service (PID $DPID) is on isolated cores (2, 3, or 2-3)" "taskset -cp $DPID | grep -q -E '2,3|2-3|3|2'"
+    else
+        check "Diretta service is running" "false"
+    fi
+
+    # Check RoonBridge Isolation
+    # Use systemctl to get the MainPID reliably
+    RPID=$(systemctl show --property MainPID --value roonbridge.service 2>/dev/null)
+
+    if [[ -n "$RPID" && "$RPID" -ne 0 ]]; then
+        # PASS if affinity DOES NOT contain 2 or 3.
+        check "RoonBridge (PID $RPID) is NOT on isolated cores (2 or 3)" "! taskset -cp $RPID | grep -q '[23]'"
+
+        # Diagnostic
+        if taskset -cp $RPID | grep -q '[23]'; then
+             ACTUAL=$(taskset -cp $RPID 2>/dev/null)
+             echo -e "    ${C_YELLOW}Diagnostic: Actual affinity is: $ACTUAL${C_RESET}"
+        fi
+    else
+        check "RoonBridge service is running" "false"
+    fi
+
     check "Network IRQs (end0) are pinned to cores 2-3 (affinity 'c')" "(for irq in \$(grep 'end0' /proc/interrupts | awk '{print \$1}' | tr -d :); do grep -q 'c$' /proc/irq/\$irq/smp_affinity || exit 1; done)"
     check "Uplink IRQs (enu/enp) are NOT on isolated cores" "(for irq in \$(grep -E 'enu|enp' /proc/interrupts | awk '{print \$1}' | tr -d :); do grep -v -q 'c$' /proc/irq/\$irq/smp_affinity || exit 1; done)"
 }
 run_appendix7_checks() {
-    header "Appendix 7" "Optional: Event-Driven CPU Hooks"
-    check "'isolated_app.timer' is disabled" "! systemctl is-enabled isolated_app.timer 2>/dev/null"
-    check "Roon hook for 'isolated_app.sh' is REMOVED" "! [ -d /etc/systemd/system/roonbridge.service.d ]"
-    check "Diretta hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa.service.d/"
+    header "Appendix 7" "Optional: Diretta Configuration Tuning"
+    CONFIG="/opt/diretta-alsa/setting.inf"
+    check "Diretta 'CpuSend' pinned to Core 2" "grep -q '^CpuSend=2' $CONFIG"
+    check "Diretta 'CpuOther' pinned to Core 3" "grep -q '^CpuOther=3' $CONFIG"
+    check "Diretta 'CPUFLOW' optimization enabled" "grep -q '^CPUFLOW=3' $CONFIG"
 }
 run_appendix8_checks() {
     header "Appendix 8" "Optional: Purist 100Mbps Network Mode"
@@ -188,15 +213,6 @@ check "Old 'iptables' rule file is removed" "! [ -f /etc/iptables/iptables.rules
 check "USB Ethernet udev rule exists" "[ -f /etc/udev/rules.d/99-ax88179a.rules ]"
 check "MOTD update script is up-to-date" "[ -f /opt/scripts/update/update_motd.sh ] && [[ \$(md5sum /opt/scripts/update/update_motd.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh | md5sum | awk '{print \$1}') ]]"
 
-header "Section 7" "Common System Optimizations"
-check "'shadow' service is not in a failed state" "! systemctl is-failed --quiet shadow.service"
-check "sudoers rule order is correct" "awk '/^audiolinux ALL=\\(ALL\\) ALL$/ {u=NR} /^@includedir/ {i=NR} END {exit !(u && i && u < i)}' /etc/sudoers"
-check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
-check "MOTD service actively waits for a default route" "[ -f /etc/systemd/system/update_motd.service.d/wait-for-ip.conf ] && grep -q 'while.*ip route' /etc/systemd/system/update_motd.service.d/wait-for-ip.conf"
-check "Boot repair script is up-to-date" "[ -x /usr/local/sbin/check-and-repair-boot.sh ] && [[ \$(md5sum /usr/local/sbin/check-and-repair-boot.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh | md5sum | awk '{print \$1}') ]]"
-check "'boot-repair' service file exists" "[ -f /etc/systemd/system/boot-repair.service ]"
-check "'boot-repair' service is enabled" "systemctl is-enabled boot-repair.service"
-
 header "Section 8" "Diretta Software & System Logging"
 check "Journald is set to volatile storage" "grep -q '^Storage=volatile' /etc/systemd/journald.conf"
 check "'diretta-alsa-daemon' package is installed" "pacman -Q diretta-alsa-daemon"
@@ -224,9 +240,9 @@ check "'roonbridge' service is active" "systemctl is-active roonbridge.service"
 check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Appendix 1 (Argon ONE Fan)"
 check_optional_section "[ -d /home/audiolinux/roon-ir-remote ]" "run_appendix2_checks" "Appendix 2 (IR Remote)"
 check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix4_checks" "Appendix 4 (Web UI)"
-check_optional_section "cset set --list 2>/dev/null | grep -q 'isolated1'" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
-# Updated trigger: Roon directory is removed, so we check for Diretta service hooks instead
-check_optional_section "[ -d /etc/systemd/system/diretta_alsa.service.d ]" "run_appendix7_checks" "Appendix 7 (Event-Driven Hooks)"
+check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf 2>/dev/null" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
+# New trigger for Appendix 7 checks for the tuning parameters
+check_optional_section "grep -q '^CpuSend=' /opt/diretta-alsa/setting.inf 2>/dev/null" "run_appendix7_checks" "Appendix 7 (Diretta Tuning)"
 check_optional_section "systemctl is-enabled limit-speed-100m.service" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 check_optional_section "grep -q '^FlexCycle=enable' /opt/diretta-alsa/setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
 

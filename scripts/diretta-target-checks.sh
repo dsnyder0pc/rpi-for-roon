@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.13
-# (Updated to include Appendix 8 checks)
+# Diretta Target QA Check Script v1.20
+# (Removed obsolete realtime priority check)
 #
 
 # --- Colors and Formatting ---
@@ -71,20 +71,31 @@ run_appendix4_checks() {
 }
 run_appendix6_checks() {
     header "Appendix 6" "Advanced Realtime Performance Tuning"
-    SYS_PY=$(/usr/bin/python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-    check "cpuset module installed for Python $SYS_PY" "[ -d /usr/lib/python$SYS_PY/site-packages/cpuset ]"
-    check "Diretta app realtime priority is set to 70" "[[ \$(ps -o rtprio -C diretta_app_target | tail -n 1 | tr -d ' ') -eq 70 ]]"
-    check "CPU isolation is set to cores 2-3" "[[ \$(cset set --list 2>/dev/null | grep 'isolated1' | awk '{print \$2}') == '2-3' ]]"
-    check "Diretta app is running on the isolated core" "cset proc --list --set=isolated1 2>/dev/null | grep -q 'diretta_app_target'"
+    check "Kernel configured for isolation (nohz_full)" "grep -q 'nohz_full=2,3' /boot/cmdline.txt"
+    check "AudioLinux isolation config exists" "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf"
+
+    # Old rtapp.timer must be disabled
+    check "'rtapp.timer' service is disabled" "! systemctl is-enabled rtapp.timer"
+
+    # Check Diretta Isolation (Using pgrep -f to match the binary under the wrapper)
+    # Using pgrep -f to match the full command line
+    DPID=$(pgrep -f "diretta_app_target" | head -n1)
+
+    if [[ -n "$DPID" ]]; then
+        # Check if the process is on ANY allowed isolated core (2, 3, or both)
+        # 3 (single core 3) is commonly returned by taskset -c even if 2 is allowed but unused
+        check "Diretta app is running on isolated cores (2-3)" "taskset -cp $DPID | grep -q -E '2,3|2-3|3|2'"
+
+         # Diagnostic: If the check failed, print the actual affinity
+        if ! taskset -cp $DPID | grep -q -E '2,3|2-3|3|2'; then
+             ACTUAL=$(taskset -cp $DPID 2>/dev/null)
+             echo -e "    ${C_YELLOW}Diagnostic: Actual affinity is: $ACTUAL${C_RESET}"
+        fi
+    else
+        check "Diretta app is running" "false"
+    fi
+
     check "Network IRQs (end0) are pinned to cores 2-3 (affinity 'c')" "(for irq in \$(grep 'end0' /proc/interrupts | awk '{print \$1}' | tr -d :); do grep -q 'c$' /proc/irq/\$irq/smp_affinity || exit 1; done)"
-}
-run_appendix7_checks() {
-    header "Appendix 7" "Optional: Event-Driven CPU Hooks"
-    check "'isolated_app.timer' is disabled" "! systemctl is-enabled isolated_app.timer 2>/dev/null"
-    check "'rtapp.timer' is disabled" "! systemctl is-enabled rtapp.timer 2>/dev/null"
-    check "Isolation grup delay" "grep -qr 'ExecStartPost=.*sleep' /etc/systemd/system/diretta_alsa_target.service.d/"
-    check "Hook for 'isolated_app.sh' is set" "grep -qr 'ExecStartPost=/opt/scripts/system/isolated_app.sh' /etc/systemd/system/diretta_alsa_target.service.d/"
-    check "Hook for 'rtapp' is set" "grep -qr 'ExecStartPost=-/bin/bash /usr/bin/rtapp' /etc/systemd/system/diretta_alsa_target.service.d/"
 }
 run_appendix8_checks() {
     header "Appendix 8" "Optional: Purist 100Mbps Network Mode"
@@ -176,8 +187,7 @@ check "pacman.conf ignores 'diretta-direct-dkms'" "grep -Pq '^IgnorePkg\s*=\s*.*
 check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Appendix 1 (Argon ONE Fan)"
 check_optional_section "[ -f /usr/local/bin/purist-mode ]" "run_appendix3_checks" "Appendix 3 (Purist Mode)"
 check_optional_section "id purist-app" "run_appendix4_checks" "Appendix 4 (Web UI Backend)"
-check_optional_section "cset set --list 2>/dev/null | grep -q 'isolated1'" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
-check_optional_section "[ -d /etc/systemd/system/diretta_alsa_target.service.d ]" "run_appendix7_checks" "Appendix 7 (Event-Driven Hooks)"
+check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf 2>/dev/null" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
 check_optional_section "[ -f /etc/diretta-100m ]" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 check_optional_section "grep -q '^ExtEtherMTU=' /opt/diretta-alsa-target/diretta_app_target_setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
 

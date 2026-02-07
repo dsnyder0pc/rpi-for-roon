@@ -85,7 +85,7 @@ If you are located in the US, expect to pay around $329 (plus tax and shipping) 
 13. [Appendix 4: Optional System Control Web UI](#13-appendix-4-optional-system-control-web-ui)
 14. [Appendix 5: System Health Checks](#14-appendix-5-system-health-checks)
 15. [Appendix 6: Advanced Realtime Performance Tuning](#15-appendix-6-advanced-realtime-performance-tuning)
-16. [Appendix 7: Optimize CPU with Event-Driven Hooks](#16-appendix-7-optimize-cpu-with-event-driven-hooks)
+16. [Appendix 7: Diretta Host Thread Optimization](#16-appendix-7-diretta-host-thread-optimization)
 17. [Appendix 8: Optional Purist 100Mbps Network Mode](#17-appendix-8-optional-purist-100mbps-network-mode)
 18. [Appendix 9: Optional Jumbo Frames Optimization](#18-appendix-9-optional-jumbo-frames-optimization)
 
@@ -2265,29 +2265,30 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
     ```
 3.  Navigate to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**).
 
-4.  Disable any previous settings as shown below:
+4.  Confim that isolated cores is disabled. If not, use option 3 to disable it:
     ```text
+    ISOLATED CORES CONFIGURATION
+    This option will divide CPU cores in 2 or more sets: one for audio services, one for system processes
+    After you can specify the CPU core set used by each audio service
+    You can also assign Audio or Network IRQ to specific cores
+
+    Isolated cores is disabled
+
     Please chose your option:
     1) Configure and enable
-    2) Disable
-    3) Exit
+    2) Edit configuration (for experts)
+    3) Enable/disable (keep configuration)
+    4) Exit
     ?
-    2
-
-    ISOLATED CORES has been reset
-
-    IRQ balancer was disabled
-    It can be enabled in Expert menu
-
-    PRESS RETURN TO EXIT
     ```
 
 5.  Navigate back to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**). Follow the prompts exactly as shown below to isolate **cores 2 and 3** and assign the Diretta application to it.
     ```text
     Please chose your option:
     1) Configure and enable
-    2) Disable
-    3) Exit
+    2) Edit configuration (for experts)
+    3) Enable/disable (keep configuration)
+    4) Exit
     ?
     1
 
@@ -2296,68 +2297,22 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
     Please type the cores of the group 1:
     ?2,3
 
-    Type the application(s) that should be confined to group 1...:
-    ?diretta_app_target
+    Type the service that should be confined to group 1...
+    ?diretta_alsa_target
 
-    Please type the Address (iSerial) number of your card(s)...:
-    (Press ENTER if you don't want to assign IRQ to this group):
+    Please type the Address (iSerial) number of your card(s)...
     ?end0
     ```
+
 6.  After the process completes, press **ENTER** to exit back to the System menu. **Do not reboot yet.**
 
 > **A Note on Automatic IRQ Affinity:** You may notice the script reports that it has also isolated the `end0` network IRQs to the same core. This is not a bug, but an intelligent optimization. The script automatically pins the network interrupts to the same core as the application using the network, creating the most efficient data path possible.
 
----
-
-#### **Step 6.2: Set Realtime Priority**
-
-Next, we will give the Diretta application a "not too high" priority, ensuring it runs smoothly without interfering with the more critical USB audio interrupts.
-
-1.  Also under the **SYSTEM menu**, navigate to the **REALTIME PRIORITY configuration** menu.
-2.  Select **Option 3) Configure IRQ priority**.
-3.  Follow the prompts to make sure there's a default IRQ Priority
-    ```text
-    Do you want to set the IRQ priority for each device? (1/2)
-    1 - IRQ priority (advanced)
-    2 - IRQ priority (simple)
-    3 - Exit
-    ?2
-
-    -> Your previous configuration has been saved to /etc/rtpriority/rtirqs.conf.bak
-    Please type xhci (default) or snd for internal cards
-    ?xhci
-
-    The max. available realtime priority is 98
-    Suggested values are 95 (extreme) or 90 (default)
-    Please enter your value:
-    ?90
-
-    Do you want to set the IRQ priority for each device? (1/2)
-    1 - IRQ priority (advanced)
-    2 - IRQ priority (simple)
-    3 - Exit
-    ?3
-    ```
-4.  Select **Option 4) Configure APPLICATION priority**.
-5.  Follow the prompts to set a **manual** priority of **70**.
-
-    ```text
-    ...
-    Type Y if you want to edit it
-    ?
-    [PRESS ENTER]
-
-    Here you will configure the max. priority given to audio applications...
-    ?70
-
-    Now you can configure your preferred method...
-    ?manual
-    ```
-6.  After confirming the changes, select **5) Exit** and return to the command line.
-7.  Reboot the Diretta Target for all changes to take effect.
-    ```bash
-    sudo sync && sudo reboot
-    ```
+#### **Step 6.2: Disable the legacy `rtapp` timer**
+```bash
+sudo systemctl stop rtapp.timer
+sudo systemctl disable rtapp.timer
+```
 
 ---
 
@@ -2379,29 +2334,30 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     ```
 3.  Navigate to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**).
 
-4.  Disable any previous settings as shown below:
+4.  Confim that isolated cores is disabled. If not, use option 3 to disable it:
     ```text
+    ISOLATED CORES CONFIGURATION
+    This option will divide CPU cores in 2 or more sets: one for audio services, one for system processes
+    After you can specify the CPU core set used by each audio service
+    You can also assign Audio or Network IRQ to specific cores
+
+    Isolated cores is disabled
+
     Please chose your option:
     1) Configure and enable
-    2) Disable
-    3) Exit
+    2) Edit configuration (for experts)
+    3) Enable/disable (keep configuration)
+    4) Exit
     ?
-    2
-
-    ISOLATED CORES has been reset
-
-    IRQ balancer was disabled
-    It can be enabled in Expert menu
-
-    PRESS RETURN TO EXIT
     ```
 
 5.  Navigate back to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**). Follow the prompts to isolate **cores 2 and 3** and allocate them to Diretta ALSA.
-
     ```text
     Please chose your option:
     1) Configure and enable
-    ...
+    2) Edit configuration (for experts)
+    3) Enable/disable (keep configuration)
+    4) Exit
     ?
     1
 
@@ -2410,11 +2366,10 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     Please type the cores of the group 1:
     ?2,3
 
-    Type the application(s) that should be confined to group 1...:
-    ?syncAlsa
+    Type the service that should be confined to group 1...
+    ?diretta_alsa
 
-    Please type the Address (iSerial) number of your card(s)...:
-    (Press ENTER if you don't want to assign IRQ to this group):
+    Please type the Address (iSerial) number of your card(s)...
     ?end0
     ```
 
@@ -2422,23 +2377,15 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
 
 ---
 
-#### **Step 6.4: Disable Application Realtime Priority**
+#### **Step 6.4: Disable the legacy `rtapp` timer**
+```bash
+sudo systemctl stop rtapp.timer
+sudo systemctl disable rtapp.timer
+```
 
-With our audio applications running on dedicated cores, they no longer need to compete for CPU time. Forcing a high realtime priority is now unnecessary and can be counterproductive. We will disable the service entirely on the Host.
+## 16. Appendix 7: Diretta Host Thread Optimization
 
-1.  Also under the **SYSTEM menu**, navigate to the **REALTIME PRIORITY configuration** menu.
-2.  Select **Option 2) Enable/disable APPLICATION service (rtapp)**. This will immediately disable the service.
-3.  Select **5) Exit** and return to the command line.
-4.  Reboot the Diretta Host.
-    ```bash
-    sudo sync && sudo reboot
-    ```
-
------
-
-#### **Step 6.5: Reduce Diretta `CycleTime`**
-
-With the real-time kernel optimizations in place, the Diretta Host can now handle a more aggressive packet interval, which can lead to improved sound quality. This final step reduces the `CycleTime` parameter from 800 to 514 microseconds. This smaller timing gap between packets ensures that that all content up to DSD256 and DXD (32-bit, 352.8 kHz) will require only one packet per cycle.
+With the real-time kernel optimizations in place, the Diretta Host can now handle a more aggressive packet interval, which can lead to improved sound quality. This final step reduces the `CycleTime` parameter from 800 to 514 microseconds. This smaller timing gap between packets ensures that that all content up to DSD256 and DXD (32-bit, 352.8 kHz) will require only one packet per cycle. We can also schedule Diretta threads to specific cores.
 
 1.  SSH to the **Diretta Host** if you are not still logged in.
 2.  Run the following command to apply the optimized setting:
@@ -2473,135 +2420,12 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     sudo systemctl restart diretta_alsa.service
     ```
 
------
-
 > ---
 > ### ✅ Checkpoint: Verify Your Realtime Tuning
 >
 > Your advanced realtime tuning should now be complete. To verify all components of this new configuration, please return to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
-
-## 16. Appendix 7: Optimize CPU with Event-Driven Hooks
-
-This appendix provides an advanced optimization to further reduce system jitter and needless CPU activity.
-
-The default AudioLinux configuration includes background "timers" (e.g., `isolated_app.timer`, `rtapp.timer`) that run tuning scripts once per minute. While effective, these timers cause periodic CPU spikes, which is contrary to our goal of a quiet, stable system.
-
-This guide will replace that "periodic" behavior with an "event-driven" one. We will **disable the timers** and instead use `systemd` drop-in files to run these tuning scripts **only once** when the main audio services start. This "set it and forget it" approach eliminates the one-minute CPU spikes entirely.
-
------
-
-### **Part 1: Optimizing the Diretta Target**
-
-On the Target, we will disable both `isolated_app.timer` and `rtapp.timer` and hook their scripts into the `diretta_alsa_target.service`.
-
-1.  SSH to the Diretta Target:
-
-    ```bash
-    ssh diretta-target
-    ```
-
-2.  **Stop and Disable the Timers:**
-    This command permanently stops the timers from running and removes their auto-start links.
-
-    ```bash
-    sudo systemctl stop isolated_app.timer rtapp.timer
-    sudo systemctl disable isolated_app.timer rtapp.timer
-    ```
-
-3.  **Create the Systemd Drop-in Hook:**
-    This command creates a new configuration file that instructs `systemd` to run the two scripts *after* the main `diretta_alsa_target.service` starts.
-
-    ```bash
-    # Create the directory
-    sudo mkdir -p /etc/systemd/system/diretta_alsa_target.service.d/
-
-    # Create the drop-in file
-    sudo bash -c 'cat <<EOF > /etc/systemd/system/diretta_alsa_target.service.d/10-local-hooks.conf
-    [Service]
-    ExecStartPost=sleep 1.5
-    ExecStartPost=/opt/scripts/system/isolated_app.sh
-    ExecStartPost=-/bin/bash /usr/bin/rtapp
-    EOF'
-    ```
-
-    > **Note on the Hyphen (`-`):**
-    > The prefix `-` before the `/bin/bash /usr/bin/rtapp` command is intentional. The `rtapp` script may fail to run in this context (exiting with a non-zero status). The hyphen tells `systemd` to "ignore failure" for this specific command, allowing the main `diretta_alsa_target.service` to continue running.
-
-4.  **Reload Systemd and Restart the Service:**
-
-    ```bash
-    sudo systemctl daemon-reload
-    sudo systemctl restart diretta_alsa_target.service
-    ```
-
-5.  **Verify the Changes:**
-
-    ```bash
-    systemctl status diretta_alsa_target.service
-    ```
-
-    In the output, you should see that the service is `Active: active (running)`. You should also see two `Process:` lines, one for `isolated_app.sh` (which should show `status=0/SUCCESS`) and one for `rtapp` (which will likely show `status=1/FAILURE`). This is the correct and expected outcome.
-
----
-
-### **Part 2: Optimizing the Diretta Host**
-
-On the Host, we will disable the `isolated_app.timer` and hook its script into `diretta_alsa.service`. This ensures the optimizations are applied regardless of which service starts first.
-
-1.  SSH to the Diretta Host:
-
-    ```bash
-    ssh diretta-host
-    ```
-
-2.  **Stop and Disable the Timer:**
-
-    ```bash
-    sudo systemctl stop isolated_app.timer
-    sudo systemctl disable isolated_app.timer
-    ```
-
-3.  **Create the Systemd Drop-in Hook:**
-
-    ```bash
-    # Create the directory
-    sudo mkdir -p /etc/systemd/system/diretta_alsa.service.d/
-
-    # Create the drop-in file
-    sudo bash -c 'cat <<EOF > /etc/systemd/system/diretta_alsa.service.d/10-local-hooks.conf
-    [Service]
-    ExecStartPost=/opt/scripts/system/isolated_app.sh
-    EOF'
-    ```
-
-4.  **Reload Systemd and Restart the Services:**
-
-    ```bash
-    sudo rm -rf /etc/systemd/system/roonbridge.service.d  # clean-up previous settings
-    sudo systemctl daemon-reload
-    sudo systemctl restart diretta_alsa.service
-    ```
-
-5.  **Verify the Changes:**
-    Check the status of both services.
-
-    ```bash
-    systemctl status diretta_alsa.service
-    ```
-
-    You should see `Active: active (running)` and a `Process:` line for `isolated_app.sh` showing `status=0/SUCCESS`.
-
->
->
-> -----
->
-> ### ✅ Checkpoint: Verify Your CPU Optimizations
->
-> Your system is now optimized to run its tuning scripts only at boot, eliminating periodic CPU spikes. To verify this new configuration is working correctly with the rest of the system, please return to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
->
-> -----
 
 ## 17. Appendix 8: Optional Purist 100Mbps Network Mode
 
