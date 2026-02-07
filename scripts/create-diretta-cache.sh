@@ -27,7 +27,7 @@ check_start_time="$(date +"%s")"
 
 logger -t "$LOG_TAG" "Starting health check for $LICENSE_URI"
 
-until curl -kIfs --connect-timeout 5 "$LICENSE_URI" &>/dev/null; do
+until curl -kIs --connect-timeout 5 "$LICENSE_URI" &>/dev/null; do
     sleep 2
     now="$(date +"%s")"
     elapsed=$((now - check_start_time))

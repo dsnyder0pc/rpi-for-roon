@@ -334,7 +334,7 @@ Use the AudioLinux menu system to perform all updates. Have your email from Pier
 #### **4.4.1 Critical: Select the LTS Kernel (Downgrade Required)**
 
 > **⚠️ WARNING: Do Not Use the Default Kernel (6.18+)**
-> The latest AudioLinux images ship with Kernel `6.18.x`. This version contains a known regression in the Raspberry Pi 5 Ethernet driver (`macb`) that causes the connection to permanently drop if the Host reboots.
+> The latest AudioLinux images may ship with Kernel `6.18.x` (confirm what you have by running `uname -r`). This version contains a known regression in the Raspberry Pi 5 Ethernet driver (`macb`) that causes the connection to permanently drop if the Host reboots.
 > **You MUST switch to the LTS (Long Term Support) kernel to ensure stability.**
 
 1. Run `menu` in the terminal.
@@ -941,6 +941,19 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         ```
     * Choose **4) Edit configuration**. Set `AlsaLatency=20` for a Raspberry Pi 5 Target or `AlsaLatency=40` for RPi4.
     * Choose **6) License**. The system will play hi-res (greater than 44.1 kHz PCM audio) for 6 minutes in trial mode. Follow the on-screen link and instructions to purchase and apply your full license for hi-res support. This requires the internet access we configured in step 5.
+        ```text
+        The price of this third party license is 100$
+        Without license DIRETTA Target will work for 6 min.
+        If you see a link, you can use it to purchase a license
+        If you see instead the word 'valid' the license has been correctly applied
+        Please wait a few seconds...
+
+        https://www.diretta.link/cgi-bin/target_app_regist.cgi?hash=1fd430fe950936867b31cc084a9dac031ffa7c57c8ba1d5034a1a5219444f441&vender=Audlinux
+
+
+        The license will be applied at the next DIRETTA target start
+        Press any key to continue
+        ```
     * Choose **8) Exit**. Follow prompts to get back to the terminal
 
 #### 8.2. On the Diretta Host
@@ -985,7 +998,6 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         ```
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient; however, here are some tuned settings you may wish to try:
         ```text
-        TargetProfileLimitTime=200
         FlexCycle=disable
         CycleTime=800
         periodMin=16
@@ -1406,7 +1418,7 @@ fi
 pyenv global $PYVER
 ```
 
-**Note:** It's normal for the `Installing Python-3.14.2...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
+**Note:** It's normal for the `Installing Python-3.14.3...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
 ---
 
@@ -1919,6 +1931,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
 
     # Go ahead and run the script manually once
     sudo /usr/local/bin/create-diretta-cache.sh
+    ls -l /tmp/diretta_license_url.cache
     ```
 
 ---
@@ -2041,7 +2054,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     pyenv global $PYVER
     ```
 
-    **Note:** It's normal for the `Installing Python-3.14.2...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
+    **Note:** It's normal for the `Installing Python-3.14.3...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
 7.  **Install Avahi and Python Dependencies on the Diretta Host:**
 
