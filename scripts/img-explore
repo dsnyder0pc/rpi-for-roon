@@ -1,0 +1,52 @@
+#!/bin/bash
+#
+# Mounts a Pi image, starts a tmux session for manual audit, 
+# and cleans up automatically on exit.
+#
+
+set -e
+
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run with sudo."
+  exit 1
+fi
+
+if [ -z "$1" ]; then
+  echo "Usage: $(basename "$0") <ImageFile>"
+  exit 1
+fi
+
+IMAGE_FILE="$1"
+MOUNT_POINT="/mnt/img_explore"
+LOOP_DEVICE=""
+
+cleanup() {
+  echo -e "\n--- Cleaning up ---"
+  sync
+  if mountpoint -q "${MOUNT_POINT}"; then
+    umount "${MOUNT_POINT}"
+  fi
+  if [ -n "${LOOP_DEVICE}" ]; then
+    losetup -d "${LOOP_DEVICE}"
+  fi
+  [ -d "${MOUNT_POINT}" ] && rmdir "${MOUNT_POINT}"
+  echo "Image detached and mount point removed."
+}
+
+trap cleanup EXIT
+
+# Setup Loop and Mount Root (p2)
+echo "Attaching $IMAGE_FILE..."
+LOOP_DEVICE=$(losetup -fP --show "${IMAGE_FILE}")
+mkdir -p "${MOUNT_POINT}"
+mount "${LOOP_DEVICE}p2" "${MOUNT_POINT}"
+
+echo -e "--- Image mounted at ${MOUNT_POINT} ---"
+echo -e "Dropping into tmux. Explore at will. Exit tmux to unmount.\n"
+
+# Start tmux in the mount point
+# We use 'sudo -u $SUDO_USER' to keep your local tmux config/theme
+sudo -u "$SUDO_USER" tmux new-session -c "${MOUNT_POINT}" -s "img_explore_$(date +%s)"
+
+# Script waits here until tmux session ends. 
+# Trap handles the rest.
