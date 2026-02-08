@@ -2241,17 +2241,7 @@ This is achieved by using **CPU isolation** to dedicate specific processor cores
 
 ---
 
-### **Part 1: Prepare the Python Environment for `cset`**
-
-Because AudioLinux/Arch is transitioning to Python 3.14, the `cpuset` utility (required for core isolation) may be installed in an older library path. This script identifies the current Python version and ensures the `cpuset` module is available where the system expects it. Run the script below on both the Target and the Host.
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/fix-cset-python.sh | sudo bash
-```
-
----
-
-### **Part 2: Optimizing the Diretta Target**
+### **Part 1: Optimizing the Diretta Target**
 
 The goal for the Target is to make it a pure, low-latency audio endpoint. We will isolate the Diretta application on a single, dedicated CPU core and give it a high, but not excessive, realtime priority.
 
@@ -2320,7 +2310,7 @@ sudo systemctl disable rtapp.timer
 
 ---
 
-### **Part 3: Optimizing the Diretta Host**
+### **Part 2: Optimizing the Diretta Host**
 
 The goal for the Host is to give Roon Bridge and the Diretta service dedicated processing resources, but without using high realtime priorities. CPU isolation is a more powerful tool here, as it prevents the processes from being interrupted in the first place.
 
