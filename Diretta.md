@@ -4,14 +4,18 @@ This guide provides comprehensive, step-by-step instructions for configuring two
 
 The **Diretta Host** will connect to your main network (to access your music server) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC or DDC.
 
-# Disclaimer
+# Managing Versions
 
-Diretta is a moving target. However, I'm pleased to confirm that version 146_7 (and later?) performs very well with a ~45% reduction in CPU usage on the Target, and it sounds great.
+I aim to keep this guide compatible with the current official AudioLinux download link provided by Piero.
 
-Here are some links for more information:
-* https://help.diretta.link/support/solutions/articles/73000661018-146
-* https://help.diretta.link/support/solutions/articles/73000661171-dds-diretta-direct-stream
+**Current Validation:**
+These instructions were last tested with **AudioLinux V5** (Image: `audiolinux_pi4-pi5_501`, Menu Version: `510`).
 
+**A Note on Updates:**
+Because AudioLinux is based on Arch (a rolling release), a fresh install will always pull the absolute latest software. Once your system is singing, you have two choices:
+
+1.  **Update Frequently:** Commit to updating at least monthly so you can fix small breakages as they happen.
+2.  **Lock It Down (Recommended):** If it sounds great, don't fix it. Create a backup image and enjoy the music!
 
 ## An Introduction to the Reference Roon Architecture
 
