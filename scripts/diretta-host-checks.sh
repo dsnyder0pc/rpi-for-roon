@@ -105,7 +105,7 @@ run_appendix6_checks() {
 
     if [[ -n "$RPID" && "$RPID" -ne 0 ]]; then
         # PASS if affinity DOES NOT contain 2 or 3.
-        check "RoonBridge (PID $RPID) is NOT on isolated cores (2 or 3)" "! taskset -cp $RPID | grep -q '[23]'"
+        check "RoonBridge (PID $RPID) is NOT on isolated cores (2 or 3)" "taskset -cp $RPID | awk -F': ' '\$2 ~ /[23]/ {exit 1}'"
 
         # Diagnostic
         if taskset -cp $RPID | grep -q '[23]'; then
