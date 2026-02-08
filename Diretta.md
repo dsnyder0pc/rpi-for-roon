@@ -4,7 +4,7 @@ This guide provides comprehensive, step-by-step instructions for configuring two
 
 The **Diretta Host** will connect to your main network (to access your music server) and will also act as a gateway for the Target. The **Diretta Target** will connect only to the Host and your USB DAC or DDC.
 
-# Managing Versions
+## Managing Versions
 
 I aim to keep this guide compatible with the current official AudioLinux download link provided by Piero.
 
