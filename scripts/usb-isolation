@@ -1,0 +1,98 @@
+#!/bin/bash
+# Diretta Target USB Optimization for AudioLinux
+# Precision targeting: Isolates ONLY the IRQ for the specific bus holding the DAC.
+
+ISO_CONFIG="/opt/configuration/isolated.conf"
+CMDLINE="/boot/cmdline.txt"
+ISO_CORES="2,3"
+ISO_CORES_DASH="2-3"
+
+echo "--- Diretta Target USB Optimization ---"
+
+# 1. Kernel Isolation Validation
+if grep -q "nohz_full=$ISO_CORES" "$CMDLINE" && grep -q "rcu_nocbs=$ISO_CORES" "$CMDLINE";
+then
+    echo "Check: Full Kernel Isolation (nohz_full/rcu_nocbs) is ACTIVE."
+else
+    echo "WARNING: Kernel isolation flags (nohz_full/rcu_nocbs) are incomplete."
+    read -rp "Continue anyway? (y/n): " cont
+    [[ $cont != [yY]* ]] && exit 1
+fi
+
+# 2. Precision DAC-to-Bus Mapping
+# Find all buses that have a 'snd-usb-audio' driver attached
+ACTIVE_BUSES=$(find /sys/bus/usb/drivers/snd-usb-audio -maxdepth 1 -type l 2>/dev/null | grep -oE "/[0-9]+-" | tr -d '/-' | sort -u)
+
+if [ -z "$ACTIVE_BUSES" ];
+then
+    echo "Error: No USB DAC (snd-usb-audio) detected in sysfs."
+    exit 1
+fi
+
+TARGET_IRQS=""
+TARGET_DEVS=""
+
+for BUS_NUM in $ACTIVE_BUSES;
+do
+    # On RPi5, IRQs are labeled 'xhci-hcd:usbN'. On RPi4, they are 'xhci_hcd'.
+    MATCH=$(grep -E "xhci.*usb${BUS_NUM}$|xhci_hcd$" /proc/interrupts)
+    
+    if [ -n "$MATCH" ];
+    then
+        while read -r entry;
+        do
+            IRQ=$(echo "$entry" | awk -F: '{print $1}' | tr -d ' ')
+            DEV=$(echo "$entry" | awk '{print $NF}')
+            TARGET_IRQS="$TARGET_IRQS $IRQ"
+            TARGET_DEVS="$TARGET_DEVS $DEV"
+        done <<< "$MATCH"
+    fi
+done
+
+# Cleanup unique entries - Quoted variables to satisfy SC2086
+TARGET_IRQS=$(echo "$TARGET_IRQS" | xargs -n1 | sort -u | xargs)
+TARGET_DEVS=$(echo "$TARGET_DEVS" | xargs -n1 | sort -u | xargs)
+
+if [ -z "$TARGET_IRQS" ]; then
+    echo "Error: Could not map active DAC bus to a specific IRQ."
+    exit 1
+fi
+
+echo "System: $(tr -d '\0' < /proc/device-tree/model)"
+echo "Targeting active Audio IRQ: $TARGET_IRQS ($TARGET_DEVS)"
+
+# 3. Apply Runtime Affinity
+for IRQ in $TARGET_IRQS;
+do
+    echo "Applying runtime affinity: IRQ $IRQ -> Cores $ISO_CORES_DASH"
+    echo "$ISO_CORES_DASH" | sudo tee "/proc/irq/$IRQ/smp_affinity_list" > /dev/null
+done
+
+# 4. AudioLinux Integration
+if [ -f "$ISO_CONFIG" ] && grep -q "ISOLATED1=\"$ISO_CORES\"" "$ISO_CONFIG";
+then
+    echo ""
+    echo "Detected AudioLinux isolation group (Cores $ISO_CORES) in $ISO_CONFIG"
+    read -rp "Make this specific USB affinity permanent? (y/n): " confirm
+    if [[ $confirm == [yY]* ]];
+    then
+        sudo cp "$ISO_CONFIG" "${ISO_CONFIG}.bak"
+        for IRQ in $TARGET_IRQS;
+        do
+            if ! grep -q "$IRQ" "$ISO_CONFIG";
+            then
+                sudo sed -i "/^IRQ1=/ s/\"$/ $IRQ\"/" "$ISO_CONFIG"
+            fi
+        done
+        for DEV in $TARGET_DEVS;
+        do
+            if ! grep -q "$DEV" "$ISO_CONFIG";
+            then
+                sudo sed -i "/^DEVICES1=/ s/\"$/ $DEV\"/" "$ISO_CONFIG"
+            fi
+        done
+        sudo sed -i 's/  */ /g' "$ISO_CONFIG"
+        sudo sed -i 's/="/="/g' "$ISO_CONFIG"
+        echo "Done. persistent config updated. (USB 3.0 IRQs were bypassed)."
+    fi
+fi
