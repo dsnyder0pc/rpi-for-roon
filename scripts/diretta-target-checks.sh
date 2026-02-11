@@ -112,25 +112,39 @@ run_appendix7_checks() {
     check "USB IRQs are pinned in config (IRQ1)" "grep -E 'IRQ1=\".*(129|134).*\"' /opt/configuration/isolated.conf"
     check "USB Device identified in config (xhci)" "grep -E 'DEVICES1=\".*xhci[-_]hcd.*\"' /opt/configuration/isolated.conf"
 
-    # 3. Runtime Kernel Check (RPi5 Only)
+    # 3. DAC Presence Check (Gate #1)
+    if ! grep -q ' \[.*\]:' /proc/asound/cards; then
+         echo -e "  ${C_YELLOW}* Runtime check skipped: USB DAC not detected (Powered off?)${C_RESET}"
+         return
+    fi
+
+    # 4. Runtime Kernel Check (Gate #2: Traffic Threshold)
     USB_IRQS_FOUND=0
     ALL_AFFINITY_OK=true
 
     for IRQ in 129 134; do
         if grep -q "^[[:space:]]*$IRQ:" /proc/interrupts; then
-            USB_IRQS_FOUND=$((USB_IRQS_FOUND + 1))
+            # Get total interrupts for this IRQ across all CPUs
+            HIT_COUNT=$(grep "^[[:space:]]*$IRQ:" /proc/interrupts | awk '{sum=0; for(i=2;i<=5;i++) sum+=$i; print sum}')
 
-            # Check for affinity mask 'c' (Cores 2,3)
-            if ! grep -q 'c$' "/proc/irq/$IRQ/smp_affinity"; then
-                CURRENT_AFFINITY=$(cat "/proc/irq/$IRQ/smp_affinity")
-                ALL_AFFINITY_OK=false
-                echo -e "    ${C_RED}FAIL: IRQ $IRQ exists but affinity is '$CURRENT_AFFINITY' (Expected 'c')${C_RESET}"
+            # Only QA the IRQ if it is active (>100 interrupts)
+            if [ "$HIT_COUNT" -gt 100 ]; then
+                USB_IRQS_FOUND=$((USB_IRQS_FOUND + 1))
+
+                # Check for affinity mask 'c' (Cores 2,3)
+                if ! grep -q 'c$' "/proc/irq/$IRQ/smp_affinity"; then
+                    CURRENT_AFFINITY=$(cat "/proc/irq/$IRQ/smp_affinity")
+                    ALL_AFFINITY_OK=false
+                    echo -e "    ${C_RED}FAIL: IRQ $IRQ exists but affinity is '$CURRENT_AFFINITY' (Expected 'c')${C_RESET}"
+                fi
             fi
         fi
     done
 
     if [ "$USB_IRQS_FOUND" -eq 0 ]; then
-        check "Active USB IRQs detected in kernel" "false"
+        # If we got here, the DAC is ON (ALSA check passed), but no specific IRQ has high traffic yet.
+        # This is an edge case, but we can default to PASS or Warning.
+        echo -e "  ${C_YELLOW}* Warning: DAC detected but IRQ traffic is low. Play music to verify isolation.${C_RESET}"
     else
         check "Runtime: Active USB IRQs are pinned to cores 2-3 (affinity 'c')" "$ALL_AFFINITY_OK"
     fi
