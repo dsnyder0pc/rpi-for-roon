@@ -2380,7 +2380,9 @@ sudo systemctl disable rtapp.timer
 ## 16. Appendix 7: Optional IRQ and Thread Optimizations
 
 ### Part 1: Diretta Target USB Path Isolation
-By default, even when CPU cores are isolated, USB interrupts may still compete for resources on the "noisy" system cores (0 and 1). This script dynamically identifies the specific USB controller your DAC is connected to and pins its hardware interrupts to your isolated audio cores (2 and 3).
+By default, even when CPU cores are isolated, USB interrupts may still compete for resources on the "noisy" system cores (0 and 1). This script dynamically identifies the specific USB controller your DAC is connected to and pins its hardware interrupts to your isolated audio cores (2 and 3).  On the Raspberry Pi 5, the USB controllers are managed by the RP1 chip, allowing us to steer hardware interrupts to specific cores.
+
+**Note:** This optimization is not applicable to the Raspberry Pi 4 due to hardware-locked interrupts.
 
 1.  Ensure your DAC is powered on and connected to the Target.
 2.  Start music playback to the Diretta Target. This ensures the script can detect active interrupt traffic.

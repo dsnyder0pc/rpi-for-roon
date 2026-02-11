@@ -101,32 +101,35 @@ run_appendix6_checks() {
 run_appendix7_checks() {
     header "Appendix 7" "Optional: USB IRQ Isolation"
 
-    # 1. Static Config Check (Existing)
-    check "USB IRQs are pinned in config (IRQ1)" "grep -E 'IRQ1=\".*(29|129|134).*\"' /opt/configuration/isolated.conf"
+    # 1. Hardware Detection & Skip Logic
+    MODEL=$(tr -d '\0' < /proc/device-tree/model)
+    if [[ "$MODEL" == *"Raspberry Pi 4"* ]]; then
+        echo -e "  ${C_YELLOW}* Skipping check: Optimization not applicable to Raspberry Pi 4${C_RESET}"
+        return
+    fi
+
+    # 2. Static Config Check (RPi5 Only)
+    check "USB IRQs are pinned in config (IRQ1)" "grep -E 'IRQ1=\".*(129|134).*\"' /opt/configuration/isolated.conf"
     check "USB Device identified in config (xhci)" "grep -E 'DEVICES1=\".*xhci[-_]hcd.*\"' /opt/configuration/isolated.conf"
 
-    # 2. Runtime Kernel Check (New)
-    # We loop through the specific Diretta Target USB IRQs.
-    # If an IRQ exists in /proc/interrupts, we check its affinity.
-    # If no USB IRQs are found active, we flag it.
-
+    # 3. Runtime Kernel Check (RPi5 Only)
     USB_IRQS_FOUND=0
     ALL_AFFINITY_OK=true
 
-    for IRQ in 29 129 134; do
+    for IRQ in 129 134; do
         if grep -q "^[[:space:]]*$IRQ:" /proc/interrupts; then
             USB_IRQS_FOUND=$((USB_IRQS_FOUND + 1))
-            # Check for affinity mask 'c' (Cores 2,3) or '3' (if user used cores 0,1 by mistake, but we expect c)
-            # We strictly expect 'c' based on Appendix 6.
+
+            # Check for affinity mask 'c' (Cores 2,3)
             if ! grep -q 'c$' "/proc/irq/$IRQ/smp_affinity"; then
+                CURRENT_AFFINITY=$(cat "/proc/irq/$IRQ/smp_affinity")
                 ALL_AFFINITY_OK=false
-                echo -e "    ${C_RED}FAIL: IRQ $IRQ exists but affinity is $(cat /proc/irq/$IRQ/smp_affinity) (Expected 'c')${C_RESET}"
+                echo -e "    ${C_RED}FAIL: IRQ $IRQ exists but affinity is '$CURRENT_AFFINITY' (Expected 'c')${C_RESET}"
             fi
         fi
     done
 
     if [ "$USB_IRQS_FOUND" -eq 0 ]; then
-        # This might happen if the DAC is off or unplugged
         check "Active USB IRQs detected in kernel" "false"
     else
         check "Runtime: Active USB IRQs are pinned to cores 2-3 (affinity 'c')" "$ALL_AFFINITY_OK"
