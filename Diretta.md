@@ -2391,7 +2391,7 @@ By default, even when CPU cores are isolated, USB interrupts may still compete f
     curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/usb-isolation.sh | sudo bash
     ```
 
-**What this does:** The script detects if you are on RPi4 or RPi5 hardware and locates the active DAC path (e.g., xhci-hcd:usb3 on RPi5 or xhci_hcd on RPi4). It then adds these specific identifiers to your AudioLinux isolation group to create a 100% isolated data path from network-in to USB-out.
+**What this does:** The script locates the active DAC path (e.g., xhci-hcd:usb1 or xhci-hcd:usb3). It then adds the specific identifier to your AudioLinux isolation group to create a 100% isolated data path from network-in to USB-out.
 
 ---
 
