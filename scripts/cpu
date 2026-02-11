@@ -1,3 +1,26 @@
 #!/bin/bash
 
-awk '{printf("- CPU temp : %.1f'"'"'C : %.1f'"'"'F\n", $1/1000, 32+($1/1000)*9/5)}' /sys/devices/virtual/thermal/thermal_zone0/temp
+# Define Temp Thresholds (in Celsius)
+TEMP_WARN=60
+TEMP_CRIT=75
+
+# Read raw temperature (millidegrees)
+RAW_TEMP=$(cat /sys/devices/virtual/thermal/thermal_zone0/temp)
+
+# Convert to C and F
+TEMP_C=$(awk "BEGIN {printf \"%.1f\", $RAW_TEMP/1000}")
+TEMP_F=$(awk "BEGIN {printf \"%.1f\", 32+($RAW_TEMP/1000)*9/5}")
+
+# Determine Color
+if (( $(echo "$TEMP_C < $TEMP_WARN" | bc -l) )); then
+    COLOR=$'\033[0;32m' # Green (Safe)
+elif (( $(echo "$TEMP_C < $TEMP_CRIT" | bc -l) )); then
+    COLOR=$'\033[1;33m' # Yellow (Warning)
+else
+    COLOR=$'\033[0;31m' # Red (Critical)
+fi
+
+RESET=$'\033[0m'
+
+# Output with Degree Symbol and Color
+echo -e "- CPU temp : ${COLOR}${TEMP_C}°C : ${TEMP_F}°F${RESET}"
