@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.20
-# (Removed obsolete realtime priority check)
+# Diretta Target QA Check Script v1.22
+# (Fixes SC2086 quoting issues)
 #
 
 # --- Colors and Formatting ---
@@ -70,7 +70,7 @@ run_appendix4_checks() {
     check "SSH authorized_keys has security restrictions" "grep -q 'command=\"sudo' /home/purist-app/.ssh/authorized_keys"
 }
 run_appendix6_checks() {
-    header "Appendix 6" "Advanced Realtime Performance Tuning"
+    header "Appendix 6" "Optional: Realtime Performance Tuning"
     check "Kernel configured for isolation (nohz_full)" "grep -q 'nohz_full=2,3' /boot/cmdline.txt"
     check "AudioLinux isolation config exists" "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf"
 
@@ -84,11 +84,12 @@ run_appendix6_checks() {
     if [[ -n "$DPID" ]]; then
         # Check if the process is on ANY allowed isolated core (2, 3, or both)
         # 3 (single core 3) is commonly returned by taskset -c even if 2 is allowed but unused
-        check "Diretta app is running on isolated cores (2-3)" "taskset -cp $DPID | grep -q -E '2,3|2-3|3|2'"
+        # FIX: Quoted $DPID to satisfy SC2086
+        check "Diretta app is running on isolated cores (2-3)" "taskset -cp \"$DPID\" | grep -q -E '2,3|2-3|3|2'"
 
          # Diagnostic: If the check failed, print the actual affinity
-        if ! taskset -cp $DPID | grep -q -E '2,3|2-3|3|2'; then
-             ACTUAL=$(taskset -cp $DPID 2>/dev/null)
+        if ! taskset -cp "$DPID" | grep -q -E '2,3|2-3|3|2'; then
+             ACTUAL=$(taskset -cp "$DPID" 2>/dev/null)
              echo -e "    ${C_YELLOW}Diagnostic: Actual affinity is: $ACTUAL${C_RESET}"
         fi
     else
@@ -96,6 +97,13 @@ run_appendix6_checks() {
     fi
 
     check "Network IRQs (end0) are pinned to cores 2-3 (affinity 'c')" "(for irq in \$(grep 'end0' /proc/interrupts | awk '{print \$1}' | tr -d :); do grep -q 'c$' /proc/irq/\$irq/smp_affinity || exit 1; done)"
+}
+run_appendix7_checks() {
+    header "Appendix 7" "Optional: USB IRQ Isolation"
+    # IRQ1 should contain at least one valid USB IRQ (29 for RPi4, 129/134 for RPi5)
+    check "USB IRQs are pinned in config (IRQ1)" "grep -E 'IRQ1=\".*(29|129|134).*\"' /opt/configuration/isolated.conf"
+    # DEVICES1 should contain an xhci reference
+    check "USB Device identified in config (xhci)" "grep -E 'DEVICES1=\".*xhci[-_]hcd.*\"' /opt/configuration/isolated.conf"
 }
 run_appendix8_checks() {
     header "Appendix 8" "Optional: Purist 100Mbps Network Mode"
@@ -188,6 +196,7 @@ check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Append
 check_optional_section "[ -f /usr/local/bin/purist-mode ]" "run_appendix3_checks" "Appendix 3 (Purist Mode)"
 check_optional_section "id purist-app" "run_appendix4_checks" "Appendix 4 (Web UI Backend)"
 check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf 2>/dev/null" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
+check_optional_section "grep -q 'IRQ1=' /opt/configuration/isolated.conf 2>/dev/null" "run_appendix7_checks" "Appendix 7 (USB Isolation)"
 check_optional_section "[ -f /etc/diretta-100m ]" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 check_optional_section "grep -q '^ExtEtherMTU=' /opt/diretta-alsa-target/diretta_app_target_setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
 

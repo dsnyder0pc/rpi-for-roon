@@ -88,8 +88,8 @@ If you are located in the US, expect to pay around $329 (plus tax and shipping) 
 12. [Appendix 3: Optional Purist Mode](#12-appendix-3-optional-purist-mode)
 13. [Appendix 4: Optional System Control Web UI](#13-appendix-4-optional-system-control-web-ui)
 14. [Appendix 5: System Health Checks](#14-appendix-5-system-health-checks)
-15. [Appendix 6: Advanced Realtime Performance Tuning](#15-appendix-6-advanced-realtime-performance-tuning)
-16. [Appendix 7: Diretta Host Thread Optimization](#16-appendix-7-diretta-host-thread-optimization)
+15. [Appendix 6: Optional Realtime Performance Tuning](#15-appendix-6-optional-realtime-performance-tuning)
+16. [Appendix 7: Optional IRQ and Thread Optimizations](#16-appendix-7-optional-irq-and-thread-optimizations)
 17. [Appendix 8: Optional Purist 100Mbps Network Mode](#17-appendix-8-optional-purist-100mbps-network-mode)
 18. [Appendix 9: Optional Jumbo Frames Optimization](#18-appendix-9-optional-jumbo-frames-optimization)
 
@@ -2231,7 +2231,7 @@ curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/script
 
 ---
 
-## 15. Appendix 6: Advanced Realtime Performance Tuning
+## 15. Appendix 6: Optional Realtime Performance Tuning
 
 The following steps are optional but recommended for users seeking to extract the absolute maximum performance from their Diretta setup. The strategy, based on advice from AudioLinux author Piero, is to create the most stable and electrically quiet environment possible on both the Host and Target devices.
 
@@ -2259,7 +2259,7 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
     ```
 3.  Navigate to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**).
 
-4.  Confim that isolated cores is disabled. If not, use option 3 to disable it:
+4.  Confirm that isolated cores is disabled. If not, use option 3 to disable it:
     ```text
     ISOLATED CORES CONFIGURATION
     This option will divide CPU cores in 2 or more sets: one for audio services, one for system processes
@@ -2328,7 +2328,7 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     ```
 3.  Navigate to the **ISOLATED CPU CORES configuration** menu (under **SYSTEM menu**).
 
-4.  Confim that isolated cores is disabled. If not, use option 3 to disable it:
+4.  Confirm that isolated cores is disabled. If not, use option 3 to disable it:
     ```text
     ISOLATED CORES CONFIGURATION
     This option will divide CPU cores in 2 or more sets: one for audio services, one for system processes
@@ -2377,9 +2377,25 @@ sudo systemctl stop rtapp.timer
 sudo systemctl disable rtapp.timer
 ```
 
-## 16. Appendix 7: Diretta Host Thread Optimization
+## 16. Appendix 7: Optional IRQ and Thread Optimizations
 
-With the real-time kernel optimizations in place, the Diretta Host can now handle a more aggressive packet interval, which can lead to improved sound quality. This final step reduces the `CycleTime` parameter from 800 to 514 microseconds. This smaller timing gap between packets ensures that that all content up to DSD256 and DXD (32-bit, 352.8 kHz) will require only one packet per cycle. We can also schedule Diretta threads to specific cores.
+### Part 1: Diretta Target USB Path Isolation
+By default, even when CPU cores are isolated, USB interrupts may still compete for resources on the "noisy" system cores (0 and 1). This script dynamically identifies the specific USB controller your DAC is connected to and pins its hardware interrupts to your isolated audio cores (2 and 3).
+
+1.  Ensure your DAC is powered on and connected to the Target.
+2.  Start music playback to the Diretta Target. This ensures the script can detect active interrupt traffic.
+3.  Run the following command on the Diretta Target:
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/usb-isolation.sh | sudo bash
+    ```
+
+**What this does:** The script detects if you are on RPi4 or RPi5 hardware and locates the active DAC path (e.g., xhci-hcd:usb3 on RPi5 or xhci_hcd on RPi4). It then adds these specific identifiers to your AudioLinux isolation group to create a 100% isolated data path from network-in to USB-out.
+
+---
+
+### Part 2: Diretta Host Thread Optimization
+
+With the real-time kernel optimizations in place, the Diretta Host can now handle a more aggressive packet interval, which can lead to improved sound quality. This final step reduces the `CycleTime` parameter from 800 to 514 microseconds. This smaller timing gap between packets ensures that all content up to DSD256 and DXD (32-bit, 352.8 kHz) will require only one packet per cycle. We can also schedule Diretta threads to specific cores.
 
 1.  SSH to the **Diretta Host** if you are not still logged in.
 2.  Run the following command to apply the optimized setting:

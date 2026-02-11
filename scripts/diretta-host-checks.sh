@@ -81,7 +81,7 @@ run_appendix4_checks() {
     check "'purist-webui' service is active" "systemctl is-active purist-webui.service"
 }
 run_appendix6_checks() {
-    header "Appendix 6" "Advanced Realtime Performance Tuning"
+    header "Appendix 6" "Optional: Realtime Performance Tuning"
     check "Kernel configured for isolation (nohz_full)" "grep -q 'nohz_full=2,3' /boot/cmdline.txt"
     check "AudioLinux isolation config exists" "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf"
 
@@ -108,8 +108,8 @@ run_appendix6_checks() {
         check "RoonBridge (PID $RPID) is NOT on isolated cores (2 or 3)" "taskset -cp $RPID | awk -F': ' '\$2 ~ /[23]/ {exit 1}'"
 
         # Diagnostic
-        if taskset -cp $RPID | grep -q '[23]'; then
-             ACTUAL=$(taskset -cp $RPID 2>/dev/null)
+        if taskset -cp "$RPID" | grep -q '[23]'; then
+             ACTUAL=$(taskset -cp "$RPID" 2>/dev/null)
              echo -e "    ${C_YELLOW}Diagnostic: Actual affinity is: $ACTUAL${C_RESET}"
         fi
     else
