@@ -124,8 +124,7 @@ Here's a link to a series of short videos walking through this process:
 A complete bill of materials is provided below. While other parts can be substituted, using these specific components improves the chances of a successful build.
 
 **Core Components (from [pishop.us](https://www.pishop.us/) or similar supplier):**
-* 1 x [Raspberry Pi 5/1GB](https://www.pishop.us/product/raspberry-pi-5-1gb/) (for the Diretta Target)
-* 1 x [Raspberry Pi 5/2GB](https://www.pishop.us/product/raspberry-pi-5-2gb/) (for the Diretta Host)
+* 2 x [Raspberry Pi 5/1GB](https://www.pishop.us/product/raspberry-pi-5-1gb/)
 * 2 x [Flirc Raspberry Pi 5 Case](https://www.pishop.us/product/flirc-raspberry-pi-5-case/)
 * 2 x [64 GB A2 microSDXC Card](https://www.bhphotovideo.com/c/product/1830849-REG/lexar_lmssipl064g_bnanu_64gb_silver_plus_microsdxc.html)
 * 2 x [Raspberry Pi 45W USB-C Power Supply - White](https://www.pishop.us/product/raspberry-pi-45w-usb-c-power-supply-white/)
