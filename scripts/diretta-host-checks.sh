@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.22
-# (Moved setting.inf checks to Appendix 7; removed obsolete Event-Driven Hooks)
+# Diretta Host QA Check Script v1.23
+# (Adaptive Section 8a for versioned/default LLVM toolchains)
 #
 
 # --- Colors and Formatting ---
@@ -60,6 +60,7 @@ run_appendix2_checks() {
     check "'roon-ir-remote' service is enabled" "systemctl is-enabled roon-ir-remote.service"
     check "'roon-ir-remote' service is active" "systemctl is-active roon-ir-remote.service"
     check "'set-roon-zone' script is up-to-date" "[ -x /usr/local/bin/set-roon-zone ] && [[ \$(md5sum /usr/local/bin/set-roon-zone | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone | md5sum | awk '{print \$1}') ]]"
+
     # Only check for Argon IR specifics if the dtoverlay is active in /boot/config.txt
     if grep -q '^dtoverlay=gpio-ir,gpio_pin=23' /boot/config.txt; then
         header "Appendix 2b" "Optional: Argon IR Receiver"
@@ -91,10 +92,13 @@ run_appendix6_checks() {
     # Check Diretta Isolation
     # Use systemctl to get the MainPID reliably
     DPID=$(systemctl show --property MainPID --value diretta_alsa.service 2>/dev/null)
-
     if [[ -n "$DPID" && "$DPID" -ne 0 ]]; then
         # PASS if affinity includes 2 OR 3 (or both)
         check "Diretta service (PID $DPID) is on isolated cores (2, 3, or 2-3)" "taskset -cp $DPID | grep -q -E '2,3|2-3|3|2'"
+        if ! taskset -cp "$DPID" | grep -q -E '2,3|2-3|3|2' 2>/dev/null; then
+             ACTUAL=$(taskset -cp "$DPID" 2>/dev/null | awk -F': ' '{print $2}')
+             echo -e "      ${C_YELLOW}-> Diagnostic: Actual affinity is: ${ACTUAL:-unknown}${C_RESET}"
+        fi
     else
         check "Diretta service is running" "false"
     fi
@@ -102,15 +106,13 @@ run_appendix6_checks() {
     # Check RoonBridge Isolation
     # Use systemctl to get the MainPID reliably
     RPID=$(systemctl show --property MainPID --value roonbridge.service 2>/dev/null)
-
     if [[ -n "$RPID" && "$RPID" -ne 0 ]]; then
         # PASS if affinity DOES NOT contain 2 or 3.
         check "RoonBridge (PID $RPID) is NOT on isolated cores (2 or 3)" "taskset -cp $RPID | awk -F': ' '\$2 ~ /[23]/ {exit 1}'"
-
         # Diagnostic
-        if taskset -cp "$RPID" | grep -q '[23]'; then
-             ACTUAL=$(taskset -cp "$RPID" 2>/dev/null)
-             echo -e "    ${C_YELLOW}Diagnostic: Actual affinity is: $ACTUAL${C_RESET}"
+        if taskset -cp "$RPID" | grep -q '[23]' 2>/dev/null; then
+             ACTUAL=$(taskset -cp "$RPID" 2>/dev/null | awk -F': ' '{print $2}')
+             echo -e "      ${C_YELLOW}-> Diagnostic: Actual affinity is: ${ACTUAL:-unknown}${C_RESET}"
         fi
     else
         check "RoonBridge service is running" "false"
@@ -154,11 +156,13 @@ run_appendix9_checks() {
     else
         check "Systemd network config contains MTUBytes setting" "false"
     fi
+
     if [ "$CURRENT_MTU" -eq 9000 ]; then
-        check "Link passes Full Jumbo Ping (8972 bytes)" "ping -c 1 -w 1 -M do -s 8972 target"
+        check "Link passes Full Jumbo Ping (8972 bytes)" "ping -c 1 -w 1 -M do -s 8972 diretta-target"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
-        check "Link passes Baby Jumbo Ping (2004 bytes)" "ping -c 1 -w 1 -M do -s 2004 target"
+        check "Link passes Baby Jumbo Ping (2004 bytes)" "ping -c 1 -w 1 -M do -s 2004 diretta-target"
     fi
+
     CONFIG="/opt/diretta-alsa/setting.inf"
     check "FlexCycle is enabled" "grep -q '^FlexCycle=enable' $CONFIG"
     if [ -f "$CONFIG" ]; then
@@ -223,8 +227,18 @@ check "Diretta is configured for 'end0' interface" "grep -q 'Interface=end0' /op
 check "Diretta service is set to auto-restart" "[ -f /etc/systemd/system/diretta_alsa.service.d/restart.conf ] && grep -q 'Restart=on-failure' /etc/systemd/system/diretta_alsa.service.d/restart.conf"
 
 header "Section 8a" "Diretta Compiler Toolchain"
-check "Compiler profile script exists" "[ -f /etc/profile.d/llvm_diretta.sh ]"
-check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\$PATH' /etc/profile.d/llvm_diretta.sh"
+# --- Version-Aware Compiler Checks ---
+K_VER=$(grep -oP 'clang version \K[0-9]+' /proc/version)
+LATEST_LLVM=$(pacman -Ss '^llvm[0-9]+$' | grep -oP '^extra/llvm\K[0-9]+' | sort -nr | head -n 1)
+
+if [[ -n "$K_VER" && "$K_VER" -le "$LATEST_LLVM" ]]; then
+    check "Compiler profile script exists (Required for LLVM $K_VER)" "[ -f /etc/profile.d/llvm_diretta.sh ]"
+    check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\$PATH' /etc/profile.d/llvm_diretta.sh"
+else
+    check "System default toolchain prioritized (No profile script needed)" "! [ -f /etc/profile.d/llvm_diretta.sh ]"
+    check "Clang version matches kernel ($K_VER)" "clang --version | grep -q 'clang version $K_VER'"
+fi
+
 check "pacman.conf ignores 'clang'" "grep -Pq '^IgnorePkg\s*=\s*.*(clang|clang[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'llvm'" "grep -Pq '^IgnorePkg\s*=\s*.*(llvm|llvm[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'lld'" "grep -Pq '^IgnorePkg\s*=\s*.*(lld|lld[0-9]+)' /etc/pacman.conf"
@@ -241,6 +255,7 @@ check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Append
 check_optional_section "[ -d /home/audiolinux/roon-ir-remote ]" "run_appendix2_checks" "Appendix 2 (IR Remote)"
 check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix4_checks" "Appendix 4 (Web UI)"
 check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf 2>/dev/null" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
+
 # New trigger for Appendix 7 checks for the tuning parameters
 check_optional_section "grep -q '^CpuSend=' /opt/diretta-alsa/setting.inf 2>/dev/null" "run_appendix7_checks" "Appendix 7 (Diretta Tuning)"
 check_optional_section "systemctl is-enabled limit-speed-100m.service" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"

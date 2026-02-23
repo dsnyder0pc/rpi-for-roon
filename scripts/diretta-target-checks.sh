@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.22
-# (Fixes SC2086 quoting issues)
+# Diretta Target QA Check Script v1.23.1
+# (Adaptive Section 8a for versioned/default LLVM toolchains)
 #
 
 # --- Colors and Formatting ---
@@ -80,17 +80,15 @@ run_appendix6_checks() {
     # Check Diretta Isolation (Using pgrep -f to match the binary under the wrapper)
     # Using pgrep -f to match the full command line
     DPID=$(pgrep -f "diretta_app_target" | head -n1)
-
     if [[ -n "$DPID" ]]; then
         # Check if the process is on ANY allowed isolated core (2, 3, or both)
         # 3 (single core 3) is commonly returned by taskset -c even if 2 is allowed but unused
-        # FIX: Quoted $DPID to satisfy SC2086
         check "Diretta app is running on isolated cores (2-3)" "taskset -cp \"$DPID\" | grep -q -E '2,3|2-3|3|2'"
 
-         # Diagnostic: If the check failed, print the actual affinity
-        if ! taskset -cp "$DPID" | grep -q -E '2,3|2-3|3|2'; then
-             ACTUAL=$(taskset -cp "$DPID" 2>/dev/null)
-             echo -e "    ${C_YELLOW}Diagnostic: Actual affinity is: $ACTUAL${C_RESET}"
+        # Diagnostic: If the check failed, print the actual affinity
+        if ! taskset -cp "$DPID" | grep -q -E '2,3|2-3|3|2' 2>/dev/null; then
+             ACTUAL=$(taskset -cp "$DPID" 2>/dev/null | awk -F': ' '{print $2}')
+             echo -e "      ${C_YELLOW}-> Diagnostic: Actual affinity is: ${ACTUAL:-unknown}${C_RESET}"
         fi
     else
         check "Diretta app is running" "false"
@@ -121,7 +119,6 @@ run_appendix7_checks() {
     # 4. Runtime Kernel Check (Gate #2: Traffic Threshold)
     USB_IRQS_FOUND=0
     ALL_AFFINITY_OK=true
-
     for IRQ in 129 134; do
         if grep -q "^[[:space:]]*$IRQ:" /proc/interrupts; then
             # Get total interrupts for this IRQ across all CPUs
@@ -130,12 +127,9 @@ run_appendix7_checks() {
             # Only QA the IRQ if it is active (>100 interrupts)
             if [ "$HIT_COUNT" -gt 100 ]; then
                 USB_IRQS_FOUND=$((USB_IRQS_FOUND + 1))
-
                 # Check for affinity mask 'c' (Cores 2,3)
                 if ! grep -q 'c$' "/proc/irq/$IRQ/smp_affinity"; then
-                    CURRENT_AFFINITY=$(cat "/proc/irq/$IRQ/smp_affinity")
                     ALL_AFFINITY_OK=false
-                    echo -e "    ${C_RED}FAIL: IRQ $IRQ exists but affinity is '$CURRENT_AFFINITY' (Expected 'c')${C_RESET}"
                 fi
             fi
         fi
@@ -147,6 +141,17 @@ run_appendix7_checks() {
         echo -e "  ${C_YELLOW}* Warning: DAC detected but IRQ traffic is low. Play music to verify isolation.${C_RESET}"
     else
         check "Runtime: Active USB IRQs are pinned to cores 2-3 (affinity 'c')" "$ALL_AFFINITY_OK"
+        if [ "$ALL_AFFINITY_OK" = false ]; then
+             # Print details AFTER the check to keep the flow clean
+             for IRQ in 129 134; do
+                 if [ -f "/proc/irq/$IRQ/smp_affinity" ]; then
+                     CURRENT_AFFINITY=$(cat "/proc/irq/$IRQ/smp_affinity")
+                     if [[ ! "$CURRENT_AFFINITY" =~ c$ ]]; then
+                         echo -e "      ${C_YELLOW}-> Diagnostic: IRQ $IRQ affinity is: '$CURRENT_AFFINITY' (Expected 'c')${C_RESET}"
+                     fi
+                 fi
+             done
+        fi
     fi
 }
 run_appendix8_checks() {
@@ -175,6 +180,7 @@ run_appendix9_checks() {
     else
         check "Systemd network config contains MTUBytes setting" "false"
     fi
+
     CONFIG="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
 
     if [ "$CURRENT_MTU" -eq 9000 ]; then
@@ -227,8 +233,18 @@ check "USB DAC/DDC is configured and detected" "grep -q ' \[.*\]:' /proc/asound/
 check_status "Diretta Target License Status" "ls /opt/diretta-alsa-target/ | grep -qv '^diretta'" "activated" "limited"
 
 header "Section 8a" "Diretta Compiler Toolchain"
-check "Compiler profile script exists" "[ -f /etc/profile.d/llvm_diretta.sh ]"
-check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\$PATH' /etc/profile.d/llvm_diretta.sh"
+# --- Version-Aware Compiler Checks ---
+K_VER=$(grep -oP 'clang version \K[0-9]+' /proc/version)
+LATEST_LLVM=$(pacman -Ss '^llvm[0-9]+$' | grep -oP '^extra/llvm\K[0-9]+' | sort -nr | head -n 1)
+
+if [[ -n "$K_VER" && "$K_VER" -le "$LATEST_LLVM" ]]; then
+    check "Compiler profile script exists (Required for LLVM $K_VER)" "[ -f /etc/profile.d/llvm_diretta.sh ]"
+    check "Compiler profile script sets PATH" "grep -q 'export PATH=.*bin:\$PATH' /etc/profile.d/llvm_diretta.sh"
+else
+    check "System default toolchain prioritized (No profile script needed)" "! [ -f /etc/profile.d/llvm_diretta.sh ]"
+    check "Clang version matches kernel ($K_VER)" "clang --version | grep -q 'clang version $K_VER'"
+fi
+
 check "pacman.conf ignores 'clang'" "grep -Pq '^IgnorePkg\s*=\s*.*(clang|clang[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'llvm'" "grep -Pq '^IgnorePkg\s*=\s*.*(llvm|llvm[0-9]+)' /etc/pacman.conf"
 check "pacman.conf ignores 'lld'" "grep -Pq '^IgnorePkg\s*=\s*.*(lld|lld[0-9]+)' /etc/pacman.conf"

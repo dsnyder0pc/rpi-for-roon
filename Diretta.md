@@ -2483,21 +2483,22 @@ Energy Efficient Ethernet (EEE) can cause link instability on some hardware comb
 cat <<'EOT' | sudo tee /etc/systemd/system/disable-eee.service
 [Unit]
 Description=Disable EEE on end0 for Link Stability
-After=network-online.target
-Wants=network-online.target
+After=network.target
+BindsTo=sys-subsystem-net-devices-end0.device
+After=sys-subsystem-net-devices-end0.device
 
 [Service]
 Type=oneshot
-ExecCondition=/usr/bin/ip link show end0
-# Explicitly disable EEE (ignore errors if unsupported by driver)
-ExecStart=-/usr/bin/ethtool --set-eee end0 eee off
+# Wait up to 5 seconds for the interface to actually show as UP
+ExecStartPre=/usr/bin/bash -c 'for i in {1..5}; do if ip link show end0 | grep -q "UP"; then exit 0; fi; sleep 1; done; exit 1'
+# Now set the hardware optimization
+ExecStart=/usr/bin/ethtool --set-eee end0 eee off
 RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
 EOT
 
-echo "Enable and start the service:"
 sudo systemctl daemon-reload
 sudo systemctl enable --now disable-eee.service
 ```

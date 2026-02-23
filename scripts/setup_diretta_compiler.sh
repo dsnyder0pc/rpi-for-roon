@@ -4,13 +4,18 @@
 #              Includes fallbacks for Arch Linux ARM archive mirrors.
 
 # --- Configuration ---
-KERNEL_VERSION_INFO=$(cat /proc/version)
+KERNEL_VERSION_INFO=$(< /proc/version)
 echo "Kernel build info: ${KERNEL_VERSION_INFO}"
 
 # Extract the major clang version used to build the kernel
 MAJOR_VER=$(echo "${KERNEL_VERSION_INFO}" | grep -oP 'clang version \K[0-9]+')
 
-# --- Pre-installation Prep ---
+# --- Pre-installation Prep & Cleanup ---
+# Ensure we start with a clean slate by removing any existing profile scripts
+# This prevents the "stale file" bug that can trigger QA check failures.
+echo "Cleaning up any existing Diretta LLVM profile scripts..."
+sudo rm -f "/etc/profile.d/llvm_diretta.sh"
+
 # Temporarily disable IgnorePkg in pacman.conf to allow the system sync
 # and toolchain installation to proceed without interactive prompts.
 echo "Temporarily disabling IgnorePkg to allow full system synchronization..."
@@ -66,7 +71,6 @@ PACKAGES_TO_IGNORE=(
 # --- Installation with Archive Fallback ---
 echo "Ensuring required toolchain packages are installed..."
 
-# Use array expansion with double quotes to satisfy shellcheck SC2086
 if ! sudo pacman -S --noconfirm --needed "${PACKAGES_TO_INSTALL[@]}"; then
     echo "Standard installation failed (likely a 404). Attempting Archive Fallback..."
 
@@ -89,6 +93,7 @@ else
     LLVM_BIN_PATH="/usr/bin"
 fi
 
+# Only create the profile script if we are using a non-default path
 PROFILE_SCRIPT="/etc/profile.d/llvm_diretta.sh"
 if [[ "${LLVM_BIN_PATH}" != "/usr/bin" ]]; then
     echo "Configuring system-wide PATH in ${PROFILE_SCRIPT} to prioritize ${LLVM_BIN_PATH}..."
@@ -99,10 +104,7 @@ EOF
     sudo chmod +x "${PROFILE_SCRIPT}"
     export PATH="${LLVM_BIN_PATH}:$PATH"
 else
-    if [[ -f "${PROFILE_SCRIPT}" ]]; then
-        sudo rm "${PROFILE_SCRIPT}"
-    fi
-    echo "Using default system path for LLVM tools."
+    echo "Using default system path for LLVM tools. No profile script required."
 fi
 
 # --- Clean and Set IgnorePkg ---
