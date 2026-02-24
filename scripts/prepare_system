@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-#         Remote System Preparation & Shutdown Script (v5 - with Diretta)
+#         Remote System Preparation & Shutdown Script (v6 - with Cleanup)
 #
 # Meant to be run with a command that first clears the calling user's history:
 # history -c; rm -f ~/.bash_history; export HISTSIZE=0; curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/prepare_system | sudo bash
@@ -13,8 +13,6 @@ MIRRORLIST_PATH="/etc/pacman.d/mirrorlist"
 DEFAULT_MIRROR="http://mirror.archlinuxarm.org/\$arch/\$repo"
 CUSTOM_MIRROR="http://ca.us.mirror.archlinuxarm.org/\$arch/\$repo"
 
-# --- Script Start ---
-# --- Add color variables right after configuration ---
 # --- Colors ---
 RED_BOLD='\033[1;31m'
 NC='\033[0m' # No Color
@@ -35,8 +33,6 @@ if [ -f "$SSH_KEYS_FILE" ]; then
 else
     echo "   - No authorized_keys file found. Skipping."
 fi
-
-# ---
 
 # Step 2: Restore default pacman mirrorlist
 echo "🌐 Restoring default pacman mirrorlist..."
@@ -66,9 +62,7 @@ echo "🔗 Extracting Diretta Target Information..."
 DIRETTA_APP="/opt/diretta-alsa-target/diretta_app_activate"
 if [ -f "$DIRETTA_APP" ]; then
     echo "   - Found Diretta application, generating link..."
-    # Execute the app and capture the full URL
     ACTIVATION_URL=$($DIRETTA_APP)
-    # Use sed to extract the hash value from the URL
     HASH_ID=$(echo "$ACTIVATION_URL" | sed -n 's/.*hash=\([^&]*\).*/\1/p')
 
     echo ""
@@ -92,6 +86,7 @@ EMAIL=
 VERSION=
 EOT
 chmod 600 "/opt/configuration/data"
+
 echo "------------------------------------------------"
 
 # Step 6: Clean up root's Bash history
@@ -103,19 +98,33 @@ if [ -f "$HOME/.bash_history" ]; then
 fi
 export HISTSIZE=0
 echo "   - History disabled for this session."
+
 echo "------------------------------------------------"
 
 # Step 7: Clean up audiolinux user's Bash history
-# (This is handled by the curl command, but we clean it one last time)
 echo "🧹 Cleaning up audiolinux user's Bash history..."
 USER_HISTORY="/home/$TARGET_USER/.bash_history"
 if [ -f "$USER_HISTORY" ]; then
     cat /dev/null > "$USER_HISTORY"
     echo "   - Cleared history file for user '$TARGET_USER'."
 fi
+
 echo "------------------------------------------------"
 
-# Step 8: Clean up audiolinux user's wget logs
+# Step 8: Reclaim Disk Space
+echo "🧹 Reclaiming disk space..."
+if [ -d "/home/$TARGET_USER/.pyenv" ]; then
+    echo "   - Removing Python build artifacts..."
+    rm -rf /home/$TARGET_USER/.pyenv/sources/* 2>/dev/null
+    sudo -u $TARGET_USER /home/$TARGET_USER/.pyenv/shims/pip cache purge &>/dev/null
+fi
+
+echo "   - Clearing Pacman cache and metadata..."
+pacman -Scc --noconfirm &>/dev/null
+
+echo "------------------------------------------------"
+
+# Step 9: Clean up audiolinux user's wget logs
 echo "🧹 Cleaning up audiolinux user's wget logs..."
 WGET_LOGS="/home/$TARGET_USER/wget-log*"
 if ls $WGET_LOGS &> /dev/null; then
@@ -124,9 +133,10 @@ if ls $WGET_LOGS &> /dev/null; then
 else
     echo "   - No wget-log files found. Skipping."
 fi
+
 echo "------------------------------------------------"
 
-# Step 9: Sync disks and power off the system
+# Step 10: Sync disks and power off the system
 echo "✅ Preparation complete. System will power off in 5 seconds."
 sleep 5
 sync
