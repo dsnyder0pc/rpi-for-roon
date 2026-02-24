@@ -908,7 +908,6 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 3.  Configure Compatible Compiler Toolchain
     ```bash
     curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_diretta_compiler.sh | sudo bash
-    source /etc/profile.d/llvm_diretta.sh
     ```
 4.  Run `menu`.
 5.  Select **AUDIO extra menu**.
@@ -966,7 +965,6 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 2.  Configure Compatible Compiler Toolchain
     ```bash
     curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/setup_diretta_compiler.sh | sudo bash
-    source /etc/profile.d/llvm_diretta.sh
     ```
 
 3.  Run `menu`.
