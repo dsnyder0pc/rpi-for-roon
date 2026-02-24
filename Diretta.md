@@ -2490,7 +2490,7 @@ Type=oneshot
 # Wait up to 5 seconds for the interface to actually show as UP
 ExecStartPre=/usr/bin/bash -c 'for i in {1..5}; do if ip link show end0 | grep -q "UP"; then exit 0; fi; sleep 1; done; exit 1'
 # Now set the hardware optimization
-ExecStart=/usr/bin/ethtool --set-eee end0 eee off
+ExecStart=-/usr/bin/ethtool --set-eee end0 eee off
 RemainAfterExit=yes
 
 [Install]
