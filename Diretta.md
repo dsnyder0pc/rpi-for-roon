@@ -2392,6 +2392,10 @@ By default, even when CPU cores are isolated, USB interrupts may still compete f
     ```bash
     curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/usb-isolation.sh | sudo bash
     ```
+4.  Reboot to pick up the changes:
+    ```bash
+    sudo sync && sudo reboot
+    ```
 
 **What this does:** The script locates the active DAC path (e.g., xhci-hcd:usb1 or xhci-hcd:usb3). It then adds the specific identifier to your AudioLinux isolation group to create a 100% isolated data path from network-in to USB-out.
 
@@ -2584,6 +2588,7 @@ Address=172.20.0.2/24
 Gateway=172.20.0.1
 DNS=1.1.1.1
 EOF
+  sudo systemctl daemon-reload
   sudo networkctl reload
 
   # 3. Apply Diretta Config
@@ -2640,6 +2645,7 @@ MTUBytes=$NEW_MTU
 [Network]
 Address=172.20.0.1/24
 EOF
+  sudo systemctl daemon-reload
   sudo networkctl reload
 
   # 3. Apply Diretta Config
