@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.23.1
-# (Adaptive Section 8a for versioned/default LLVM toolchains)
+# Diretta Target QA Check Script v1.23.4
+# (Exact awk PID parsing for isolated core checks)
 #
 
 # --- Colors and Formatting ---
@@ -33,6 +33,11 @@ header() { echo -e "\n${C_BOLD}${C_YELLOW}--- $1: $2 ---${C_RESET}"; }
 check_optional_section() {
     if eval "$1" &>/dev/null; then eval "$2"; else echo -e "\n${C_BOLD}${C_YELLOW}--- Skipping QA for $3 (Not Detected) ---\033[0m"; fi
 }
+check_hash() {
+    local file=$1
+    local url=$2
+    [ -f "$file" ] && [[ $(md5sum "$file" | awk '{print $1}') == $(curl -sL "$url" | md5sum | awk '{print $1}') ]]
+}
 
 # --- QA Check Functions for Optional Sections ---
 run_appendix1_checks() {
@@ -49,7 +54,7 @@ run_appendix1_checks() {
 }
 run_appendix3_checks() {
     header "Appendix 3" "Optional: Purist Mode"
-    check "'purist-mode' script is up-to-date" "[ -x /usr/local/bin/purist-mode ] && [[ \$(md5sum /usr/local/bin/purist-mode | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode | md5sum | awk '{print \$1}') ]]"
+    check "'purist-mode' script is up-to-date" "check_hash /usr/local/bin/purist-mode https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode"
     check "Login status message script exists" "[ -f /etc/profile.d/purist-status.sh ]"
     check "Purist revert-on-boot service is enabled" "systemctl is-enabled purist-mode-revert-on-boot.service"
     check "Menu wrapper alias is in .bashrc" "grep -q 'alias menu=.menu_wrapper' /home/audiolinux/.bashrc"
@@ -83,10 +88,10 @@ run_appendix6_checks() {
     if [[ -n "$DPID" ]]; then
         # Check if the process is on ANY allowed isolated core (2, 3, or both)
         # 3 (single core 3) is commonly returned by taskset -c even if 2 is allowed but unused
-        check "Diretta app is running on isolated cores (2-3)" "taskset -cp \"$DPID\" | grep -q -E '2,3|2-3|3|2'"
+        check "Diretta app is running on isolated cores (2-3)" "taskset -cp \"$DPID\" | awk -F': ' '{print \$2}' | grep -q -E '2,3|2-3|3|2'"
 
         # Diagnostic: If the check failed, print the actual affinity
-        if ! taskset -cp "$DPID" | grep -q -E '2,3|2-3|3|2' 2>/dev/null; then
+        if ! taskset -cp "$DPID" 2>/dev/null | awk -F': ' '{print $2}' | grep -q -E '2,3|2-3|3|2'; then
              ACTUAL=$(taskset -cp "$DPID" 2>/dev/null | awk -F': ' '{print $2}')
              echo -e "      ${C_YELLOW}-> Diagnostic: Actual affinity is: ${ACTUAL:-unknown}${C_RESET}"
         fi
@@ -212,15 +217,24 @@ header "Section 5" "Point-to-Point Network Configuration"
 check "P2P network file 'end0.network' exists" "[ -f /etc/systemd/network/end0.network ]"
 check "P2P network file contains correct IP" "grep -q 'Address=172.20.0.2/24' /etc/systemd/network/end0.network"
 check "P2P network file contains correct Gateway" "grep -q 'Gateway=172.20.0.1' /etc/systemd/network/end0.network"
-check "Old generic network files are removed" "! [ -f /etc/systemd/network/en.network ] && ! [ -f /etc/systemd/network/auto.network ] && ! [ -f /etc/systemd/network/eth.network ]"
+
+# Replaced mega-line with granular file deletion checks
+check "Generic network file 'en.network' is removed" "! [ -f /etc/systemd/network/en.network ]"
+check "Generic network file 'auto.network' is removed" "! [ -f /etc/systemd/network/auto.network ]"
+check "Generic network file 'eth.network' is removed" "! [ -f /etc/systemd/network/eth.network ]"
+
 check "/etc/hosts contains 'diretta-host' entry" "grep -q '172.20.0.1.*diretta-host' /etc/hosts"
 
 header "Section 7" "Common System Optimizations"
 check "'shadow' service is not in a failed state" "! systemctl is-failed --quiet shadow.service"
 check "sudoers rule order is correct" "awk '/^audiolinux ALL=\\(ALL\\) ALL$/ {u=NR} /^@includedir/ {i=NR} END {exit !(u && i && u < i)}' /etc/sudoers"
 check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
-check "MOTD service actively waits for a default route" "[ -f /etc/systemd/system/update_motd.service.d/wait-for-ip.conf ] && grep -q 'while.*ip route' /etc/systemd/system/update_motd.service.d/wait-for-ip.conf"
-check "Boot repair script is up-to-date" "[ -x /usr/local/sbin/check-and-repair-boot.sh ] && [[ \$(md5sum /usr/local/sbin/check-and-repair-boot.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh | md5sum | awk '{print \$1}') ]]"
+
+# Replaced mega-line to prevent MOTD check hanging
+check "MOTD wait-for-ip drop-in exists" "[ -f /etc/systemd/system/update_motd.service.d/wait-for-ip.conf ]"
+check "MOTD service actively waits for a default route" "grep -q 'while.*ip route' /etc/systemd/system/update_motd.service.d/wait-for-ip.conf"
+
+check "Boot repair script is up-to-date" "check_hash /usr/local/sbin/check-and-repair-boot.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh"
 check "'boot-repair' service file exists" "[ -f /etc/systemd/system/boot-repair.service ]"
 check "'boot-repair' service is enabled" "systemctl is-enabled boot-repair.service"
 

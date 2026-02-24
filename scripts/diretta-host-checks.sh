@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.23
-# (Adaptive Section 8a for versioned/default LLVM toolchains)
+# Diretta Host QA Check Script v1.23.4
+# (Hardware gating for IR remote + exact awk PID parsing)
 #
 
 # --- Colors and Formatting ---
@@ -24,6 +24,11 @@ check() {
 header() { echo -e "\n${C_BOLD}${C_YELLOW}--- $1: $2 ---${C_RESET}"; }
 check_optional_section() {
     if eval "$1" &>/dev/null; then eval "$2"; else echo -e "\n${C_BOLD}${C_YELLOW}--- Skipping QA for $3 (Not Detected) ---\033[0m"; fi
+}
+check_hash() {
+    local file=$1
+    local url=$2
+    [ -f "$file" ] && [[ $(md5sum "$file" | awk '{print $1}') == $(curl -sL "$url" | md5sum | awk '{print $1}') ]]
 }
 
 # --- State for Optional Checks ---
@@ -58,8 +63,15 @@ run_appendix2_checks() {
     check "'roon-ir-remote' directory exists" "[ -d /home/audiolinux/roon-ir-remote ]"
     check "Roon IR config 'app_info.json' exists" "[ -f /home/audiolinux/roon-ir-remote/app_info.json ]"
     check "'roon-ir-remote' service is enabled" "systemctl is-enabled roon-ir-remote.service"
-    check "'roon-ir-remote' service is active" "systemctl is-active roon-ir-remote.service"
-    check "'set-roon-zone' script is up-to-date" "[ -x /usr/local/bin/set-roon-zone ] && [[ \$(md5sum /usr/local/bin/set-roon-zone | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone | md5sum | awk '{print \$1}') ]]"
+
+    # Hardware detection gate for active service check
+    if grep -iqE "flirc|gpio_ir_recv" /proc/bus/input/devices 2>/dev/null; then
+        check "'roon-ir-remote' service is active" "systemctl is-active roon-ir-remote.service"
+    else
+        echo -e "  ${C_YELLOW}* Skipping active check: Flirc or Argon IR receiver not detected.${C_RESET}"
+    fi
+
+    check "'set-roon-zone' script is up-to-date" "check_hash /usr/local/bin/set-roon-zone https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone"
 
     # Only check for Argon IR specifics if the dtoverlay is active in /boot/config.txt
     if grep -q '^dtoverlay=gpio-ir,gpio_pin=23' /boot/config.txt; then
@@ -75,7 +87,7 @@ run_appendix4_checks() {
     check "'avahi-daemon' service is enabled" "systemctl is-enabled avahi-daemon.service"
     check "Avahi is configured for USB LAN" "[ -f /etc/avahi/avahi-daemon.conf.d/interface-scoping.conf ]"
     check "Web UI SSH key exists" "[ -f /home/audiolinux/.ssh/purist_app_key ]"
-    check "Web UI app file is up-to-date" "[ -f /home/audiolinux/purist-mode-webui/app.py ] && [[ \$(md5sum /home/audiolinux/purist-mode-webui/app.py | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py | md5sum | awk '{print \$1}') ]]"
+    check "Web UI app file is up-to-date" "check_hash /home/audiolinux/purist-mode-webui/app.py https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py"
     check "Python has port binding capability" "getcap \$(readlink -f /home/audiolinux/.pyenv/versions/purist-webui/bin/python) | grep -q 'cap_net_bind_service.ep'"
     check "Web UI sudoers file exists" "[ -f /etc/sudoers.d/webui-restarts ]"
     check "'purist-webui' service is enabled" "systemctl is-enabled purist-webui.service"
@@ -94,8 +106,8 @@ run_appendix6_checks() {
     DPID=$(systemctl show --property MainPID --value diretta_alsa.service 2>/dev/null)
     if [[ -n "$DPID" && "$DPID" -ne 0 ]]; then
         # PASS if affinity includes 2 OR 3 (or both)
-        check "Diretta service (PID $DPID) is on isolated cores (2, 3, or 2-3)" "taskset -cp $DPID | grep -q -E '2,3|2-3|3|2'"
-        if ! taskset -cp "$DPID" | grep -q -E '2,3|2-3|3|2' 2>/dev/null; then
+        check "Diretta service (PID $DPID) is on isolated cores (2, 3, or 2-3)" "taskset -cp $DPID | awk -F': ' '{print \$2}' | grep -q -E '2,3|2-3|3|2'"
+        if ! taskset -cp "$DPID" 2>/dev/null | awk -F': ' '{print $2}' | grep -q -E '2,3|2-3|3|2'; then
              ACTUAL=$(taskset -cp "$DPID" 2>/dev/null | awk -F': ' '{print $2}')
              echo -e "      ${C_YELLOW}-> Diagnostic: Actual affinity is: ${ACTUAL:-unknown}${C_RESET}"
         fi
@@ -110,7 +122,7 @@ run_appendix6_checks() {
         # PASS if affinity DOES NOT contain 2 or 3.
         check "RoonBridge (PID $RPID) is NOT on isolated cores (2 or 3)" "taskset -cp $RPID | awk -F': ' '\$2 ~ /[23]/ {exit 1}'"
         # Diagnostic
-        if taskset -cp "$RPID" | grep -q '[23]' 2>/dev/null; then
+        if taskset -cp "$RPID" 2>/dev/null | awk -F': ' '{print $2}' | grep -q '[23]'; then
              ACTUAL=$(taskset -cp "$RPID" 2>/dev/null | awk -F': ' '{print $2}')
              echo -e "      ${C_YELLOW}-> Diagnostic: Actual affinity is: ${ACTUAL:-unknown}${C_RESET}"
         fi
@@ -201,7 +213,13 @@ check "P2P network file contains correct IP" "grep -q 'Address=172.20.0.1/24' /e
 check "USB LAN network file 'usb-uplink.network' exists" "[ -f /etc/systemd/network/usb-uplink.network ]"
 check "USB LAN network file is set for DHCP" "grep -q 'DHCP=yes' /etc/systemd/network/usb-uplink.network"
 check "No Jumbo Frames on Uplink" "[[ -z \$(ip link show | awk -F'[: ]+' '\$1 ~ /^[0-9]+/ && \$2 !~ /^lo|^end|^wl/ && \$5 > 1500 {print \$5}') ]]"
-check "Old generic network files are removed" "! [ -f /etc/systemd/network/enp.network ] && ! [ -f /etc/systemd/network/en.network ] && ! [ -f /etc/systemd/network/auto.network ] && ! [ -f /etc/systemd/network/eth.network ]"
+
+# Replaced mega-line with granular file deletion checks
+check "Generic network file 'enp.network' is removed" "! [ -f /etc/systemd/network/enp.network ]"
+check "Generic network file 'en.network' is removed" "! [ -f /etc/systemd/network/en.network ]"
+check "Generic network file 'auto.network' is removed" "! [ -f /etc/systemd/network/auto.network ]"
+check "Generic network file 'eth.network' is removed" "! [ -f /etc/systemd/network/eth.network ]"
+
 check "/etc/hosts contains 'diretta-target' entry" "grep -q '172.20.0.2.*diretta-target' /etc/hosts"
 check "IP forwarding is enabled in sysctl.d" "grep -q 'net.ipv4.ip_forward=1' /etc/sysctl.d/99-ip-forwarding.conf"
 check "IP forwarding is active in kernel" "[[ \$(cat /proc/sys/net/ipv4/ip_forward) -eq 1 ]]"
@@ -211,11 +229,16 @@ check "'nftables' service has not failed" "! systemctl is-failed --quiet nftable
 check "nftables config file '/etc/nftables.conf' exists" "[ -f /etc/nftables.conf ]"
 check "nftables config contains DNAT rule (5101 -> 5001)" "grep -q 'tcp dport 5101 dnat to 172.20.0.2:5001' /etc/nftables.conf"
 check "nftables config contains FORWARD rule (-> 5001)" "grep -q 'ip daddr 172.20.0.2 tcp dport 5001 ct state new accept' /etc/nftables.conf"
-check "nftables config contains MASQUERADE rules" "grep -q 'oifname \"enp\*\" masquerade' /etc/nftables.conf && grep -q 'oifname \"enu\*\" masquerade' /etc/nftables.conf && grep -q 'oifname \"wlp\*\" masquerade' /etc/nftables.conf"
+
+# Replaced mega-line with granular MASQUERADE checks
+check "nftables MASQUERADE rule exists (enp*)" "grep -q 'oifname \"enp\*\" masquerade' /etc/nftables.conf"
+check "nftables MASQUERADE rule exists (enu*)" "grep -q 'oifname \"enu\*\" masquerade' /etc/nftables.conf"
+check "nftables MASQUERADE rule exists (wlp*)" "grep -q 'oifname \"wlp\*\" masquerade' /etc/nftables.conf"
+
 check "Old 'iptables' service is disabled" "! systemctl is-enabled iptables.service 2>/dev/null"
 check "Old 'iptables' rule file is removed" "! [ -f /etc/iptables/iptables.rules ] 2>/dev/null"
 check "USB Ethernet udev rule exists" "[ -f /etc/udev/rules.d/99-ax88179a.rules ]"
-check "MOTD update script is up-to-date" "[ -f /opt/scripts/update/update_motd.sh ] && [[ \$(md5sum /opt/scripts/update/update_motd.sh | awk '{print \$1}') == \$(curl -sL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh | md5sum | awk '{print \$1}') ]]"
+check "MOTD update script is up-to-date" "check_hash /opt/scripts/update/update_motd.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh"
 
 header "Section 8" "Diretta Software & System Logging"
 check "Journald is set to volatile storage" "grep -q '^Storage=volatile' /etc/systemd/journald.conf"
