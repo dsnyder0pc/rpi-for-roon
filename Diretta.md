@@ -9,7 +9,7 @@ The **Diretta Host** will connect to your main network (to access your music ser
 I aim to keep this guide compatible with the current official AudioLinux download link provided by Piero.
 
 **Current Validation:**
-These instructions were last tested with **AudioLinux V5** (Image: `audiolinux_pi4-pi5_501`, Menu Version: `510`).
+These instructions were last tested with **AudioLinux V5** (Image: `audiolinux_pi4-pi5_501`, Menu Version: `513`).
 
 **A Note on Updates:**
 Because AudioLinux is based on Arch (a rolling release), a fresh install will always pull the absolute latest software. Once your system is singing, you have two choices:
@@ -46,7 +46,7 @@ This guide presents a more elegant and dramatically more effective solution. Ins
 This project evolves Roon's recommended two-box setup into an ultimate, three-tier system that provides multiple, compounding layers of isolation.
 
 1.  **Tier 1: Roon Core**: Your powerful Roon server runs on a dedicated machine, placed far away from your listening room. It does all the heavy lifting, and its electrical noise is kept isolated from your audio system.
-2.  **Tier 2: Diretta Host**: The first Raspberry Pi in our build acts as the **Diretta Host**. It connects to your main network, receives the audio stream from the Roon Core, and then prepares to forward it using a specialized protocol.
+2.  **Tier 2: Diretta Host**: The first Raspberry Pi in our build acts as the **Diretta Host**. It connects to your main network, receives the audio stream from the Roon Core, and then transmits it in tiny, precisely timed segments, eliminating the bursty nature of the original stream.
 3.  **Tier 3: Diretta Target**: The second Raspberry Pi, the **Diretta Target**, connects *only* to the Host Pi via a short Ethernet cable, creating a point-to-point, galvanically isolated link. It receives the audio from the Host and connects to your DAC or DDC via USB.
 
 ### What Diretta and AudioLinux Bring to the Table
@@ -68,7 +68,7 @@ Now, let's get started.
 
 ---
 
-If you are located in the US, expect to pay around $310 (plus tax and shipping) to complete the basic build, limited to 44.1 kHz playback (for evaluation), plus another €100 to enable hi-res playback (prices subject to change):
+If you are located in the US, expect to pay around $310 (plus tax and shipping) to complete the basic build, limited to 44.1/48 kHz playback (for evaluation), plus another €100 to enable hi-res playback (prices subject to change):
 - Hardware ($230)
 - One year AudioLinux subscription ($79)
 - Diretta Target license (€100)
@@ -155,23 +155,22 @@ A complete bill of materials is provided below. While other parts can be substit
 **Required Build Tools:**
 * Laptop or desktop PC running Linux, macOS (iTerm2, https://iterm2.com/, recommended), or Microsoft Windows with [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install)
 * An SD or microSD card reader
-* An HDMI TV or display (optional, but useful for troubleshooting)
+* An HDMI TV or display and USB keyboard (optional, but useful for troubleshooting)
 
 #### Software & Licensing Costs
 
 * **AudioLinux:** An "Unlimited" license is recommended for enthusiasts, is currently **$158** (prices subject to change). However, it's fine to get started with a one year subscription, currently **$79**. Both options allow for installation on multiple devices within the same location.
-* **Diretta Target:** A license is required for high-res playback (greater than 44.1 kHz PCM) via the Diretta Target device and currently costs **€100**.
-    * You may evaluate the Diretta Target using 44.1 kHz streams for an extended period of time. Therefore, I recommend using Roon's **Sample rate conversion** feature under **MUSE** DSP settings to convert all content to 44.1 kHz during your evaluation period. Once you are satisfied, purchase the Diretta Target license to remove the restriction. Leave sample rate conversion settings engaged until you receive the second email from the Diretta team indicating that your hardware has been activated.
-    * **CRITICAL:** This license is locked to the specific hardware of the Raspberry Pi it is purchased for. It is essential that you perform the final licensing step on the exact hardware you intend to use permanently.
+* **Diretta Target:** A license is required for high-res playback (greater than 48 kHz PCM) via the Diretta Target device and currently costs **€100**.
+    * You may evaluate the Diretta Target using 44.1/48 kHz streams for an extended period of time. Therefore, I recommend using Roon's **Sample rate conversion** feature under **MUSE** DSP settings to convert all content to 44.1 kHz during your evaluation period. Once you are satisfied, purchase the Diretta Target license to remove the restriction. Leave sample rate conversion settings engaged until you receive the second email from the Diretta team indicating that your hardware has been activated in their database.
+    * **CRITICAL:** This license is *locked* to the specific hardware of the Raspberry Pi it is purchased for. It is essential that you perform the final licensing step on the exact hardware you intend to use permanently.
     * Diretta may offer a one-time replacement license for hardware failure within the first two years (please verify terms at time of purchase). If you change the hardware for any other reason, a new license must be purchased.
 
 ---
 
 ### 2. Initial Image Preparation
 
-1.  **Purchase and Download:** Obtain the AudioLinux image from the [official website](https://www.audio-linux.com/). You will receive a link to download the `.img.gz` file via email typically within 24 hours of purchase.
+1.  **Purchase and Download:** Obtain the AudioLinux image from the [official website](https://www.audio-linux.com/). You will receive a link to download a `.img.gz` or `.img.xz` file via email typically within 24 hours of purchase.
 2.  **Flash the Image:** Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/)) to write the downloaded AudioLinux image to **both** microSD cards.
-    > **Note:** The AudioLinux image is a direct disk dump, not a compressed installer. As a result, the image file is quite large, and the flashing process can be unusually long. Expect it to take up to 15 minutes per card, depending on the speed of your microSD card and reader.
 
 ---
 
@@ -334,11 +333,11 @@ Use the AudioLinux menu system to perform all updates. Have your email from Pier
 5.  Exit the menu system to get back to the terminal.
 
 ---
-#### **4.4.1 Critical: Select the LTS Kernel (Downgrade Required)**
+#### **4.4.1 Critical: Select the 6.12.x Kernel (Downgrade Required)**
 
 > **⚠️ WARNING: Do Not Use the Default Kernel (6.18+)**
 > The latest AudioLinux images may ship with Kernel `6.18.x` (confirm what you have by running `uname -r`). This version contains a known regression in the Raspberry Pi 5 Ethernet driver (`macb`) that causes the connection to permanently drop if the Host reboots.
-> **You MUST switch to the LTS (Long Term Support) kernel to ensure stability.**
+> **You MUST switch to the 6.12.x kernel to ensure network stability.**
 
 1. Run `menu` in the terminal.
 2. Select **Update/Install**.
@@ -354,10 +353,6 @@ Audiolinux last RT LTO 16k (only Pi 5)   6.18.7-1
 
 5. Select option **1** (`Audiolinux LTS RT LTO`).
    *Verify the version is `6.12.59-1`.*
-
-6. **Reboot immediately** after the kernel installation completes:
-```bash
-sudo sync && sudo reboot
 ```
 
 ---
@@ -928,7 +923,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ?
     ```
 7.  You should perform these actions in sequence:
-    * Choose **1) Install/update** to install the software.
+    * Choose **1) Install/update** to install the software (say "Y" to all prompts.)
     * Choose **2) Enable/Disable Diretta Target** and enable it.
     * Choose **3) Configure Audio card**. The system will list your available audio devices. Enter the card number corresponding to your USB DAC.
         ```text
@@ -988,7 +983,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ```
 
 6.  You should perform these actions in sequence:
-    * Choose **1) Install/update** to install the software. *(Note: you may see `error: package 'lld' was not found. Don't worry, that will be corrected automatically by the installation)*
+    * Choose **1) Install/update** to install the software. (say "Y" to all prompts.) *(Note: you may see `error: package 'lld' was not found. Don't worry, that will be corrected automatically by the installation)*
     * Choose **2) Enable/Disable Diretta daemon** and enable it.
     * Choose **3) Set Ethernet interface**. It is critical to select `end0`, the interface for the point-to-point link.
         ```text
@@ -1068,7 +1063,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 5.  **Configure Roon:**
     * Open Roon on your control device.
     * Go to `Settings` -> `Audio`.
-    * Under the "Diretta" section, you should see your device. The name will be based on your DAC.
+    * Under `diretta-host`, you should see your device. The name will be based on your DAC.
     * Click `Enable`, give it a name, and you are ready to play music!
 
 Your dedicated Diretta link is now fully configured for pristine, isolated audio playback.
