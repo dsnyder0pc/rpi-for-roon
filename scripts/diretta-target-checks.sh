@@ -270,7 +270,7 @@ check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Append
 check_optional_section "[ -f /usr/local/bin/purist-mode ]" "run_appendix3_checks" "Appendix 3 (Purist Mode)"
 check_optional_section "id purist-app" "run_appendix4_checks" "Appendix 4 (Web UI Backend)"
 check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf 2>/dev/null" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
-check_optional_section "grep -q 'IRQ1=' /opt/configuration/isolated.conf 2>/dev/null" "run_appendix7_checks" "Appendix 7 (USB Isolation)"
+check_optional_section "grep -q 'DEVICES1=.*xhci-hcd' /opt/configuration/isolated.conf" "run_appendix7_checks" "Appendix 7 (USB Isolation)"
 check_optional_section "[ -f /etc/diretta-100m ]" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 check_optional_section "grep -q '^ExtEtherMTU=' /opt/diretta-alsa-target/diretta_app_target_setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
 

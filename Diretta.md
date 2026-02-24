@@ -2290,7 +2290,7 @@ This step dedicates one CPU core exclusively to the Diretta Target application.
     ?end0
     ```
 
-6.  After the process completes, press **ENTER** to exit back to the System menu. **Do not reboot yet.**
+6.  After the process completes, exit back to the terminal.
 
 > **A Note on Automatic IRQ Affinity:** You may notice the script reports that it has also isolated the `end0` network IRQs to the same core. This is not a bug, but an intelligent optimization. The script automatically pins the network interrupts to the same core as the application using the network, creating the most efficient data path possible.
 
@@ -2300,13 +2300,18 @@ sudo systemctl stop rtapp.timer
 sudo systemctl disable rtapp.timer
 ```
 
+#### **Step 6.3: Reboot to pick up the changes.**
+```bash
+sudo sync && sudo reboot
+```
+
 ---
 
 ### **Part 2: Optimizing the Diretta Host**
 
 The goal for the Host is to give Roon Bridge and the Diretta service dedicated processing resources, but without using high realtime priorities. CPU isolation is a more powerful tool here, as it prevents the processes from being interrupted in the first place.
 
-#### **Step 6.3: Isolate CPU Cores for Audio Applications**
+#### **Step 6.4: Isolate CPU Cores for Audio Applications**
 
 This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Host service.
 
@@ -2359,14 +2364,19 @@ This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Hos
     ?end0
     ```
 
-6.  After the process completes, press **ENTER** to exit back to the System menu. **Do not reboot yet.**
+6.  After the process completes, exit back to the terminal.
 
 ---
 
-#### **Step 6.4: Disable the legacy `rtapp` timer**
+#### **Step 6.5: Disable the legacy `rtapp` timer**
 ```bash
 sudo systemctl stop rtapp.timer
 sudo systemctl disable rtapp.timer
+```
+
+#### **Step 6.6: Reboot to pick up the changes.**
+```bash
+sudo sync && sudo reboot
 ```
 
 ## 16. Appendix 7: Optional IRQ and Thread Optimizations
