@@ -102,10 +102,8 @@ run_appendix6_checks() {
     check "'rtapp.timer' service is disabled" "! systemctl is-enabled rtapp.timer"
 
     # Check Diretta Isolation
-    # Use systemctl to get the MainPID reliably
     DPID=$(systemctl show --property MainPID --value diretta_alsa.service 2>/dev/null)
     if [[ -n "$DPID" && "$DPID" -ne 0 ]]; then
-        # PASS if affinity includes 2 OR 3 (or both)
         check "Diretta service (PID $DPID) is on isolated cores (2, 3, or 2-3)" "taskset -cp $DPID | awk -F': ' '{print \$2}' | grep -q -E '2,3|2-3|3|2'"
         if ! taskset -cp "$DPID" 2>/dev/null | awk -F': ' '{print $2}' | grep -q -E '2,3|2-3|3|2'; then
              ACTUAL=$(taskset -cp "$DPID" 2>/dev/null | awk -F': ' '{print $2}')
@@ -116,12 +114,9 @@ run_appendix6_checks() {
     fi
 
     # Check RoonBridge Isolation
-    # Use systemctl to get the MainPID reliably
     RPID=$(systemctl show --property MainPID --value roonbridge.service 2>/dev/null)
     if [[ -n "$RPID" && "$RPID" -ne 0 ]]; then
-        # PASS if affinity DOES NOT contain 2 or 3.
         check "RoonBridge (PID $RPID) is NOT on isolated cores (2 or 3)" "taskset -cp $RPID | awk -F': ' '\$2 ~ /[23]/ {exit 1}'"
-        # Diagnostic
         if taskset -cp "$RPID" 2>/dev/null | awk -F': ' '{print $2}' | grep -q '[23]'; then
              ACTUAL=$(taskset -cp "$RPID" 2>/dev/null | awk -F': ' '{print $2}')
              echo -e "      ${C_YELLOW}-> Diagnostic: Actual affinity is: ${ACTUAL:-unknown}${C_RESET}"
@@ -214,7 +209,6 @@ check "USB LAN network file 'usb-uplink.network' exists" "[ -f /etc/systemd/netw
 check "USB LAN network file is set for DHCP" "grep -q 'DHCP=yes' /etc/systemd/network/usb-uplink.network"
 check "No Jumbo Frames on Uplink" "[[ -z \$(ip link show | awk -F'[: ]+' '\$1 ~ /^[0-9]+/ && \$2 !~ /^lo|^end|^wl/ && \$5 > 1500 {print \$5}') ]]"
 
-# Replaced mega-line with granular file deletion checks
 check "Generic network file 'enp.network' is removed" "! [ -f /etc/systemd/network/enp.network ]"
 check "Generic network file 'en.network' is removed" "! [ -f /etc/systemd/network/en.network ]"
 check "Generic network file 'auto.network' is removed" "! [ -f /etc/systemd/network/auto.network ]"
@@ -230,7 +224,6 @@ check "nftables config file '/etc/nftables.conf' exists" "[ -f /etc/nftables.con
 check "nftables config contains DNAT rule (5101 -> 5001)" "grep -q 'tcp dport 5101 dnat to 172.20.0.2:5001' /etc/nftables.conf"
 check "nftables config contains FORWARD rule (-> 5001)" "grep -q 'ip daddr 172.20.0.2 tcp dport 5001 ct state new accept' /etc/nftables.conf"
 
-# Replaced mega-line with granular MASQUERADE checks
 check "nftables MASQUERADE rule exists (enp*)" "grep -q 'oifname \"enp\*\" masquerade' /etc/nftables.conf"
 check "nftables MASQUERADE rule exists (enu*)" "grep -q 'oifname \"enu\*\" masquerade' /etc/nftables.conf"
 check "nftables MASQUERADE rule exists (wlp*)" "grep -q 'oifname \"wlp\*\" masquerade' /etc/nftables.conf"
@@ -238,6 +231,13 @@ check "nftables MASQUERADE rule exists (wlp*)" "grep -q 'oifname \"wlp\*\" masqu
 check "Old 'iptables' service is disabled" "! systemctl is-enabled iptables.service 2>/dev/null"
 check "Old 'iptables' rule file is removed" "! [ -f /etc/iptables/iptables.rules ] 2>/dev/null"
 check "USB Ethernet udev rule exists" "[ -f /etc/udev/rules.d/99-ax88179a.rules ]"
+
+header "Section 7" "Common System Optimizations"
+check "'shadow' service is not in a failed state" "! systemctl is-failed --quiet shadow.service"
+check "sudoers rule order is correct" "awk '/^audiolinux ALL=\\(ALL\\) ALL$/ {u=NR} /^@includedir/ {i=NR} END {exit !(u && i && u < i)}' /etc/sudoers"
+check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
+check "MOTD wait-for-ip drop-in exists" "[ -f /etc/systemd/system/update_motd.service.d/wait-for-ip.conf ]"
+check "MOTD service actively waits for a default route" "grep -q 'while.*ip route' /etc/systemd/system/update_motd.service.d/wait-for-ip.conf"
 check "MOTD update script is up-to-date" "check_hash /opt/scripts/update/update_motd.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh"
 
 header "Section 8" "Diretta Software & System Logging"
@@ -250,7 +250,6 @@ check "Diretta is configured for 'end0' interface" "grep -q 'Interface=end0' /op
 check "Diretta service is set to auto-restart" "[ -f /etc/systemd/system/diretta_alsa.service.d/restart.conf ] && grep -q 'Restart=on-failure' /etc/systemd/system/diretta_alsa.service.d/restart.conf"
 
 header "Section 8a" "Diretta Compiler Toolchain"
-# --- Version-Aware Compiler Checks ---
 K_VER=$(grep -oP 'clang version \K[0-9]+' /proc/version)
 LATEST_LLVM=$(pacman -Ss '^llvm[0-9]+$' | grep -oP '^extra/llvm\K[0-9]+' | sort -nr | head -n 1)
 
@@ -278,8 +277,6 @@ check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Append
 check_optional_section "[ -d /home/audiolinux/roon-ir-remote ]" "run_appendix2_checks" "Appendix 2 (IR Remote)"
 check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix4_checks" "Appendix 4 (Web UI)"
 check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf 2>/dev/null" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
-
-# New trigger for Appendix 7 checks for the tuning parameters
 check_optional_section "grep -q '^CpuSend=[0-9]' /opt/diretta-alsa/setting.inf 2>/dev/null" "run_appendix7_checks" "Appendix 7 (Diretta Tuning)"
 check_optional_section "systemctl is-enabled limit-speed-100m.service" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 check_optional_section "grep -q '^FlexCycle=enable' /opt/diretta-alsa/setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
