@@ -1461,6 +1461,17 @@ echo "IMPORTANT: This must match the zone name in the Roon app exactly (case-sen
 # This line is the fix: < /dev/tty tells read to use the terminal
 read -rp "Enter your Roon Zone name: " MY_ROON_ZONE < /dev/tty
 
+# Detect if Flirc/Keyboard mapping is needed
+if [ -f "/etc/systemd/system/ir-keymap.service" ]; then
+    VOL_UP_CODE="KEY_VOLUMEUP"
+    VOL_DOWN_CODE="KEY_VOLUMEDOWN"
+    echo "--- Standard IR receiver detected. Using KEY_VOLUMEUP/DOWN. ---"
+else
+    VOL_UP_CODE="KEY_UP"
+    VOL_DOWN_CODE="KEY_DOWN"
+    echo "--- Flirc/HID adapter detected. Using KEY_UP/DOWN for volume. ---"
+fi
+
 # Ensure the target directory exists
 mkdir -p roon-ir-remote
 
@@ -1486,8 +1497,8 @@ cat <<EOD > roon-ir-remote/app_info.json
         "stop": "KEY_ESC",
         "skip": "KEY_RIGHT",
         "prev": "KEY_LEFT",
-        "vol_up": "KEY_VOLUMEUP",
-        "vol_down": "KEY_VOLUMEDOWN",
+        "vol_up": "${VOL_UP_CODE}",
+        "vol_down": "${VOL_DOWN_CODE}",
         "mute": "KEY_MUTE"
       }
     }
