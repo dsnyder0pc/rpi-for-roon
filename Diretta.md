@@ -1402,14 +1402,24 @@ fi
 
 # Install and set the latest Python version only if it's not already installed
 PYVER=$(pyenv install --list | grep -E '^\s{2}3\.[0-9]+\.[0-9]+$' | tail -n 1 | tr -d ' ')
+
 if ! pyenv versions --bare | grep -q "^${PYVER}$"; then
-  echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
-  pyenv install $PYVER
+    # Get total memory in MB
+    TOTAL_MEM=$(awk '/^MemTotal:/ {print int($2/1024)}' /proc/meminfo)
+
+    if [ "$TOTAL_MEM" -lt 1900 ]; then
+        echo "--- Physical RAM is ${TOTAL_MEM}MB. Limiting to 1 core to prevent lockup. ---"
+        export MAKEFLAGS="-j1"
+    else
+        echo "--- Physical RAM is ${TOTAL_MEM}MB. Proceeding with parallel build. ---"
+    fi
+
+    echo "--- Installing Python ${PYVER}... ---"
+    pyenv install $PYVER
 else
-  echo "--- Python ${PYVER} is already installed. Skipping installation. ---"
+    echo "--- Python ${PYVER} is already installed. ---"
 fi
 
-# Set the global Python version
 pyenv global $PYVER
 ```
 
