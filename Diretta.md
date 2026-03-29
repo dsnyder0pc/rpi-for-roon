@@ -344,16 +344,15 @@ Use the AudioLinux menu system to perform all updates. Have your email from Pier
 3. Select **Kernel update**.
 4. You will see a menu similar to this:
 ```text
-Your kernel                              6.18.7-1-rpi RT LTO
-Audiolinux LTS RT LTO                    6.12.59-1
-Audiolinux last RT LTO                   6.18.7-1
-Audiolinux LTS RT LTO 16k (only Pi 5)    6.12.59-1
-Audiolinux last RT LTO 16k (only Pi 5)   6.18.7-1
+Your kernel                                6.12.59-1-rpi LTS RT LTO
+Audiolinux LTS RT LTO                      6.12.77-1
+Audiolinux last RT LTO                     6.18.20-1
+Audiolinux LTS RT LTO 16k (only Pi 5)      6.12.77-1
+Audiolinux last RT LTO 16k (only Pi 5)     6.18.19-1
 ```
 
-5. Select option **1** (`Audiolinux LTS RT LTO`).
-   *Verify the version is `6.12.59-1`.*
-```
+#### 4.5. Select option **1** (`Audiolinux LTS RT LTO`).
+   *Verify the version is `6.12.77-1`.*
 
 ---
 > Note: Workaround for Pacman Update Issue
@@ -366,7 +365,7 @@ Audiolinux last RT LTO 16k (only Pi 5)   6.18.7-1
 > ```
 ---
 
-#### 4.5. Reboot
+#### 4.6. Reboot
 Reboot to load the kernel and other updates:
 ```bash
 sudo sync && sudo reboot
