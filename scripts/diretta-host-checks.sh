@@ -231,17 +231,32 @@ check "nftables MASQUERADE rule exists (wlp*)" "grep -q 'oifname \"wlp\*\" masqu
 check "Old 'iptables' service is disabled" "! systemctl is-enabled iptables.service 2>/dev/null"
 check "Old 'iptables' rule file is removed" "! [ -f /etc/iptables/iptables.rules ] 2>/dev/null"
 check "USB Ethernet udev rule exists" "[ -f /etc/udev/rules.d/99-ax88179a.rules ]"
+check "MOTD update script is up-to-date" "check_hash /opt/scripts/update/update_motd.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh"
 
 header "Section 7" "Common System Optimizations"
+
+# 7.1. Fix Systemd "Degraded" State
 check "'shadow' service is not in a failed state" "! systemctl is-failed --quiet shadow.service"
+
+# 7.2. Correct sudoers Rule Precedence
 check "sudoers rule order is correct" "awk '/^audiolinux ALL=\\(ALL\\) ALL$/ {u=NR} /^@includedir/ {i=NR} END {exit !(u && i && u < i)}' /etc/sudoers"
+
+# 7.3. Optimize Boot Time
 check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
 check "MOTD wait-for-ip drop-in exists" "[ -f /etc/systemd/system/update_motd.service.d/wait-for-ip.conf ]"
 check "MOTD service actively waits for a default route" "grep -q 'while.*ip route' /etc/systemd/system/update_motd.service.d/wait-for-ip.conf"
-check "MOTD update script is up-to-date" "check_hash /opt/scripts/update/update_motd.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh"
+
+# 7.4. Create the Repair Script
+check "Boot repair script is up-to-date" "check_hash /usr/local/sbin/check-and-repair-boot.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh"
+
+# 7.5. Create the systemd Service File
+check "'boot-repair' service file exists" "[ -f /etc/systemd/system/boot-repair.service ]"
+check "'boot-repair' service is enabled" "systemctl is-enabled boot-repair.service"
+
+# 7.6. Minimize Disk I/O
+check "Journald is set to volatile storage" "grep -q '^Storage=volatile' /etc/systemd/journald.conf"
 
 header "Section 8" "Diretta Software & System Logging"
-check "Journald is set to volatile storage" "grep -q '^Storage=volatile' /etc/systemd/journald.conf"
 check "'diretta-alsa-daemon' package is installed" "pacman -Q diretta-alsa-daemon"
 check "'diretta-alsa-dkms' package is installed" "pacman -Q diretta-alsa-dkms"
 check "'diretta_alsa' service is enabled" "systemctl is-enabled diretta_alsa.service"

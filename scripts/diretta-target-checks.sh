@@ -210,6 +210,7 @@ check "/etc/machine-id is not empty" "[ -s /etc/machine-id ]"
 header "Section 4" "System Updates & Time"
 check "'chrony' package is installed" "pacman -Q chrony"
 check "'chronyd' service is enabled" "systemctl is-enabled chronyd.service"
+check "'chronyd' service is active" "systemctl is-active chronyd.service"
 check "Timezone is configured" "[ -e /etc/localtime ] && [[ \$(readlink /etc/localtime) == ../usr/share/zoneinfo/* ]]"
 check "'dnsutils' package is installed (for menu updates)" "pacman -Q dnsutils"
 
@@ -226,20 +227,29 @@ check "Generic network file 'eth.network' is removed" "! [ -f /etc/systemd/netwo
 check "/etc/hosts contains 'diretta-host' entry" "grep -q '172.20.0.1.*diretta-host' /etc/hosts"
 
 header "Section 7" "Common System Optimizations"
-check "'shadow' service is not in a failed state" "! systemctl is-failed --quiet shadow.service"
-check "sudoers rule order is correct" "awk '/^audiolinux ALL=\\(ALL\\) ALL$/ {u=NR} /^@includedir/ {i=NR} END {exit !(u && i && u < i)}' /etc/sudoers"
-check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
 
-# Replaced mega-line to prevent MOTD check hanging
+# 7.1. Fix Systemd "Degraded" State
+check "'shadow' service is not in a failed state" "! systemctl is-failed --quiet shadow.service"
+
+# 7.2. Correct sudoers Rule Precedence
+check "sudoers rule order is correct" "awk '/^audiolinux ALL=\\(ALL\\) ALL$/ {u=NR} /^@includedir/ {i=NR} END {exit !(u && i && u < i)}' /etc/sudoers"
+
+# 7.3. Optimize Boot Time
+check "'wait-online' service is disabled (for fast boot)" "! systemctl is-enabled systemd-networkd-wait-online.service"
 check "MOTD wait-for-ip drop-in exists" "[ -f /etc/systemd/system/update_motd.service.d/wait-for-ip.conf ]"
 check "MOTD service actively waits for a default route" "grep -q 'while.*ip route' /etc/systemd/system/update_motd.service.d/wait-for-ip.conf"
 
+# 7.4. Create the Repair Script
 check "Boot repair script is up-to-date" "check_hash /usr/local/sbin/check-and-repair-boot.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh"
+
+# 7.5. Create the systemd Service File
 check "'boot-repair' service file exists" "[ -f /etc/systemd/system/boot-repair.service ]"
 check "'boot-repair' service is enabled" "systemctl is-enabled boot-repair.service"
 
-header "Section 8" "Diretta Software & System Logging"
+# 7.6. Minimize Disk I/O
 check "Journald is set to volatile storage" "grep -q '^Storage=volatile' /etc/systemd/journald.conf"
+
+header "Section 8" "Diretta Software & System Logging"
 check "'diretta-alsa-target' is installed" "[ -d /opt/diretta-alsa-target ]"
 check "'diretta_alsa_target' service is enabled" "systemctl is-enabled diretta_alsa_target.service"
 check "'diretta_alsa_target' service is active" "systemctl is-active diretta_alsa_target.service"
