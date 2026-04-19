@@ -2472,7 +2472,7 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     ```
 3.  Restart the Diretta service for the change to take effect:
     ```bash
-    suo systemctl daemon-reload
+    sudo systemctl daemon-reload
     sudo systemctl restart diretta_alsa.service
     ```
 
