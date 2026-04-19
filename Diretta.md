@@ -9,7 +9,7 @@ The **Diretta Host** will connect to your main network (to access your music ser
 I aim to keep this guide compatible with the current official AudioLinux download link provided by Piero.
 
 **Current Validation:**
-These instructions were last tested with **AudioLinux V5** (Image: `audiolinux_pi4-pi5_501`, Menu Version: `513`).
+These instructions were last tested with **AudioLinux V5** (Image: `audiolinux_pi4-pi5_510`, Menu Version: `529`).
 
 **A Note on Updates:**
 Because AudioLinux is based on Arch (a rolling release), a fresh install will always pull the absolute latest software. Once your system is singing, you have two choices:
@@ -1427,7 +1427,7 @@ fi
 pyenv global $PYVER
 ```
 
-**Note:** It's normal for the `Installing Python-3.14.3...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
+**Note:** It's normal for the `Installing Python-3.14.4...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
 ---
 
@@ -2087,7 +2087,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     pyenv global $PYVER
     ```
 
-    **Note:** It's normal for the `Installing Python-3.14.3...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
+    **Note:** It's normal for the `Installing Python-3.14.4...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
 7.  **Install Avahi and Python Dependencies on the Diretta Host:**
 
