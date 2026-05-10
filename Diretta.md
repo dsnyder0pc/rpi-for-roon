@@ -2346,11 +2346,11 @@ sudo sync && sudo reboot
 
 ### **Part 2: Optimizing the Diretta Host**
 
-The goal for the Host is to give Roon Bridge and the Diretta service dedicated processing resources, but without using high realtime priorities. CPU isolation is a more powerful tool here, as it prevents the processes from being interrupted in the first place.
+The goal for the Host is to give the Diretta service threads dedicated processing resources, but without using high realtime priorities. CPU isolation is a more powerful tool here, as it prevents the processes from being interrupted in the first place.
 
 #### **Step 6.4: Isolate CPU Cores for Audio Applications**
 
-This step dedicates two CPU cores to handle both Roon Bridge and the Diretta Host service.
+This step dedicates two CPU cores to handle the Diretta Host service threads.
 
 1.  SSH to the Diretta Host:
     ```bash
