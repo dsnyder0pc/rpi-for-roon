@@ -141,7 +141,7 @@ run_appendix8_checks() {
     check "'limit-speed-100m' service is active" "systemctl is-active limit-speed-100m.service"
     check "'disable-eee' service is enabled" "systemctl is-enabled disable-eee.service"
     check "'disable-eee' service is active" "systemctl is-active disable-eee.service"
-    check "Link speed is 100Mb/s" "ethtool end0 | grep -q 'Speed: 100Mb/s'"
+    check "Link speed is optimized (10Mb/s or 100Mb/s)" "ethtool end0 | grep -qEe 'Speed: (10|100)Mb/s'"
     check "Duplex is Full" "ethtool end0 | grep -q 'Duplex: Full'"
     check "Energy Efficient Ethernet (EEE) is disabled" "! ethtool --show-eee end0 | grep -q 'enabled - active'"
     if [ -f /sys/class/net/end0/carrier_changes ]; then
