@@ -92,6 +92,7 @@ If you are located in the US, expect to pay around $320 (plus tax and shipping) 
 16. [Appendix 7: Optional IRQ and Thread Optimizations](#16-appendix-7-optional-irq-and-thread-optimizations)
 17. [Appendix 8: Optional Purist 100Mbps Network Mode](#17-appendix-8-optional-purist-100mbps-network-mode)
 18. [Appendix 9: Optional Jumbo Frames Optimization](#18-appendix-9-optional-jumbo-frames-optimization)
+19. [Appendix 10: Optional System Updates](#19-appendix-10-optional-system-updates)
 
 ---
 
@@ -1872,10 +1873,16 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     # Script to toggle Purist Mode
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-mode
     #!/bin/bash
-    if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
-      /usr/local/bin/purist-mode --revert
+    if [[ "$1" == "--enforce" ]]; then
+        # Absolute enforcement: If it's supposed to be active, re-run
+        # the baseline script to clean up any resurrected default routes.
+        if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+            /usr/local/bin/purist-mode
+        fi
+    elif [ -f "/etc/nsswitch.conf.purist-bak" ]; then
+        /usr/local/bin/purist-mode --revert
     else
-      /usr/local/bin/purist-mode
+        /usr/local/bin/purist-mode
     fi
     EOT
 
@@ -1914,6 +1921,26 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     fi
     EOT
 
+    # Create script to set the link speed
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-set-link
+    #!/bin/bash
+    # Profile script to enforce Target physical link boundaries
+    # Refactored to use explicit isolated subshells for clean SSH detaching
+
+    SPEED="$1"
+
+    if [ "$SPEED" = "10" ]; then
+        echo "Scheduling 10Mbps transition..."
+        /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 speed 10 duplex full autoneg on" >/dev/null 2>&1 < /dev/null &
+    elif [ "$SPEED" = "100" ]; then
+        echo "Scheduling 100Mbps transition..."
+        /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 speed 100 duplex full autoneg on" >/dev/null 2>&1 < /dev/null &
+    else
+        echo "Usage: $0 [10|100]"
+        exit 1
+    fi
+    EOT
+
     # Make the new scripts executable
     sudo chmod -v +x /usr/local/bin/pm-*
     ```
@@ -1931,6 +1958,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-restart-target
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-license-url
+    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-set-link
     EOT
     ```
 
@@ -1942,12 +1970,26 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     sudo install -m 0755 create-diretta-cache.sh /usr/local/bin/
     rm create-diretta-cache.sh
 
-    # Create the Systemd Drop-in File
-    sudo mkdir -p /etc/systemd/system/purist-mode-revert-on-boot.service.d
-    cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-revert-on-boot.service.d/create-cache.conf
+    # Create a service for populating the license status cache
+    cat <<'EOT' | sudo tee /etc/systemd/system/diretta-cache.service
+    [Unit]
+    Description=Asynchronous Diretta License Cache Collector
+    After=network.target purist-mode-revert-on-boot.service
+    Before=purist-mode-auto.service
+
     [Service]
-    ExecStartPost=/usr/local/bin/create-diretta-cache.sh
+    Type=simple
+    ExecStart=/usr/local/bin/create-diretta-cache.sh
+    Restart=no
+
+    [Install]
+    WantedBy=multi-user.target
     EOT
+
+    # Reload systemd to pick up the updated drop-in configuration
+    sudo rm -rf /etc/systemd/system/purist-mode-revert-on-boot.service.d
+    sudo systemctl daemon-reload
+    sudo systemctl enable diretta-cache.service
 
     # Go ahead and run the script manually once
     sudo /usr/local/bin/create-diretta-cache.sh
@@ -2012,22 +2054,13 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ```
 
 5.  **Manually Test the Remote Commands (Recommended):**
-    Before starting the web app, test each of the remote commands from the **Diretta Host's** terminal to confirm the backend is working.
+    Before starting the web app, test the read-only remote commands from the **Diretta Host's** terminal to confirm the backend is working.
     ```bash
     # Test the Status Command (should return a JSON string)
     ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-get-status'
 
-    # Test Toggling Purist Mode (run this twice to turn it on, then off)
-    ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-toggle-mode'
-
-    # Test Toggling Auto-Start on Boot (run this twice to enable, then disable)
-    ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-toggle-auto'
-
-    # Test Fetching the Diretta Target License URL
+    # Test the command for fetching license status.
     ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-get-license-url'
-
-    # Test Restarting the Diretta Target Service
-    ssh -i ~/.ssh/purist_app_key purist-app@diretta-target '/usr/local/bin/pm-restart-target'
     ```
 
 6.  **Install Python via pyenv** on the **Diretta Host** (feel free to skip this step if you did this already to get the IR Remote working)
@@ -2161,9 +2194,12 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     This step is critical for allowing the web application to restart the necessary Roon-related services without a password.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/webui-restarts
-    # Allow the webui (running as audiolinux) to restart required services
+    # Allow the webui (running as audiolinux) to enforce host profiles and restart services
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roon-ir-remote.service
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roonbridge.service
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart diretta_alsa.service
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/ethtool end0
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/setting.inf.tmp /opt/diretta-alsa/setting.inf
     EOT
     sudo chmod 0440 /etc/sudoers.d/webui-restarts
     ```
@@ -2494,19 +2530,32 @@ While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the 
 ### Step 1: Configure the Host (Speed Limit)
 We will create a service on the **Host** that forces it to advertise *only* 100 Mbps Full Duplex. The Target will automatically detect this and match it.
 
-**Create the restriction service:** *(Perform on Host Only)*
+**Create the restriction script and service:** *(Perform on Host Only)*
 ```bash
+cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
+#!/bin/bash
+# Set link speed based on the Super Purist web UI flag
+FLAG_FILE="/home/audiolinux/purist-mode-webui/super_purist.flag"
+
+if [ -f "$FLAG_FILE" ]; then
+    echo "Super Purist flag detected. Forcing 10 Mbps..."
+    /usr/bin/ethtool -s end0 speed 10 duplex full autoneg off
+else
+    echo "Standard/Purist mode. Setting 100 Mbps..."
+    /usr/bin/ethtool -s end0 speed 100 duplex full autoneg on
+fi
+EOT
+
 cat <<'EOT' | sudo tee /etc/systemd/system/limit-speed-100m.service
 [Unit]
-Description=Limit end0 advertisement to 100Mbps for Audio Purity
+Description=Set end0 link speed for Audio Purity
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
 ExecCondition=/usr/bin/ip link show end0
-# Enable Auto-Neg but strictly limit advertisement to 100Mbps/Full
-ExecStart=/usr/bin/ethtool -s end0 speed 100 duplex full autoneg on
+ExecStart=/usr/local/bin/set-link-speed.sh
 RemainAfterExit=yes
 
 [Install]
@@ -2515,6 +2564,8 @@ EOT
 
 echo "Enable and start the service:"
 sudo systemctl daemon-reload
+sudo systemctl disable limit-speed-100m.service
+sudo rm -f /etc/systemd/system/limit-speed-100m.service
 sudo systemctl enable --now limit-speed-100m.service
 ```
 
@@ -2723,3 +2774,115 @@ sudo sync && sudo reboot
 > If you were able to enable Jumbo frames support for your configuration, now is a good time to return to [**Appendix 5**](#14-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
+
+## 19. Appendix 10: Optional: System Updates
+This section provides guidance on applying updates to the Raspberry Pi hardware, AudioLinux operating system, and the Diretta software stack.
+
+#### **Part 1:** Update the Raspberry Pi Bootloader (Optional)
+
+Updating the Raspberry Pi bootloader (EEPROM) is not required and carries inherent risks. However, keeping the firmware current can offer advantages like lower operating temperatures and cleaner startup sequences due to continuous bug fixes provided by the Raspberry Pi Foundation.
+
+*Warning: Ensure you only ever apply the correct firmware image to the corresponding board. Flashing a Raspberry Pi 4 with a Raspberry Pi 5 bootloader (or vice-versa) can result in severe negative consequences, up to and including permanently bricking the board.*
+
+**Verify Current Bootloader Version**
+Before beginning, SSH into both the Host and Target and run the following command to check your current bootloader release date. Note these dates so you can verify the update was successful later.
+
+```bash
+vcgencmd bootloader_version
+```
+
+*(Look for the date on the first line of the output).*
+
+**Prepare the Update Media**
+You will need a blank microSD card, an SD card reader, and the official Raspberry Pi Imager software installed on your workstation.
+
+1. Open Raspberry Pi Imager. Click **CHOOSE DEVICE** and select the specific Raspberry Pi board you will be updating.
+   ![Select Raspberry Pi 5 Device](images/01-rpi-dev.png)
+
+2. Click **CHOOSE OS**, scroll down the list, and select **Misc utility images**.
+   ![Select Misc Utility Images](images/02-rpi-misc.png)
+
+3. Select **Bootloader**. *(Note: The menu will display the Pi family you selected in Step 1).*
+   ![Select Bootloader for Pi 5 Family](images/03-rpi-bl.png)
+
+4. Select **SD Card Boot**.
+   ![Select SD Card Boot](images/04-rpi-sd.png)
+
+5. Click **CHOOSE STORAGE**, select your blank microSD card, click **NEXT**, and write the image.
+
+*Important: If your Target is a Raspberry Pi 5 and your Host is a Raspberry Pi 4 (or any mixed combination), you cannot reuse the same update card. You must return to your computer and flash a new update microSD card specifically for the second board type before proceeding.*
+
+**Perform the Hardware Update**
+
+1. Safely shut down both machines. Shut down the Target first, then the Host (`sudo poweroff`).
+2. Disconnect the physical power cables from both units.
+3. Remove the primary boot microSD cards from each unit and set them safely aside.
+4. Carefully insert the freshly prepared update microSD card into the board (ensure the gold leads are facing the underside of the Raspberry Pi board).
+5. Reconnect power to the board.
+6. Watch the activity lights on the board. Wait until the green LED begins flashing rapidly at a steady, continuous pace (this usually takes about 10 seconds). The steady flashing indicates the EEPROM flash is complete.
+7. Disconnect power from the board.
+8. Remove the update microSD card and reinsert your original boot microSD card.
+9. Reconnect power to the systems. **Power on the Host first, then the Target.**
+
+Once the systems are fully booted and accessible, run the bootloader version check on each computer one more time to confirm the bootloader dates have advanced to the release date written by the Imager. If your Host and Target use different board types (e.g., RPi4 and RPi5), the versions will likely be different. That's fine.
+
+```bash
+vcgencmd bootloader_version
+```
+
+---
+
+#### **Part 2:** Update AudioLinux and Diretta Software
+
+The system update process requires a strict sequence to ensure the custom kernel, compilation toolchains, and ALSA daemon remain perfectly synchronized.
+
+1. Launch the AudioLinux configuration tool by typing `menu` at the command prompt.
+2. Navigate to the **Install/Update menu** and select **UPDATE System**.
+3. While still in the **Install/Update menu**, select **UPDATE menu**.
+   *(Note: You will be required to enter the email address used for your AudioLinux purchase, along with the specific username and password provided by Piero for downloading the AudioLinux image).*
+4. Select **SELECT/UPDATE kernel**. Choose the exact kernel version recommended previously in [**Step 4**](#44-run-system-and-menu-updates).
+5. Re-apply the `motd` fix from [**Section 5.1**](#51-pre-configure-the-diretta-host) on the **Host**.
+6. Re-apply the `sudoers` patch from [**Section 7.2**](#72-correct-sudoers-rule-precedence) on **both** the Target and the Host.
+7. Reboot the Target first, followed by the Host.
+8. Once back online, re-run the "Configure Compatible Compiler Toolchain" script from [**Step 8**](#8-diretta-software-installation--configuration) on **both** the Target and the Host.
+9. On the **Target**, run the Diretta Install/Update step detailed in [**Section 8.1**](#81-on-the-diretta-target).
+10. On the **Host**, run the Diretta Install/Update step detailed in [**Section 8.2**](#82-on-the-diretta-host).
+11. Reboot the Target first, followed by the Host.
+>
+>
+> ---
+>
+> ### ✅ Checkpoint: System Health & Regression Testing
+>
+> After completing the update sequence, you must verify the stability of the audio pipeline to ensure no software or configuration regressions occurred during the upgrade.
+>
+> 1. Open Roon, wait for the network zone to return, and play at least a few seconds of music to verify the transport layer link and get the hardware counters moving.
+> 2. SSH into the **Target** and temporarily revert to Standard Mode to allow diagnostic scripts to pass traffic cleanly over the wire:
+>    ```bash
+>    purist-mode --revert
+>    ```
+> 3. Run the universal **System Health Check** QA script from [**Appendix 5**](#14-appendix-5-system-health-checks) on **both** the Host and the Target.
+> 4. Carefully verify the output and resolve any isolated thread affinity or priority issues caught by the script.
+>
+> ---
+
+---
+
+#### **Part 3:** Override USB Current Limits (Raspberry Pi 5 Only)
+
+If you are utilizing a Raspberry Pi 5 and powering it with a premium third-party supply (e.g., iFi SilentPower Elite 5V or a 5A-capable Linear Power Supply) rather than the official Raspberry Pi 27W USB-C supply, the Pi will default to a safe 5V/3A negotiation. This restricts the combined current draw across all four USB ports to 600mA.
+
+While usually inconsequential for pure audio transports, if you know your power supply is capable of continuously delivering at least 5A at 5V, you can safely bypass this restriction.
+
+**Run this command to append the override to your boot configuration:**
+
+```bash
+if ! grep -q "^usb_max_current_enable=" /boot/config.txt; then
+  echo "usb_max_current_enable=1" | sudo tee -a /boot/config.txt
+else
+  echo "Optimization already present in /boot/config.txt. Skipping configuration."
+fi
+sudo sync && sudo reboot
+```
+
+---

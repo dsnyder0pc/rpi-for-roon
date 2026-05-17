@@ -1,35 +1,38 @@
 #!/usr/bin/env python
-#
-# AnCaolas Link System Control - A multi-page Flask application to control
-# Diretta Purist Mode and Roon IR Remote settings.
-# To be run on the Diretta Host.
-#
+"""
+AnCaolas Link System Control - A multi-page Flask application to control
+Diretta Purist Mode states and Roon IR Remote settings.
+
+To be run on the Diretta Host.
+"""
+
 import os
+import time
 import subprocess
 import json
 import logging
 import sys
-from flask import Flask, render_template_string, jsonify, request, redirect, url_for, flash
 from datetime import datetime
+from flask import Flask, render_template_string, request, redirect, url_for, flash
 
 # --- Configuration ---
 REMOTE_USER = "purist-app"
 REMOTE_HOST = "diretta-target"
 SSH_KEY_PATH = os.path.expanduser("~/.ssh/purist_app_key")
-ROON_CONFIG_PATH = os.path.expanduser('~/roon-ir-remote/app_info.json')
-
+ROON_CONFIG_PATH = os.path.expanduser("~/roon-ir-remote/app_info.json")
+DIRETTA_SETTING_PATH = "/opt/diretta-alsa/setting.inf"
+SUPER_PURIST_FLAG = os.path.expanduser("~/purist-mode-webui/super_purist.flag")
 
 app = Flask(__name__)
 # A secret key is required for flash messaging
 app.secret_key = os.urandom(24)
 
-
 # --- Configure Logging ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+# pylint: disable=line-too-long
 # --- HTML & CSS TEMPLATES ---
 
-# --- BASE TEMPLATE (Used by all pages) ---
 BASE_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en" class="bg-gray-900 text-gray-200">
@@ -49,9 +52,12 @@ BASE_TEMPLATE = """
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        .htmx-request .btn-spinner { display: inline-block; }
-        .htmx-request .btn-text { opacity: 0; }
-        .htmx-request button { cursor: not-allowed; }
+
+        /* STRICT TARGETING: Only spin if the button itself fired the request */
+        button.htmx-request .btn-spinner { display: inline-block; }
+        button.htmx-request .btn-text { opacity: 0; }
+        button.htmx-request { cursor: not-allowed; }
+
         .nav-link {
             @apply px-4 py-2 text-gray-300 rounded-md border border-gray-600 hover:bg-green-600 hover:border-green-500 hover:text-white transition-colors;
         }
@@ -97,7 +103,6 @@ BASE_TEMPLATE = """
 </html>
 """
 
-# --- LANDING PAGE ---
 LANDING_PAGE_CONTENT = """
 <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center space-y-6">
     <h2 class="text-2xl font-bold text-white">Welcome</h2>
@@ -110,8 +115,8 @@ LANDING_PAGE_CONTENT = """
             Host AudioLinux UI
         </a>
 
-        {% if status.purist_mode_active or music_playing %}
-            {% set reason = "Unavailable while Purist Mode is active" if status.purist_mode_active else "Unavailable while music is playing" %}
+        {% if current_state != 'Standard' or music_playing %}
+            {% set reason = "Unavailable while background services are disabled" if current_state != 'Standard' else "Unavailable while music is playing" %}
             <a href="#" class="bg-gray-800 text-gray-500 cursor-not-allowed font-bold py-3 px-6 rounded-lg" title="{{ reason }}">
                 Target AudioLinux UI
             </a>
@@ -130,7 +135,6 @@ LANDING_PAGE_CONTENT = """
 </div>
 """
 
-# --- PURIST MODE APP ---
 PURIST_APP_TEMPLATE = """
 <div id="control-panel" hx-get="/status" hx-trigger="load, every 30s, visibilitychange from:document" hx-swap="innerHTML">
     <div class="p-8 text-center text-gray-400">
@@ -140,41 +144,86 @@ PURIST_APP_TEMPLATE = """
 </div>
 """
 
-# --- UPDATED STATUS PANEL TEMPLATE ---
 STATUS_PANEL_TEMPLATE = """
 <div class="space-y-6">
     <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-6">
-        <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
-            <div>
-                <h2 class="font-semibold text-lg text-white">Purist Mode</h2>
-                {% if status.purist_mode_active %}
-                    <p class="text-sm text-green-400">ACTIVE - Optimized for critical listening.</p>
-                {% else %}
-                    <p class="text-sm text-yellow-400">DISABLED - System in standard mode.</p>
-                {% endif %}
+        <div>
+            <h2 class="font-semibold text-xl text-white mb-4">System Optimization Level</h2>
+            <div class="grid grid-cols-3 gap-2 p-1 bg-gray-900 rounded-xl border border-gray-700">
+                <button hx-post="/set-state/Standard" hx-target="#control-panel" hx-swap="innerHTML" hx-disabled-elt="this"
+                        class="relative inline-flex items-center justify-center py-3 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
+                        {{ 'bg-yellow-600 text-gray-900' if current_state == 'Standard' else 'text-gray-400 hover:text-white' }}">
+                    <span class="btn-text">Standard</span>
+                    <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-current"></span>
+                </button>
+                <button hx-post="/set-state/Purist" hx-target="#control-panel" hx-swap="innerHTML" hx-disabled-elt="this"
+                        class="relative inline-flex items-center justify-center py-3 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
+                        {{ 'bg-green-600 text-white' if current_state == 'Purist' else 'text-gray-400 hover:text-white' }}
+                        {{ 'opacity-50 cursor-not-allowed' if status.license_needs_activation }}"
+                        {{ 'disabled' if status.license_needs_activation }}
+                        {{ 'title=\"Requires active Diretta License\"' if status.license_needs_activation }}>
+                    <span class="btn-text">Purist</span>
+                    <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-current"></span>
+                </button>
+                <button hx-post="/set-state/SuperPurist" hx-target="#control-panel" hx-swap="innerHTML" hx-disabled-elt="this"
+                        class="relative inline-flex items-center justify-center py-3 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
+                        {{ 'bg-green-600 text-white border border-green-400/30' if current_state == 'SuperPurist' else 'text-gray-400 hover:text-white' }}">
+                    <span class="btn-text">Super Purist</span>
+                    <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-current"></span>
+                </button>
             </div>
-            <button hx-post="/toggle-mode" hx-target="#control-panel" hx-swap="innerHTML"
-                    class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
-                        {% if status.purist_mode_active %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
-                <span class="btn-text">{% if status.purist_mode_active %}Disable{% else %}Enable{% endif %}</span>
-                <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
-            </button>
+
+        <div class="border-t border-gray-700/50 py-4">
+            {% if current_state == 'Standard' %}
+                <div class="text-sm text-yellow-400">
+                    <span class="font-bold block mb-1">Standard Operation:</span>
+                    <ul class="list-disc list-outside space-y-1 text-gray-400 text-xs ml-5">
+                        <li>Background tasks and communications enabled on the Target.</li>
+                        <li>Required state for routine system maintenance and updates.</li>
+                        <li>Sets and maintains the local system time on the Target.</li>
+                        <li>Point-to-point link operates at its standard baseline frequency.</li>
+                    </ul>
+                </div>
+            {% elif current_state == 'Purist' %}
+                <div class="text-sm text-green-400">
+                    <span class="font-bold block mb-1">Purist Mode:</span>
+                    <ul class="list-disc list-outside space-y-1 text-gray-400 text-xs ml-5">
+                        <li>Non-essential background tasks and communications disabled on the Target.</li>
+                        <li>Local noise floor minimized and computational headroom maximized.</li>
+                        <li>50% reduction in physical network frequency compared to standard Gigabit.</li>
+                        <li>Preserves bandwidth required for native, bit-perfect DSD and high-res PCM.</li>
+                    </ul>
+                </div>
+            {% elif current_state == 'SuperPurist' %}
+                <div class="text-sm text-green-400">
+                    <span class="font-bold block mb-1">Super Purist Mode:</span>
+                    <ul class="list-disc list-outside space-y-1 text-gray-400 text-xs ml-5">
+                        <li>Maximum physical and electrical isolation engaged.</li>
+                        <li>Point-to-point link throttled to its absolute lowest operating frequency.</li>
+                        <li>68% lower physical network frequency than Purist Mode.</li>
+                        <li>Optimized for maximum micro-dynamic expression and the quietest background at the cost of restricted format support.</li>
+                    </ul>
+                    <div class="p-3 mt-3 text-xs text-yellow-400 bg-yellow-900/20 rounded-lg border border-yellow-700/30">
+                        <strong>⚠️ Required Roon Setting:</strong> You must configure Roon's MUSE DSP settings to downsample all music to a maximum of 96 kHz PCM for this zone. Native DSD is unsupported.
+                    </div>
+                </div>
+            {% endif %}
         </div>
 
-        <div class="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
+        <div class="flex items-center justify-between p-4 bg-gray-700/30 border border-gray-700 rounded-xl">
             <div>
-                <h2 class="font-semibold text-lg text-white">Activate on Boot</h2>
+                <h3 class="font-semibold text-base text-white">Activate on Boot</h3>
                 {% if status.auto_start_enabled %}
-                    <p class="text-sm text-green-400">ENABLED - Will activate 60s after boot.</p>
+                    <p class="text-xs text-green-400">Will automatically engage current optimization level 60s after boot.</p>
                 {% else %}
-                    <p class="text-sm text-yellow-400">DISABLED - System will remain in standard mode.</p>
+                    <p class="text-xs text-gray-400">System will always initialize in Standard Mode after a reboot.</p>
                 {% endif %}
             </div>
             <button hx-post="/toggle-auto" hx-target="#control-panel" hx-swap="innerHTML"
-                    class="relative inline-flex items-center justify-center w-28 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
+                    class="relative inline-flex items-center justify-center w-24 h-10 px-3 py-1.5 text-xs font-semibold rounded-lg shadow-sm transition-colors duration-200
                         {% if status.auto_start_enabled %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
                 <span class="btn-text">{% if status.auto_start_enabled %}Disable{% else %}Enable{% endif %}</span>
-                <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
+                <span class="absolute btn-spinner hidden h-4 w-4 rounded-full border-2 border-white"></span>
             </button>
         </div>
     </div>
@@ -183,7 +232,7 @@ STATUS_PANEL_TEMPLATE = """
     <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-4">
         <div>
             <h2 class="font-semibold text-lg text-white">License Activation Required</h2>
-            <p class="text-sm text-yellow-400 mt-1">Hi-res playback is disabled. Please purchase and activate your license.</p>
+            <p class="text-sm text-yellow-400 mt-1">Evaluation mode detected. High-resolution playback is locked to Super Purist boundaries (10 Mbps limit).</p>
         </div>
         <div class="flex flex-col sm:flex-row items-start justify-between gap-6">
             <div class="text-sm text-gray-300 flex-1">
@@ -208,7 +257,6 @@ STATUS_PANEL_TEMPLATE = """
 </div>
 """
 
-# --- IR REMOTE APP ---
 REMOTE_APP_TEMPLATE = """
 <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
     <h2 class="text-xl font-bold text-white mb-4">Roon IR Remote Zone</h2>
@@ -226,7 +274,6 @@ REMOTE_APP_TEMPLATE = """
 </div>
 """
 
-# --- MUSIC PLAYING TEMPLATE ---
 MUSIC_PLAYING_TEMPLATE = """
 <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center" hx-get="/status" hx-trigger="every 5s" hx-swap="outerHTML">
     <div class="flex items-center justify-center mb-4">
@@ -240,75 +287,319 @@ MUSIC_PLAYING_TEMPLATE = """
     <br>It will automatically reappear up to a minute after the music has finished.</p>
 </div>
 """
+# pylint: enable=line-too-long
+
 
 # --- BACKEND LOGIC (Helper Functions) ---
 
 def is_music_playing():
     """Checks if music is actively playing by inspecting /proc/asound/."""
-    # Define the path to the ALSA status file
     status_file_path = "/proc/asound/card0/pcm0p/sub0/status"
-
     try:
-        # Read the content of the status file
-        with open(status_file_path, 'r') as f:
-            status_content = f.read()
+        with open(status_file_path, "r", encoding="utf-8") as file_handle:
+            status_content = file_handle.read()
 
-        # Check if the state is "RUNNING"
         if "state: RUNNING" in status_content:
             app.logger.info("Playback detected on Host via /proc.")
             return True
-        else:
-            # This will catch "closed" and other states
-            app.logger.info("No playback detected on Host via /proc (state is not RUNNING).")
-            return False
 
+        app.logger.info("No playback detected on Host via /proc (state is not RUNNING).")
+        return False
     except FileNotFoundError:
-        # This handles the case where the path doesn't exist, which implies no playback
-        app.logger.info(f"ALSA status file not found at {status_file_path}. Assuming no playback.")
+        app.logger.info("ALSA status file not found at %s. Assuming no playback.", status_file_path)
         return False
-    except Exception as e:
-        # Catch other potential errors (e.g., permissions)
-        app.logger.error(f"Error checking playback status via /proc: {e}")
+    except OSError as err:
+        app.logger.error("OS Error checking playback status via /proc: %s", err)
         return False
+
 
 def run_remote_command(command):
     """Executes a command on the Diretta Target via SSH."""
-    ssh_command = ["/usr/bin/ssh", "-i", SSH_KEY_PATH, "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", f"{REMOTE_USER}@{REMOTE_HOST}", command]
+    ssh_command = [
+        "/usr/bin/ssh",
+        "-i", SSH_KEY_PATH,
+        "-o", "ConnectTimeout=5",
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "UserKnownHostsFile=/dev/null",
+        f"{REMOTE_USER}@{REMOTE_HOST}",
+        command
+    ]
     try:
-        app.logger.info(f"Running remote command: {' '.join(ssh_command)}")
-        result = subprocess.run(ssh_command, capture_output=True, text=True, check=True, timeout=15)
-        app.logger.info(f"Remote command successful. Output: {result.stdout.strip()}")
-        return result.stdout.strip()
-    except Exception as e:
-        app.logger.error(f"Remote command failed: {e}")
+        app.logger.info("Running remote command: %s", " ".join(ssh_command))
+        result = subprocess.run(
+            ssh_command, capture_output=True, text=True, check=True, timeout=15
+        )
+        output = result.stdout.strip()
+        app.logger.info("Remote command successful. Output: %s", output)
+        return output
+    except subprocess.CalledProcessError as err:
+        app.logger.error(
+            "Remote command failed with return code %s: %s", err.returncode, err.stderr
+        )
+        return None
+    except subprocess.TimeoutExpired:
+        app.logger.error("Remote command timed out after 15 seconds.")
+        return None
+    except OSError as err:
+        app.logger.error("OS Error executing remote command: %s", err)
         return None
 
-# --- UPDATED get_status_from_target FUNCTION ---
+
 def get_status_from_target():
     """Gets the current status from the Diretta Target."""
     raw_status = run_remote_command("/usr/local/bin/pm-get-status")
     if not raw_status:
         return None
+
     try:
         status_data = json.loads(raw_status)
-        # If license needs activation, fetch the unique purchase URL
         if status_data.get("license_needs_activation"):
             license_url = run_remote_command("/usr/local/bin/pm-get-license-url")
-            status_data["activation_url"] = license_url or ""  # Ensure it's a string
+            status_data["activation_url"] = license_url if license_url else ""
         else:
             status_data["activation_url"] = ""
         return status_data
     except json.JSONDecodeError:
-        app.logger.error(f"Failed to decode JSON status from remote host. Received: {raw_status}")
+        app.logger.error("Failed to decode JSON status from remote host. Received: %s", raw_status)
         return None
+
 
 def get_roon_zone_from_host():
     """Gets the current Roon zone name from the local config file."""
-    if not os.path.exists(ROON_CONFIG_PATH): return "Not Configured"
+    if not os.path.exists(ROON_CONFIG_PATH):
+        return "Not Configured"
     try:
-        with open(ROON_CONFIG_PATH, 'r') as f: config = json.load(f)
-        return config.get('roon', {}).get('zone', {}).get('name', 'Not Set')
-    except Exception: return "Error Reading Config"
+        with open(ROON_CONFIG_PATH, "r", encoding="utf-8") as file_handle:
+            config = json.load(file_handle)
+        return config.get("roon", {}).get("zone", {}).get("name", "Not Set")
+    except (json.JSONDecodeError, OSError) as err:
+        app.logger.error("Error Reading Config: %s", err)
+        return "Error Reading Config"
+
+
+def get_host_mtu(interface="end0"):
+    """Reads the MTU of the specified network interface."""
+    try:
+        with open(f"/sys/class/net/{interface}/mtu", "r", encoding="utf-8") as file_handle:
+            return int(file_handle.read().strip())
+    except OSError as err:
+        app.logger.error("Could not read MTU for %s: %s", interface, err)
+        return 1500
+    except ValueError as err:
+        app.logger.error("Invalid MTU value read for %s: %s", interface, err)
+        return 1500
+
+
+def is_diretta_isolated():
+    """
+    Checks if the running diretta_alsa service is bound to isolated audio cores (2 or 3)
+    by querying the active process affinity directly from the kernel scheduler.
+    """
+    try:
+        # 1. Grab the live MainPID from systemd
+        pid_cmd = ["systemctl", "show", "--property", "MainPID", "--value", "diretta_alsa.service"]
+        pid_result = subprocess.run(pid_cmd, capture_output=True, text=True, check=False)
+        pid = pid_result.stdout.strip()
+
+        if not pid or pid == "0":
+            app.logger.warning("Diretta service is either not running or PID is invalid (0).")
+            return False
+
+        # 2. Query the real-time CPU affinity mask for that PID
+        taskset_cmd = ["/usr/bin/taskset", "-cp", pid]
+        taskset_result = subprocess.run(taskset_cmd, capture_output=True, text=True, check=False)
+        taskset_out = taskset_result.stdout.strip()
+
+        # Parse out the list of cores (e.g., "pid 1234's current affinity list: 2-3")
+        if ":" in taskset_out:
+            affinity_list = taskset_out.split(":")[-1].strip()
+
+            # Match the QA script's exact targets: cores 2, 3, 2-3, or 2,3
+            if any(core in affinity_list for core in ["2", "3", "2-3", "2,3"]):
+                app.logger.info("Live core isolation verified. Affinity list: %s", affinity_list)
+                return True
+
+            app.logger.warning(
+                "Diretta running on non-isolated cores. Actual affinity: %s",
+                 affinity_list
+            )
+
+    except OSError as err:
+        app.logger.error("OS Error checking real-time taskset isolation: %s", err)
+
+    return False
+
+
+def _set_link_speed(speed, autoneg):
+    """Internal helper to set the link speed via ethtool."""
+    cmd = [
+        "/usr/bin/sudo", "/usr/bin/ethtool", "-s", "end0",
+        "speed", speed, "duplex", "full", "autoneg", autoneg
+    ]
+    try:
+        subprocess.run(cmd, check=False, capture_output=True)
+    except OSError as err:
+        app.logger.error("Failed to execute ethtool: %s", err)
+
+
+def update_setting_inf(cycle_time, info_cycle):
+    """Reads setting.inf, updates CycleTime and InfoCycle, and writes it back."""
+    if not os.path.exists(DIRETTA_SETTING_PATH):
+        return
+
+    try:
+        with open(DIRETTA_SETTING_PATH, "r", encoding="utf-8") as file_handle:
+            lines = file_handle.readlines()
+
+        changed = False
+        new_lines = []
+        for line in lines:
+            if line.startswith("CycleTime="):
+                new_lines.append(f"CycleTime={cycle_time}\n")
+                changed = True
+            elif line.startswith("InfoCycle="):
+                new_lines.append(f"InfoCycle={info_cycle}\n")
+                changed = True
+            else:
+                new_lines.append(line)
+
+        if changed:
+            app.logger.info("Writing new Diretta config: CycleTime=%s, InfoCycle=%s",
+                            cycle_time, info_cycle)
+            tmp_file = "/tmp/setting.inf.tmp"
+            with open(tmp_file, "w", encoding="utf-8") as file_handle:
+                file_handle.writelines(new_lines)
+
+            mv_cmd = ["/usr/bin/sudo", "/usr/bin/mv", tmp_file, DIRETTA_SETTING_PATH]
+            subprocess.run(mv_cmd, check=True)
+
+    except OSError as err:
+        app.logger.error("File operation error while updating setting.inf: %s", err)
+    except subprocess.CalledProcessError as err:
+        app.logger.error("Sudo mv failed when updating setting.inf: %s", err)
+
+
+def restart_diretta_services():
+    """Restarts the Diretta and Roon Bridge services."""
+    app.logger.info("Restarting Diretta and Roon Bridge services...")
+    try:
+        subprocess.run(
+            ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "diretta_alsa.service"],
+            check=True
+        )
+        subprocess.run(
+            ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "roonbridge.service"],
+            check=True
+        )
+    except subprocess.CalledProcessError as err:
+        app.logger.error("Failed to restart services: %s", err)
+    except OSError as err:
+        app.logger.error("OS Error restarting services: %s", err)
+
+
+def _get_current_speed():
+    """Parses ethtool output to return the current speed string."""
+    try:
+        ethtool_out = subprocess.run(
+            ["/usr/bin/ethtool", "end0"], capture_output=True, text=True, check=False
+        ).stdout
+        for line in ethtool_out.split("\n"):
+            if "Speed:" in line:
+                return line.split(":")[1].strip()
+    except OSError as err:
+        app.logger.error("Could not run ethtool to determine speed: %s", err)
+    return None
+
+
+def get_current_system_state(target_status):
+    """Derives the friendly UI state name based on Target flags and Host flags."""
+    if not target_status:
+        return "Standard"
+    if not target_status.get("purist_mode_active", False):
+        return "Standard"
+    if os.path.exists(SUPER_PURIST_FLAG) or target_status.get("license_needs_activation", False):
+        return "SuperPurist"
+    return "Purist"
+
+
+def _handle_licensed_transition_up():
+    """Executes the specific logic path when moving from 10 Mbps to 100 Mbps."""
+    _set_link_speed("100", "on")
+    run_remote_command("/usr/local/bin/pm-set-link 100")
+
+    if not is_diretta_isolated():
+        update_setting_inf(cycle_time=800, info_cycle=80000)
+    else:
+        mtu = get_host_mtu()
+        if mtu == 1500:
+            update_setting_inf(cycle_time=514, info_cycle=51400)
+        elif mtu == 2032:
+            update_setting_inf(cycle_time=700, info_cycle=70000)
+        elif mtu >= 9000:
+            update_setting_inf(cycle_time=1000, info_cycle=100000)
+        else:
+            app.logger.warning("Unexpected MTU (%s). Defaulting to 1500 profile.", mtu)
+            update_setting_inf(cycle_time=514, info_cycle=51400)
+
+    restart_diretta_services()
+
+
+def check_and_enforce_host_profile(target_status):
+    """
+    Checks current host MTU, link speed, and shadows Target state.
+    Bails out safely if the physical interface is currently flapping or down.
+    """
+    if not target_status:
+        return
+
+    current_speed = _get_current_speed()
+
+    # SAFETY GATE: If the link state is unstable or negotiating, do not enforce rules
+    if not current_speed or "Unknown" in current_speed:
+        app.logger.info(
+            "Physical link is currently negotiating or down. "
+            "Skipping enforcement to prevent loops."
+        )
+        return
+
+    current_state = get_current_system_state(target_status)
+    current_speed = _get_current_speed()
+
+    if current_state == "SuperPurist":
+        # STATE: Enforce 10 Mbps layers
+        if current_speed != "10Mb/s":
+            app.logger.info("Transition DOWN to 10 Mbps detected. Enforcing Super Purist mode.")
+
+            # 1. Tell Target first while the 100Mbps link is wide open
+            run_remote_command("/usr/local/bin/pm-set-link 10")
+
+            # 2. Immediately drop the Host to match
+            _set_link_speed("10", "on")
+
+            # 3. Settle physical layer before cycling media engines
+            time.sleep(4)
+            update_setting_inf(cycle_time=2000, info_cycle=200000)
+            restart_diretta_services()
+            run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
+
+    else:
+        # STATE: Enforce 100 Mbps layers
+        if current_speed == "10Mb/s":
+            app.logger.info("Transition UP to 100 Mbps detected from state: %s", current_state)
+
+            # 1. Tell Target first while the 10Mbps link is stable
+            run_remote_command("/usr/local/bin/pm-set-link 100")
+
+            # 2. Immediately raise the Host to match
+            _set_link_speed("100", "on")
+
+            # 3. Settle physical layer before cycling media engines
+            time.sleep(4)
+            _handle_licensed_transition_up()
+
+            if current_state == "Purist":
+                run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
+
 
 # --- FLASK ROUTES ---
 
@@ -316,71 +607,173 @@ def get_roon_zone_from_host():
 def landing_page():
     """Serves the main landing page."""
     roon_configured = os.path.exists(ROON_CONFIG_PATH)
-    # Fetch status for Purist Mode and music playback
-    target_status = get_status_from_target() or {'purist_mode_active': False}
+    target_status = get_status_from_target() or {"purist_mode_active": False}
     music_playing = is_music_playing()
-    content = render_template_string(LANDING_PAGE_CONTENT, roon_is_configured=roon_configured, status=target_status, music_playing=music_playing)
-    return render_template_string(BASE_TEMPLATE, content=content, active_page='home', roon_is_configured=roon_configured, current_year=datetime.now().year)
+    current_state = get_current_system_state(target_status)
+
+    content = render_template_string(
+        LANDING_PAGE_CONTENT,
+        roon_is_configured=roon_configured,
+        status=target_status,
+        music_playing=music_playing,
+        current_state=current_state
+    )
+    return render_template_string(
+        BASE_TEMPLATE,
+        content=content,
+        active_page="home",
+        roon_is_configured=roon_configured,
+        current_year=datetime.now().year
+    )
+
 
 @app.route("/purist")
 def purist_app():
     """Serves the Purist Mode control application."""
     roon_configured = os.path.exists(ROON_CONFIG_PATH)
     content = render_template_string(PURIST_APP_TEMPLATE)
-    return render_template_string(BASE_TEMPLATE, content=content, active_page='purist', roon_is_configured=roon_configured, current_year=datetime.now().year)
+    return render_template_string(
+        BASE_TEMPLATE,
+        content=content,
+        active_page="purist",
+        roon_is_configured=roon_configured,
+        current_year=datetime.now().year
+    )
 
-@app.route("/remote", methods=['GET', 'POST'])
+
+@app.route("/remote", methods=["GET", "POST"])
 def remote_app():
     """Serves the IR Remote control application."""
     roon_configured = os.path.exists(ROON_CONFIG_PATH)
     if not roon_configured:
-        return redirect(url_for('landing_page'))
+        return redirect(url_for("landing_page"))
 
-    if request.method == 'POST':
-        new_zone_name = request.form.get('zone_name')
+    if request.method == "POST":
+        new_zone_name = request.form.get("zone_name")
         if not new_zone_name:
             flash("Error: No zone name provided.")
         else:
             try:
-                with open(ROON_CONFIG_PATH, 'r') as f: config = json.load(f)
-                config['roon']['zone']['name'] = new_zone_name
-                with open(ROON_CONFIG_PATH, 'w') as f: json.dump(config, f, indent=2)
-                subprocess.run(['/usr/bin/sudo', '/usr/bin/systemctl', 'restart', 'roon-ir-remote.service'], check=True)
-                app.logger.info(f"Roon zone updated to '{new_zone_name}' and service restarted.")
-                flash(f"Successfully updated Roon Zone to: {new_zone_name}")
-            except Exception as e:
-                app.logger.error(f"Failed to update Roon zone: {e}")
-                flash(f"An error occurred: {e}")
-        return redirect(url_for('remote_app'))
+                with open(ROON_CONFIG_PATH, "r", encoding="utf-8") as file_handle:
+                    config = json.load(file_handle)
 
-    # For GET request
+                config["roon"]["zone"]["name"] = new_zone_name
+
+                with open(ROON_CONFIG_PATH, "w", encoding="utf-8") as file_handle:
+                    json.dump(config, file_handle, indent=2)
+
+                subprocess.run(
+                    ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "roon-ir-remote.service"],
+                    check=True
+                )
+                app.logger.info("Roon zone updated to '%s' and service restarted.", new_zone_name)
+                flash(f"Successfully updated Roon Zone to: {new_zone_name}")
+            except OSError as err:
+                app.logger.error("Failed to update Roon zone config file: %s", err)
+                flash(f"An error occurred: {err}")
+            except subprocess.CalledProcessError as err:
+                app.logger.error("Failed to restart Roon IR service: %s", err)
+                flash(f"An error occurred restarting the service: {err}")
+
+        return redirect(url_for("remote_app"))
+
     current_zone = get_roon_zone_from_host()
     content = render_template_string(REMOTE_APP_TEMPLATE, current_zone=current_zone)
-    return render_template_string(BASE_TEMPLATE, content=content, active_page='remote', roon_is_configured=roon_configured, current_year=datetime.now().year)
+    return render_template_string(
+        BASE_TEMPLATE,
+        content=content,
+        active_page="remote",
+        roon_is_configured=roon_configured,
+        current_year=datetime.now().year
+    )
 
-# --- HTMX API Endpoints (for Purist App) ---
+
+# --- HTMX API Endpoints ---
 
 @app.route("/status")
 def status():
     """Serves the status panel for HTMX updates."""
     if is_music_playing():
         return render_template_string(MUSIC_PLAYING_TEMPLATE)
+
     target_status = get_status_from_target()
     if target_status is None:
-        return '<div class="p-8 text-center text-red-400">Error: Could not connect to Diretta Target.</div>'
-    return render_template_string(STATUS_PANEL_TEMPLATE, status=target_status)
+        return '<div class="p-8 text-center text-red-400">Error: Could not connect to Target.</div>'
 
-@app.route("/toggle-mode", methods=["POST"])
-def toggle_mode():
-    """Toggles Purist Mode on/off."""
-    run_remote_command("/usr/local/bin/pm-toggle-mode")
+    # Enforce Host profile (speed and CycleTime) dynamically based on Target status
+    check_and_enforce_host_profile(target_status)
+    current_state = get_current_system_state(target_status)
+
+    return render_template_string(
+        STATUS_PANEL_TEMPLATE,
+        status=target_status,
+        current_state=current_state
+    )
+
+
+def _clear_super_purist_flag():
+    """Safely removes the super purist flag from disk if it exists."""
+    if os.path.exists(SUPER_PURIST_FLAG):
+        try:
+            os.remove(SUPER_PURIST_FLAG)
+            app.logger.info("Super Purist Mode flag cleanly removed from disk.")
+        except OSError as err:
+            app.logger.error("Failed to remove Super Purist flag file: %s", err)
+
+
+def _transition_to_standard(is_currently_purist):
+    """Handles down-transition back to Standard operational mode."""
+    _clear_super_purist_flag()
+    if is_currently_purist:
+        run_remote_command("/usr/local/bin/pm-toggle-mode")
+
+
+def _transition_to_purist(is_currently_purist):
+    """Handles transition to high-resolution Purist mode layers."""
+    _clear_super_purist_flag()
+    if not is_currently_purist:
+        run_remote_command("/usr/local/bin/pm-toggle-mode")
+
+
+def _transition_to_super_purist(is_currently_purist):
+    """Handles extreme isolation transition down to 10 Mbps layers."""
+    if not os.path.exists(SUPER_PURIST_FLAG):
+        try:
+            os.makedirs(os.path.dirname(SUPER_PURIST_FLAG), exist_ok=True)
+            with open(SUPER_PURIST_FLAG, "w", encoding="utf-8") as file_handle:
+                file_handle.write("1")
+            app.logger.info("Super Purist Mode flag created via UI selection.")
+        except OSError as err:
+            app.logger.error("Failed to set Super Purist flag: %s", err)
+    if not is_currently_purist:
+        run_remote_command("/usr/local/bin/pm-toggle-mode")
+
+
+@app.route("/set-state/<state_name>", methods=["POST"])
+def set_state(state_name):
+    """HTMX endpoint to transition the system explicitly between operational states."""
+    target_status = get_status_from_target()
+    if not target_status:
+        return status()
+
+    is_currently_purist = target_status.get("purist_mode_active", False)
+
+    if state_name == "Standard":
+        _transition_to_standard(is_currently_purist)
+    elif state_name == "Purist" and not target_status.get("license_needs_activation", False):
+        _transition_to_purist(is_currently_purist)
+    elif state_name == "SuperPurist":
+        _transition_to_super_purist(is_currently_purist)
+
     return status()
+
 
 @app.route("/toggle-auto", methods=["POST"])
 def toggle_auto():
     """Toggles the auto-start service on/off."""
     run_remote_command("/usr/local/bin/pm-toggle-auto")
     return status()
+
 
 @app.route("/restart-target", methods=["POST"])
 def restart_target():
@@ -390,34 +783,35 @@ def restart_target():
     restarts the Roon Bridge service on the Host.
     """
     app.logger.info("Starting license activation sequence...")
+    t_status = get_status_from_target()
 
-    # First, check if Purist Mode is active on the Target.
-    target_status = get_status_from_target()
-
-    # If it's active, send the command to disable it.
-    if target_status and target_status.get("purist_mode_active"):
+    if t_status and t_status.get("purist_mode_active"):
         app.logger.info("Purist Mode is active. Disabling it before restart.")
-        # Use the existing, authorized toggle script to turn it off.
         run_remote_command("/usr/local/bin/pm-toggle-mode")
     else:
         app.logger.info("Purist Mode is not active. Proceeding with restart.")
 
-    # Now, restart the Diretta service on the Target.
     app.logger.info("Restarting Diretta ALSA Target service...")
     run_remote_command("/usr/local/bin/pm-restart-target")
 
-    # Finally, restart Roon Bridge on the Host.
     app.logger.info("Restarting Roon Bridge service on Host...")
-    subprocess.run(['/usr/bin/sudo', '/usr/bin/systemctl', 'restart', 'roonbridge.service'], check=True)
+    try:
+        subprocess.run(
+            ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "roonbridge.service"],
+            check=True
+        )
+    except subprocess.CalledProcessError as err:
+        app.logger.error("Failed to restart Roon Bridge during activation: %s", err)
 
     now = datetime.now().strftime("%H:%M:%S")
     return f"""
     <span>Restart commands sent at {now}. Page will refresh shortly.</span>
-    <div hx-trigger="load delay:3s" hx-get="/status" hx-target="#control-panel"></div>
+    <div hx-trigger=\"load delay:3s\" hx-get=\"/status\" hx-target=\"#control-panel\"></div>
     """
+
 
 if __name__ == "__main__":
     is_interactive = sys.stdout.isatty()
-    port = 8080 if is_interactive else 80
-    debug_mode = is_interactive
-    app.run(host="0.0.0.0", port=port, debug=debug_mode)
+    APP_PORT = 8080 if is_interactive else 80
+    APP_DEBUG_MODE = is_interactive
+    app.run(host="0.0.0.0", port=APP_PORT, debug=APP_DEBUG_MODE)

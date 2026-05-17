@@ -84,7 +84,10 @@ if [[ "$1" == "--revert" || "$1" == "-r" ]]; then
     revert_mode
 else
     if [ -f "$BACKUP_FILE" ]; then
-        echo "✅ Purist Mode is already active."
+        # Already active. Enforce the route drop silently in case a physical link 
+        # speed change caused the OS network daemon to resurrect the gateway.
+        sudo ip route del default &>/dev/null
+        echo "✅ Purist Mode is active. Enforced route isolation."
         exit 0
     fi
     activate_mode

@@ -22,7 +22,7 @@ if [ "$is_licensed" = true ]; then
 fi
 
 # 2. Wait for the Diretta service to be healthy at the application layer.
-timeout=60
+timeout=150
 check_start_time="$(date +"%s")"
 
 logger -t "$LOG_TAG" "Starting health check for $LICENSE_URI"
