@@ -2803,15 +2803,19 @@ vcgencmd bootloader_version
 You will need a blank microSD card, an SD card reader, and the official Raspberry Pi Imager software installed on your workstation.
 
 1. Open Raspberry Pi Imager. Click **CHOOSE DEVICE** and select the specific Raspberry Pi board you will be updating.
+
    ![Select Raspberry Pi 5 Device](images/01-rpi-dev.png)
 
 2. Click **CHOOSE OS**, scroll down the list, and select **Misc utility images**.
+
    ![Select Misc Utility Images](images/02-rpi-misc.png)
 
 3. Select **Bootloader**. *(Note: The menu will display the Pi family you selected in Step 1).*
+
    ![Select Bootloader for Pi 5 Family](images/03-rpi-bl.png)
 
 4. Select **SD Card Boot**.
+
    ![Select SD Card Boot](images/04-rpi-sd.png)
 
 5. Click **CHOOSE STORAGE**, select your blank microSD card, click **NEXT**, and write the image.
