@@ -995,6 +995,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient; however, here are some tuned settings you may wish to try:
         ```text
         FlexCycle=disable
+        InfoCycle=80000
         CycleTime=800
         periodMin=16
         periodSizeMin=2048
@@ -1005,9 +1006,12 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         cat <<'EOT' | sudo tee /opt/diretta-alsa/setting.inf
         [global]
         Interface=end0
+        Broadcast=disable
+        ScanOnlineStop=disable
+        ScanInterval=
         TargetProfileLimitTime=200
         ThredMode=1
-        InfoCycle=100000
+        InfoCycle=80000
         FlexCycle=disable
         CycleTime=800
         CycleMinTime=
@@ -1018,6 +1022,8 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         periodSizeMin=2048
         syncBufferCount=8
         alsaUnderrun=enable
+        alsaUnderrunSleep=0
+        alsaUnderrunClear=disable
         unInitMemDet=disable
         CpuSend=
         CpuOther=
