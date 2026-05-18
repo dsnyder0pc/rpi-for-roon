@@ -176,7 +176,7 @@ PURIST_APP_TEMPLATE = """
 
 STATUS_PANEL_TEMPLATE = """
 <div class="space-y-6">
-    <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-6">
+    <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
         <div>
             <h2 class="font-semibold text-xl text-white mb-4">System Optimization Level</h2>
             <div class="grid grid-cols-3 gap-2 p-1 bg-gray-900 rounded-xl border border-gray-700">
@@ -204,7 +204,7 @@ STATUS_PANEL_TEMPLATE = """
             </div>
         </div>
 
-        <div class="border-t border-gray-700/50 py-4">
+        <div class="border-t border-gray-700/50 py-4 mt-6">
             {% if current_state == 'Standard' %}
                 <div class="text-sm text-yellow-400">
                     <span class="font-bold block mb-1">Standard Operation:</span>
@@ -241,7 +241,7 @@ STATUS_PANEL_TEMPLATE = """
             {% endif %}
         </div>
 
-        <div class="flex items-center justify-between p-4 bg-gray-700/30 border border-gray-700 rounded-xl">
+        <div class="flex items-center justify-between p-4 bg-gray-700/30 border border-gray-700 rounded-xl mt-2">
             <div>
                 <h3 class="font-semibold text-base text-white">Activate on Boot</h3>
                 {% if status.auto_start_enabled %}
