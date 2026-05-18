@@ -252,7 +252,7 @@ check "'diretta-alsa-target' is installed" "[ -d /opt/diretta-alsa-target ]"
 check "'diretta_alsa_target' service is enabled" "systemctl is-enabled diretta_alsa_target.service"
 check "'diretta_alsa_target' service is active" "systemctl is-active diretta_alsa_target.service"
 check "USB DAC/DDC is configured and detected" "grep -q ' \[.*\]:' /proc/asound/cards"
-check_status "Diretta Target License Status" "ls /opt/diretta-alsa-target/ | grep -qv '^diretta'" "activated" "limited"
+check_status "Diretta Target License Status" "grep -q '^Licensed' /tmp/diretta_license_url.cache" "activated" "limited"
 
 header "Section 8a" "Diretta Compiler Toolchain"
 # --- Version-Aware Compiler Checks ---
