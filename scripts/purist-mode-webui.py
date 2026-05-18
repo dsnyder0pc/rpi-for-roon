@@ -12,6 +12,7 @@ import subprocess
 import json
 import logging
 import sys
+import threading
 from datetime import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, flash
 
@@ -104,34 +105,63 @@ BASE_TEMPLATE = """
 """
 
 LANDING_PAGE_CONTENT = """
-<div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center space-y-6">
-    <h2 class="text-2xl font-bold text-white">Welcome</h2>
-    <p class="text-gray-400">Please choose a control panel to continue.</p>
-    <div class="flex flex-wrap justify-center gap-4">
-        <a href="{{ url_for('purist_app') }}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-            Purist Mode Control
-        </a>
-        <a href="#" onclick="window.open('//' + window.location.hostname + ':5001', '_blank')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-            Host AudioLinux UI
-        </a>
-
-        {% if current_state != 'Standard' or music_playing %}
-            {% set reason = "Unavailable while background services are disabled" if current_state != 'Standard' else "Unavailable while music is playing" %}
-            <a href="#" class="bg-gray-800 text-gray-500 cursor-not-allowed font-bold py-3 px-6 rounded-lg" title="{{ reason }}">
-                Target AudioLinux UI
+<div class="space-y-6">
+    <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center space-y-6">
+        <h2 class="text-2xl font-bold text-white">Welcome</h2>
+        <p class="text-gray-400">Please choose a control panel to continue.</p>
+        <div class="flex flex-wrap justify-center gap-4">
+            <a href="{{ url_for('purist_app') }}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                Purist Mode Control
             </a>
-        {% else %}
-            <a href="#" onclick="window.open('//' + window.location.hostname + ':5101', '_blank')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-                Target AudioLinux UI
+            <a href="#" onclick="window.open('//' + window.location.hostname + ':5001', '_blank')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                Host AudioLinux UI
             </a>
-        {% endif %}
 
-        {% if roon_is_configured %}
-        <a href="{{ url_for('remote_app') }}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-            IR Remote Control
-        </a>
-        {% endif %}
+            {% if current_state != 'Standard' or music_playing %}
+                {% set reason = "Unavailable while background services are disabled" if current_state != 'Standard' else "Unavailable while music is playing" %}
+                <a href="#" class="bg-gray-800 text-gray-500 cursor-not-allowed font-bold py-3 px-6 rounded-lg" title="{{ reason }}">
+                    Target AudioLinux UI
+                </a>
+            {% else %}
+                <a href="#" onclick="window.open('//' + window.location.hostname + ':5101', '_blank')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                    Target AudioLinux UI
+                </a>
+            {% endif %}
+
+            {% if roon_is_configured %}
+            <a href="{{ url_for('remote_app') }}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                IR Remote Control
+            </a>
+            {% endif %}
+        </div>
     </div>
+
+    {% if status.license_needs_activation %}
+    <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-4">
+        <div class="text-left">
+            <h2 class="font-semibold text-lg text-white">License Activation Required</h2>
+            <p class="text-sm text-yellow-400 mt-1">Evaluation mode detected. High-resolution playback is locked to Super Purist boundaries (10 Mbps limit).</p>
+        </div>
+        <div class="flex flex-col sm:flex-row items-start justify-between gap-6 text-left">
+            <div class="text-sm text-gray-300 flex-1">
+                <p class="mb-2"><strong>Step 1:</strong> Purchase license with this unique link.</p>
+                <a href="{{ status.activation_url }}" target="_blank" rel="noopener noreferrer"
+                   class="inline-block text-blue-400 hover:text-blue-300 underline break-all font-mono text-xs">
+                    {{ status.activation_url }}
+                </a>
+            </div>
+            <div class="flex-shrink-0">
+                <p class="text-sm text-gray-300 mb-2"><strong>Step 2:</strong> After activating, restart.</p>
+                <button hx-post="/restart-target" hx-target="#restart-message" hx-swap="innerHTML"
+                        class="relative inline-flex items-center justify-center w-40 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-blue-600 hover:bg-blue-500 text-white">
+                    <span class="btn-text">Restart Services</span>
+                    <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
+                </button>
+            </div>
+        </div>
+        <div id="restart-message" class="mt-4 text-center text-green-400 h-5"></div>
+    </div>
+    {% endif %}
 </div>
 """
 
@@ -172,6 +202,7 @@ STATUS_PANEL_TEMPLATE = """
                     <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-current"></span>
                 </button>
             </div>
+        </div>
 
         <div class="border-t border-gray-700/50 py-4">
             {% if current_state == 'Standard' %}
@@ -227,33 +258,6 @@ STATUS_PANEL_TEMPLATE = """
             </button>
         </div>
     </div>
-
-    {% if status.license_needs_activation %}
-    <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-4">
-        <div>
-            <h2 class="font-semibold text-lg text-white">License Activation Required</h2>
-            <p class="text-sm text-yellow-400 mt-1">Evaluation mode detected. High-resolution playback is locked to Super Purist boundaries (10 Mbps limit).</p>
-        </div>
-        <div class="flex flex-col sm:flex-row items-start justify-between gap-6">
-            <div class="text-sm text-gray-300 flex-1">
-                <p class="mb-2"><strong>Step 1:</strong> Purchase license with this unique link.</p>
-                <a href="{{ status.activation_url }}" target="_blank" rel="noopener noreferrer"
-                   class="inline-block text-blue-400 hover:text-blue-300 underline break-all">
-                    {{ status.activation_url }}
-                </a>
-            </div>
-            <div class="flex-shrink-0">
-                <p class="text-sm text-gray-300 mb-2"><strong>Step 2:</strong> After activating, restart.</p>
-                <button hx-post="/restart-target" hx-target="#restart-message" hx-swap="innerHTML"
-                        class="relative inline-flex items-center justify-center w-40 h-12 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200 bg-blue-600 hover:bg-blue-500 text-white">
-                    <span class="btn-text">Restart Services</span>
-                    <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-white"></span>
-                </button>
-            </div>
-        </div>
-        <div id="restart-message" class="mt-4 text-center text-green-400 h-5"></div>
-    </div>
-    {% endif %}
 </div>
 """
 
@@ -442,6 +446,31 @@ def _set_link_speed(speed, autoneg):
         app.logger.error("Failed to execute ethtool: %s", err)
 
 
+def _async_hardware_transition(current_state, current_speed):
+    """Executes the link adjustments on an independent, non-blocking thread."""
+    if current_state == "SuperPurist":
+        if current_speed != "10Mb/s":
+            logging.info("Asynchronously transitioning DOWN to 10 Mbps for Super Purist profile...")
+            run_remote_command("/usr/local/bin/pm-set-link 10")
+            _set_link_speed("10", "on")
+            time.sleep(4)
+            update_setting_inf(cycle_time=2000, info_cycle=200000)
+            restart_diretta_services()
+            run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
+    else:
+        if current_speed == "10Mb/s":
+            logging.info(
+                "Asynchronously transitioning UP to 100 "
+                "Mbps standard operational baseline..."
+            )
+            run_remote_command("/usr/local/bin/pm-set-link 100")
+            _set_link_speed("100", "on")
+            time.sleep(4)
+            _handle_licensed_transition_up()
+            if current_state == "Purist":
+                run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
+
+
 def update_setting_inf(cycle_time, info_cycle):
     """Reads setting.inf, updates CycleTime and InfoCycle, and writes it back."""
     if not os.path.exists(DIRETTA_SETTING_PATH):
@@ -565,49 +594,29 @@ def check_and_enforce_host_profile(target_status):
     current_state = get_current_system_state(target_status)
     current_speed = _get_current_speed()
 
-    if current_state == "SuperPurist":
-        # STATE: Enforce 10 Mbps layers
-        if current_speed != "10Mb/s":
-            app.logger.info("Transition DOWN to 10 Mbps detected. Enforcing Super Purist mode.")
-
-            # 1. Tell Target first while the 100Mbps link is wide open
-            run_remote_command("/usr/local/bin/pm-set-link 10")
-
-            # 2. Immediately drop the Host to match
-            _set_link_speed("10", "on")
-
-            # 3. Settle physical layer before cycling media engines
-            time.sleep(4)
-            update_setting_inf(cycle_time=2000, info_cycle=200000)
-            restart_diretta_services()
-            run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
-
-    else:
-        # STATE: Enforce 100 Mbps layers
-        if current_speed == "10Mb/s":
-            app.logger.info("Transition UP to 100 Mbps detected from state: %s", current_state)
-
-            # 1. Tell Target first while the 10Mbps link is stable
-            run_remote_command("/usr/local/bin/pm-set-link 100")
-
-            # 2. Immediately raise the Host to match
-            _set_link_speed("100", "on")
-
-            # 3. Settle physical layer before cycling media engines
-            time.sleep(4)
-            _handle_licensed_transition_up()
-
-            if current_state == "Purist":
-                run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
+    # Defer interface changes to a background worker to avoid blocking Flask status loops
+    threading.Thread(
+        target=_async_hardware_transition,
+        args=(current_state, current_speed),
+        daemon=True
+    ).start()
 
 
 # --- FLASK ROUTES ---
 
 @app.route("/")
 def landing_page():
-    """Serves the main landing page."""
+    """Serves the main landing page with activation details if required."""
     roon_configured = os.path.exists(ROON_CONFIG_PATH)
-    target_status = get_status_from_target() or {"purist_mode_active": False}
+
+    target_status = get_status_from_target()
+    if not target_status:
+        target_status = {
+            "purist_mode_active": False,
+            "license_needs_activation": False,
+            "activation_url": ""
+        }
+
     music_playing = is_music_playing()
     current_state = get_current_system_state(target_status)
 

@@ -1867,8 +1867,8 @@ On the **Diretta Target**, we will create a new user with very limited permissio
       IS_AUTO_ENABLED="true"
     fi
 
-    # Check for the presence of the Diretta License Key File
-    if ! ls /opt/diretta-alsa-target/ | grep -qv '^diretta'; then
+    # Check the validated boot cache for an active evaluation link
+    if [ -f /tmp/diretta_license_url.cache ] && grep -q "http" /tmp/diretta_license_url.cache; then
       LICENSE_LIMITED="true"
     fi
 
