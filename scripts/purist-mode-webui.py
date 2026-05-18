@@ -188,10 +188,7 @@ STATUS_PANEL_TEMPLATE = """
                 </button>
                 <button hx-post="/set-state/Purist" hx-target="#control-panel" hx-swap="innerHTML" hx-disabled-elt="this"
                         class="relative inline-flex items-center justify-center py-3 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
-                        {{ 'bg-green-600 text-white' if current_state == 'Purist' else 'text-gray-400 hover:text-white' }}
-                        {{ 'opacity-50 cursor-not-allowed' if status.license_needs_activation }}"
-                        {{ 'disabled' if status.license_needs_activation }}
-                        {{ 'title=\"Requires active Diretta License\"' if status.license_needs_activation }}>
+                        {{ 'bg-green-600 text-white' if current_state == 'Purist' else 'text-gray-400 hover:text-white' }}">
                     <span class="btn-text">Purist</span>
                     <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-current"></span>
                 </button>
@@ -546,7 +543,7 @@ def get_current_system_state(target_status):
         return "Standard"
     if not target_status.get("purist_mode_active", False):
         return "Standard"
-    if os.path.exists(SUPER_PURIST_FLAG) or target_status.get("license_needs_activation", False):
+    if os.path.exists(SUPER_PURIST_FLAG):
         return "SuperPurist"
     return "Purist"
 
@@ -769,7 +766,7 @@ def set_state(state_name):
 
     if state_name == "Standard":
         _transition_to_standard(is_currently_purist)
-    elif state_name == "Purist" and not target_status.get("license_needs_activation", False):
+    elif state_name == "Purist":
         _transition_to_purist(is_currently_purist)
     elif state_name == "SuperPurist":
         _transition_to_super_purist(is_currently_purist)
