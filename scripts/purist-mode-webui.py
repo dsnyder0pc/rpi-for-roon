@@ -814,8 +814,7 @@ def restart_target():
 
     now = datetime.now().strftime("%H:%M:%S")
     return f"""
-    <span>Restart commands sent at {now}. Page will refresh shortly.</span>
-    <div hx-trigger=\"load delay:3s\" hx-get=\"/status\" hx-target=\"#control-panel\"></div>
+    <span>Restart commands sent at {now}. Allow 10-15 seconds for backend initialization.</span>
     """
 
 
