@@ -1868,7 +1868,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     fi
 
     # Check the validated boot cache for an active evaluation link
-    if [ -f /tmp/diretta_license_url.cache ] && grep -q "http" /tmp/diretta_license_url.cache; then
+    if [ ! -f /tmp/diretta_license_url.cache ] || grep -q "http" /tmp/diretta_license_url.cache; then
       LICENSE_LIMITED="true"
     fi
 
@@ -1941,8 +1941,11 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     elif [ "$SPEED" = "100" ]; then
         echo "Scheduling 100Mbps transition..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 speed 100 duplex full autoneg on" >/dev/null 2>&1 < /dev/null &
+    elif [ "$SPEED" = "1000" ]; then
+        echo "Scheduling 1000Mbps transition..."
+        /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 speed 1000 duplex full autoneg on" >/dev/null 2>&1 < /dev/null &
     else
-        echo "Usage: $0 [10|100]"
+        echo "Usage: $0 [10|100|1000]"
         exit 1
     fi
     EOT
@@ -2204,7 +2207,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roon-ir-remote.service
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roonbridge.service
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart diretta_alsa.service
-    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/ethtool end0
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/ethtool end0 *
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/setting.inf.tmp /opt/diretta-alsa/setting.inf
     EOT
     sudo chmod 0440 /etc/sudoers.d/webui-restarts

@@ -28,6 +28,10 @@ app = Flask(__name__)
 # A secret key is required for flash messaging
 app.secret_key = os.urandom(24)
 
+# --- Global State ---
+ENFORCEMENT_STATE = {"last_time": 0}
+ENFORCEMENT_LOCK = threading.Lock()
+
 # --- Configure Logging ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -232,7 +236,7 @@ STATUS_PANEL_TEMPLATE = """
                         <li>Optimized for maximum micro-dynamic expression and the quietest background at the cost of restricted format support.</li>
                     </ul>
                     <div class="p-3 mt-3 text-xs text-yellow-400 bg-yellow-900/20 rounded-lg border border-yellow-700/30">
-                        <strong>⚠️ Required Roon Setting:</strong> You must configure Roon's MUSE DSP settings to downsample all music to a maximum of 96 kHz PCM for this zone. Native DSD is unsupported.
+                        <strong>⚠️ Required Roon Setting:</strong> You must set the Max sample rate (PCM) to 96 kHz. See advanced Audio settings for this zone in Roon. Native DSD is unsupported.
                     </div>
                 </div>
             {% endif %}
@@ -391,13 +395,24 @@ def get_host_mtu(interface="end0"):
         return 1500
 
 
+def is_app8_enabled():
+    """Checks if the Optional Purist Network Speed (App 8) service is enabled."""
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-enabled", "limit-speed-100m.service"],
+            capture_output=True, text=True, check=False
+        )
+        return "enabled" in result.stdout.strip()
+    except OSError:
+        return False
+
+
 def is_diretta_isolated():
     """
     Checks if the running diretta_alsa service is bound to isolated audio cores (2 or 3)
     by querying the active process affinity directly from the kernel scheduler.
     """
     try:
-        # 1. Grab the live MainPID from systemd
         pid_cmd = ["systemctl", "show", "--property", "MainPID", "--value", "diretta_alsa.service"]
         pid_result = subprocess.run(pid_cmd, capture_output=True, text=True, check=False)
         pid = pid_result.stdout.strip()
@@ -406,23 +421,22 @@ def is_diretta_isolated():
             app.logger.warning("Diretta service is either not running or PID is invalid (0).")
             return False
 
-        # 2. Query the real-time CPU affinity mask for that PID
         taskset_cmd = ["/usr/bin/taskset", "-cp", pid]
         taskset_result = subprocess.run(taskset_cmd, capture_output=True, text=True, check=False)
         taskset_out = taskset_result.stdout.strip()
 
-        # Parse out the list of cores (e.g., "pid 1234's current affinity list: 2-3")
         if ":" in taskset_out:
             affinity_list = taskset_out.split(":")[-1].strip()
 
-            # Match the QA script's exact targets: cores 2, 3, 2-3, or 2,3
-            if any(core in affinity_list for core in ["2", "3", "2-3", "2,3"]):
+            # Exact string matching prevents matching wide default masks like "0,1,2,3"
+            valid_masks = ["2", "3", "2-3", "2,3", "3,2"]
+            if affinity_list in valid_masks:
                 app.logger.info("Live core isolation verified. Affinity list: %s", affinity_list)
                 return True
 
             app.logger.warning(
                 "Diretta running on non-isolated cores. Actual affinity: %s",
-                 affinity_list
+                affinity_list
             )
 
     except OSError as err:
@@ -435,37 +449,12 @@ def _set_link_speed(speed, autoneg):
     """Internal helper to set the link speed via ethtool."""
     cmd = [
         "/usr/bin/sudo", "/usr/bin/ethtool", "-s", "end0",
-        "speed", speed, "duplex", "full", "autoneg", autoneg
+        "speed", str(speed), "duplex", "full", "autoneg", autoneg
     ]
     try:
         subprocess.run(cmd, check=False, capture_output=True)
     except OSError as err:
         app.logger.error("Failed to execute ethtool: %s", err)
-
-
-def _async_hardware_transition(current_state, current_speed):
-    """Executes the link adjustments on an independent, non-blocking thread."""
-    if current_state == "SuperPurist":
-        if current_speed != "10Mb/s":
-            logging.info("Asynchronously transitioning DOWN to 10 Mbps for Super Purist profile...")
-            run_remote_command("/usr/local/bin/pm-set-link 10")
-            _set_link_speed("10", "on")
-            time.sleep(4)
-            update_setting_inf(cycle_time=2000, info_cycle=200000)
-            restart_diretta_services()
-            run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
-    else:
-        if current_speed == "10Mb/s":
-            logging.info(
-                "Asynchronously transitioning UP to 100 "
-                "Mbps standard operational baseline..."
-            )
-            run_remote_command("/usr/local/bin/pm-set-link 100")
-            _set_link_speed("100", "on")
-            time.sleep(4)
-            _handle_licensed_transition_up()
-            if current_state == "Purist":
-                run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
 
 
 def update_setting_inf(cycle_time, info_cycle):
@@ -537,6 +526,18 @@ def _get_current_speed():
     return None
 
 
+def _get_current_cycletime():
+    """Parses the current CycleTime from setting.inf."""
+    try:
+        with open(DIRETTA_SETTING_PATH, "r", encoding="utf-8") as file_handle:
+            for line in file_handle:
+                if line.startswith("CycleTime="):
+                    return int(line.strip().split("=")[1])
+    except (OSError, ValueError, IndexError):
+        pass
+    return 0
+
+
 def get_current_system_state(target_status):
     """Derives the friendly UI state name based on Target flags and Host flags."""
     if not target_status:
@@ -548,55 +549,101 @@ def get_current_system_state(target_status):
     return "Purist"
 
 
-def _handle_licensed_transition_up():
-    """Executes the specific logic path when moving from 10 Mbps to 100 Mbps."""
-    _set_link_speed("100", "on")
-    run_remote_command("/usr/local/bin/pm-set-link 100")
+def get_baseline_link_speed(target_status):
+    """Calculates the baseline network speed based on Appendix 8 and license status."""
+    if is_app8_enabled():
+        if target_status and target_status.get("license_needs_activation", False):
+            return "10"
+        return "100"
+    return "1000"
+
+
+def get_target_speed(current_state, target_status):
+    """Determines the exact physical speed target required for the current state."""
+    if current_state == "SuperPurist":
+        return "10"
+    return get_baseline_link_speed(target_status)
+
+
+def get_target_profile(current_state):
+    """Determines the exact CycleTime and InfoCycle parameters for the current state."""
+    if current_state == "SuperPurist":
+        return 2000, 200000
 
     if not is_diretta_isolated():
-        update_setting_inf(cycle_time=800, info_cycle=80000)
-    else:
-        mtu = get_host_mtu()
-        if mtu == 1500:
-            update_setting_inf(cycle_time=514, info_cycle=51400)
-        elif mtu == 2032:
-            update_setting_inf(cycle_time=700, info_cycle=70000)
-        elif mtu >= 9000:
-            update_setting_inf(cycle_time=1000, info_cycle=100000)
-        else:
-            app.logger.warning("Unexpected MTU (%s). Defaulting to 1500 profile.", mtu)
-            update_setting_inf(cycle_time=514, info_cycle=51400)
+        return 800, 80000
 
+    mtu = get_host_mtu()
+    if mtu == 1500:
+        return 514, 51400
+    if mtu == 2032:
+        return 700, 70000
+    if mtu >= 9000:
+        return 1000, 100000
+
+    return 514, 51400  # Default isolated fallback
+
+
+def _async_hardware_transition(expected_speed, expected_ct, expected_ic, current_state):
+    """Executes the link and profile adjustments on a non-blocking thread."""
+    app.logger.info("Asynchronously transitioning link and Diretta profile...")
+
+    # 1. Coordinate link speed
+    run_remote_command(f"/usr/local/bin/pm-set-link {expected_speed}")
+    _set_link_speed(expected_speed, "on")
+
+    # 2. Wait for physical layer to settle
+    time.sleep(4)
+
+    # 3. Apply settings and restart
+    update_setting_inf(cycle_time=expected_ct, info_cycle=expected_ic)
     restart_diretta_services()
+
+    # 4. Enforce Target state
+    if current_state in ["Purist", "SuperPurist"]:
+        run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
 
 
 def check_and_enforce_host_profile(target_status):
     """
-    Checks current host MTU, link speed, and shadows Target state.
-    Bails out safely if the physical interface is currently flapping or down.
+    Intelligently compares current runtime variables against the target logic matrix.
+    If mismatched, orchestrates the entire hardware and profile transition pipeline.
     """
+
     if not target_status:
         return
 
-    current_speed = _get_current_speed()
+    current_speed_str = _get_current_speed()
 
     # SAFETY GATE: If the link state is unstable or negotiating, do not enforce rules
-    if not current_speed or "Unknown" in current_speed:
-        app.logger.info(
-            "Physical link is currently negotiating or down. "
-            "Skipping enforcement to prevent loops."
-        )
+    if not current_speed_str or "Unknown" in current_speed_str:
+        app.logger.info("Physical link is currently negotiating or down. Skipping enforcement.")
         return
 
-    current_state = get_current_system_state(target_status)
-    current_speed = _get_current_speed()
+    current_speed_val = current_speed_str.replace("Mb/s", "").strip()
+    current_ct = _get_current_cycletime()
 
-    # Defer interface changes to a background worker to avoid blocking Flask status loops
-    threading.Thread(
-        target=_async_hardware_transition,
-        args=(current_state, current_speed),
-        daemon=True
-    ).start()
+    current_state = get_current_system_state(target_status)
+    expected_speed = get_target_speed(current_state, target_status)
+    expected_ct, expected_ic = get_target_profile(current_state)
+
+    if current_speed_val != expected_speed or current_ct != expected_ct:
+        with ENFORCEMENT_LOCK:
+            # Cooldown to prevent thread spamming during fast clicks or polling
+            if time.time() - ENFORCEMENT_STATE["last_time"] < 15:
+                return
+            ENFORCEMENT_STATE["last_time"] = time.time()
+
+        app.logger.info(
+            "Enforcement triggered. Speed: %s -> %s | CycleTime: %s -> %s",
+            current_speed_val, expected_speed, current_ct, expected_ct
+        )
+
+        threading.Thread(
+            target=_async_hardware_transition,
+            args=(expected_speed, expected_ct, expected_ic, current_state),
+            daemon=True
+        ).start()
 
 
 # --- FLASK ROUTES ---
