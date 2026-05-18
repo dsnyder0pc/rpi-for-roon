@@ -2490,6 +2490,9 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     cat <<'EOT' | sudo tee /opt/diretta-alsa/setting.inf
     [global]
     Interface=end0
+    Broadcast=disable
+    ScanOnlineStop=disable
+    ScanInterval=
     TargetProfileLimitTime=200
     ThredMode=1
     InfoCycle=51400
@@ -2503,6 +2506,8 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     periodSizeMin=2048
     syncBufferCount=8
     alsaUnderrun=enable
+    alsaUnderrunSleep=0
+    alsaUnderrunClear=disable
     unInitMemDet=disable
     CpuSend=2
     CpuOther=3
