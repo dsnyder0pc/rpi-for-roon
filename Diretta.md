@@ -2541,7 +2541,47 @@ While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the 
 
 > **Note:** You may see "buffer low" warnings in the Target logs (`LatencyBuffer` dropping to 1). This is normal behavior due to the increased serialization latency of the slower link and does not cause audible dropouts.
 
-### Step 1: Configure the Host (Speed Limit)
+### Step 1: Configure Host and Target (Disable EEE)
+
+Energy Efficient Ethernet (EEE) can cause link instability on some hardware combinations. We will create a service to explicitly disable it on **both** the Host and the Target to ensure consistent behavior.
+
+**Create the disable service:** *(Perform on BOTH Host and Target)*
+
+```bash
+cat <<'EOT' | sudo tee /etc/systemd/system/disable-eee.service
+[Unit]
+Description=Disable EEE on end0 for Link Stability
+After=network.target
+BindsTo=sys-subsystem-net-devices-end0.device
+After=sys-subsystem-net-devices-end0.device
+
+[Service]
+Type=oneshot
+# Wait up to 5 seconds for the interface to actually show as UP
+ExecStartPre=/usr/bin/bash -c 'for i in {1..5}; do if ip link show end0 | grep -q "UP"; then exit 0; fi; sleep 1; done; exit 1'
+# Now set the hardware optimization
+ExecStart=-/usr/bin/ethtool -s end0 autoneg off
+ExecStart=-/usr/bin/ethtool -s end0 autoneg on
+ExecStart=-/usr/bin/ethtool --set-eee end0 eee off
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOT
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now disable-eee.service
+```
+
+### Step 2: Flag the Target (For QA)
+
+To ensure the **Target QA Script** knows to validate this specific configuration, create a marker file on the Target:
+
+```bash
+sudo touch /etc/diretta-100m
+```
+
+### Step 3: Configure the Host (Speed Limit)
 We will create a service on the **Host** that forces it to advertise *either* 10 Mbps or 100 Mbps Full Duplex, depending on if "Super Purist" mode is enabled. The Target will automatically detect the speed change and match it.
 
 **Create the restriction script and service:** *(Perform on Host Only)*
@@ -2580,46 +2620,6 @@ EOT
 echo "Enable and start the service:"
 sudo systemctl daemon-reload
 sudo systemctl enable --now limit-speed-100m.service
-```
-
-### Step 2: Configure Host and Target (Disable EEE)
-
-Energy Efficient Ethernet (EEE) can cause link instability on some hardware combinations. We will create a service to explicitly disable it on **both** the Host and the Target to ensure consistent behavior.
-
-**Create the disable service:** *(Perform on BOTH Host and Target)*
-
-```bash
-cat <<'EOT' | sudo tee /etc/systemd/system/disable-eee.service
-[Unit]
-Description=Disable EEE on end0 for Link Stability
-After=network.target
-BindsTo=sys-subsystem-net-devices-end0.device
-After=sys-subsystem-net-devices-end0.device
-
-[Service]
-Type=oneshot
-# Wait up to 5 seconds for the interface to actually show as UP
-ExecStartPre=/usr/bin/bash -c 'for i in {1..5}; do if ip link show end0 | grep -q "UP"; then exit 0; fi; sleep 1; done; exit 1'
-# Now set the hardware optimization
-ExecStart=-/usr/bin/ethtool -s end0 autoneg off
-ExecStart=-/usr/bin/ethtool -s end0 autoneg on
-ExecStart=-/usr/bin/ethtool --set-eee end0 eee off
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-EOT
-
-sudo systemctl daemon-reload
-sudo systemctl enable --now disable-eee.service
-```
-
-### Step 3: Flag the Target (For QA)
-
-To ensure the **Target QA Script** knows to validate this specific configuration, create a marker file on the Target:
-
-```bash
-sudo touch /etc/diretta-100m
 ```
 
 ***
