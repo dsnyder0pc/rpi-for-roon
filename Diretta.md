@@ -9,7 +9,7 @@ The **Diretta Host** will connect to your main network (to access your music ser
 I aim to keep this guide compatible with the current official AudioLinux download link provided by Piero.
 
 **Current Validation:**
-These instructions were last tested with **AudioLinux V5** (Image: `audiolinux_pi4-pi5_510`, Menu Version: `529`).
+These instructions were last tested with **AudioLinux V5** (Image: `audiolinux_pi4-pi5_510`, Menu Version: `532`).
 
 **A Note on Updates:**
 Because AudioLinux is based on Arch (a rolling release), a fresh install will always pull the absolute latest software. Once your system is singing, you have two choices:
@@ -2533,16 +2533,16 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
 >
 > ---
 
-## 17. Appendix 8: Optional Purist 100Mbps Network Mode
+## 17. Appendix 8: Optional Purist Network Speeds
 
-**Objective:** Reduce electrical noise and improve OS scheduler precision by limiting the dedicated network link to 100 Mbps and explicitly disabling Energy Efficient Ethernet (EEE).
+**Objective:** Reduce electrical noise and improve OS scheduler precision by limiting the dedicated network link speed and explicitly disabling Energy Efficient Ethernet (EEE).
 
-While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the dedicated link (`end0`) can improve sound quality. The lower operating frequency of 100BASE-TX (31.25 MHz vs 62.5 MHz) generates less RFI. Furthermore, ensuring EEE is disabled prevents the link from entering sleep states, eliminating potential latency spikes (flapping) and ensuring rock-solid stability on Raspberry Pi 5 hardware.
+While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the dedicated link (`end0`) can improve sound quality. The lower operating frequency of 100BASE-TX (31.25 MHz vs 62.5 MHz) generates less RFI. In the extreme, lowering the frequency to 10 Mbps reduces the frequency to 10 Mhz). Furthermore, ensuring EEE is disabled prevents the link from entering sleep states, eliminating potential latency spikes (flapping) and ensuring rock-solid stability on Raspberry Pi 5 hardware.
 
 > **Note:** You may see "buffer low" warnings in the Target logs (`LatencyBuffer` dropping to 1). This is normal behavior due to the increased serialization latency of the slower link and does not cause audible dropouts.
 
 ### Step 1: Configure the Host (Speed Limit)
-We will create a service on the **Host** that forces it to advertise *only* 100 Mbps Full Duplex. The Target will automatically detect this and match it.
+We will create a service on the **Host** that forces it to advertise *either* 10 Mbps or 100 Mbps Full Duplex, depending on if "Super Purist" mode is enabled. The Target will automatically detect the speed change and match it.
 
 **Create the restriction script and service:** *(Perform on Host Only)*
 ```bash
