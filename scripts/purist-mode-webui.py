@@ -570,18 +570,18 @@ def get_target_profile(current_state):
     if current_state == "SuperPurist":
         return 2000, 200000
 
-    if not is_diretta_isolated():
-        return 800, 80000
-
+    # Read the physical hardware environment first
     mtu = get_host_mtu()
-    if mtu == 1500:
-        return 514, 51400
     if mtu == 2032:
-        return 700, 70000
+        return 700, 70000  # Baby Jumbo optimization layer
     if mtu >= 9000:
-        return 1000, 100000
+        return 1000, 100000  # Full Jumbo optimization layer
 
-    return 514, 51400  # Default isolated fallback
+    # If we are on standard MTU, check if we have the green light for isolation timings
+    if is_diretta_isolated() or _get_current_cycletime() == 514:
+        return 514, 51400  # Tight core-isolated timing
+
+    return 800, 80000  # Un-isolated fallback baseline
 
 
 def _async_hardware_transition(expected_speed, expected_ct, expected_ic, current_state):
