@@ -1931,19 +1931,19 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     cat <<'EOT' | sudo tee /usr/local/bin/pm-set-link
     #!/bin/bash
     # Profile script to enforce Target physical link boundaries
-    # Refactored to use explicit isolated subshells for clean SSH detaching
+    # Refactored using explicit advertisement masks to prevent hardware deadlocks
 
     SPEED="$1"
 
     if [ "$SPEED" = "10" ]; then
-        echo "Scheduling 10Mbps transition..."
-        /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 speed 10 duplex full autoneg on" >/dev/null 2>&1 < /dev/null &
+        echo "Scheduling 10Mbps clamp (Super Purist)..."
+        /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x002" >/dev/null 2>&1 < /dev/null &
     elif [ "$SPEED" = "100" ]; then
-        echo "Scheduling 100Mbps transition..."
-        /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 speed 100 duplex full autoneg on" >/dev/null 2>&1 < /dev/null &
+        echo "Scheduling 100Mbps clamp (Purist)..."
+        /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x008" >/dev/null 2>&1 < /dev/null &
     elif [ "$SPEED" = "1000" ]; then
-        echo "Scheduling 1000Mbps transition..."
-        /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 speed 1000 duplex full autoneg on" >/dev/null 2>&1 < /dev/null &
+        echo "Releasing clamps. Restoring full 10/100/1000 portfolio (Standard)..."
+        /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x03f" >/dev/null 2>&1 < /dev/null &
     else
         echo "Usage: $0 [10|100|1000]"
         exit 1
