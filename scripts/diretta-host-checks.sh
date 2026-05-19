@@ -179,7 +179,9 @@ run_appendix9_checks() {
             check "InfoCycle ($IC) is 100x CycleTime ($CT)" "[[ $((CT * 100)) -eq $IC ]]"
         fi
     fi
-    if [ "$CURRENT_MTU" -eq 9000 ]; then
+    if [ -f /home/audiolinux/purist-mode-webui/super_purist.flag ]; then
+        check "CycleTime is optimized (2000us for Super Purist)" "grep -q '^CycleTime=2000' $CONFIG"
+    elif [ "$CURRENT_MTU" -eq 9000 ]; then
         check "CycleTime is optimized (1000us for Full Jumbo)" "grep -q '^CycleTime=1000' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
         check "CycleTime is optimized (700us for Baby Jumbo)" "grep -q '^CycleTime=700' $CONFIG"
