@@ -2559,6 +2559,7 @@ else
     /usr/bin/ethtool -s end0 speed 100 duplex full autoneg on
 fi
 EOT
+sudo chmod +x /usr/local/bin/set-link-speed.sh
 
 cat <<'EOT' | sudo tee /etc/systemd/system/limit-speed-100m.service
 [Unit]
