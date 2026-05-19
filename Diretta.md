@@ -90,7 +90,7 @@ If you are located in the US, expect to pay around $320 (plus tax and shipping) 
 14. [Appendix 5: System Health Checks](#14-appendix-5-system-health-checks)
 15. [Appendix 6: Optional Realtime Performance Tuning](#15-appendix-6-optional-realtime-performance-tuning)
 16. [Appendix 7: Optional IRQ and Thread Optimizations](#16-appendix-7-optional-irq-and-thread-optimizations)
-17. [Appendix 8: Optional Purist 100Mbps Network Mode](#17-appendix-8-optional-purist-100mbps-network-mode)
+17. [Appendix 8: Optional Purist Network Speeds](#17-appendix-8-optional-purist-network-speeds)
 18. [Appendix 9: Optional Jumbo Frames Optimization](#18-appendix-9-optional-jumbo-frames-optimization)
 19. [Appendix 10: Optional System Updates](#19-appendix-10-optional-system-updates)
 
