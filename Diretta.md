@@ -2587,15 +2587,15 @@ We will create a service on the **Host** that forces it to advertise *either* 10
 ```bash
 cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
 #!/bin/bash
-# Set link speed based on the Super Purist web UI flag
+# Set link speed based on the Super Purist web UI flag using safe advertisement masks
 FLAG_FILE="/home/audiolinux/purist-mode-webui/super_purist.flag"
 
 if [ -f "$FLAG_FILE" ]; then
-    echo "Super Purist flag detected. Forcing 10 Mbps..."
-    /usr/bin/ethtool -s end0 speed 10 duplex full autoneg on
+    echo "Super Purist flag detected. Advertising 10 Mbps Full Duplex..."
+    /usr/bin/ethtool -s end0 advertise 0x002
 else
-    echo "Standard/Purist mode. Setting 100 Mbps..."
-    /usr/bin/ethtool -s end0 speed 100 duplex full autoneg on
+    echo "Standard/Purist mode. Advertising up to 100 Mbps Full Duplex..."
+    /usr/bin/ethtool -s end0 advertise 0x00a
 fi
 EOT
 sudo chmod +x /usr/local/bin/set-link-speed.sh
