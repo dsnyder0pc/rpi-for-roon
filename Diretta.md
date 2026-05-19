@@ -2553,7 +2553,7 @@ FLAG_FILE="/home/audiolinux/purist-mode-webui/super_purist.flag"
 
 if [ -f "$FLAG_FILE" ]; then
     echo "Super Purist flag detected. Forcing 10 Mbps..."
-    /usr/bin/ethtool -s end0 speed 10 duplex full autoneg off
+    /usr/bin/ethtool -s end0 speed 10 duplex full autoneg on
 else
     echo "Standard/Purist mode. Setting 100 Mbps..."
     /usr/bin/ethtool -s end0 speed 100 duplex full autoneg on
@@ -2578,8 +2578,6 @@ EOT
 
 echo "Enable and start the service:"
 sudo systemctl daemon-reload
-sudo systemctl disable limit-speed-100m.service
-sudo rm -f /etc/systemd/system/limit-speed-100m.service
 sudo systemctl enable --now limit-speed-100m.service
 ```
 
