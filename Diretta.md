@@ -2598,6 +2598,7 @@ else
     echo "Standard/Purist mode. Advertising up to 100 Mbps Full Duplex..."
     /usr/bin/ethtool -s end0 advertise 0x00a
 fi
+sudo systemctl restart systemd-networkd.service
 EOT
 sudo chmod +x /usr/local/bin/set-link-speed.sh
 
