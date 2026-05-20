@@ -555,11 +555,9 @@ def get_current_system_state(target_status):
     return "Purist"
 
 
-def get_baseline_link_speed(target_status):
+def get_baseline_link_speed(_target_status):
     """Calculates the baseline network speed based on Appendix 8 and license status."""
     if is_app8_enabled():
-        if target_status and target_status.get("license_needs_activation", False):
-            return "10"
         return "100"
     return "1000"
 
