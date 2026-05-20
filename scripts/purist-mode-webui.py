@@ -445,11 +445,16 @@ def is_diretta_isolated():
     return False
 
 
-def _set_link_speed(speed, autoneg):
-    """Internal helper to set the link speed via ethtool."""
+def _set_link_speed(speed, _autoneg):
+    """Internal helper to set the link speed via ethtool using safe advertisement masks."""
+    mask = "0x03f"  # Default to 1 Gbps
+    if speed == "10":
+        mask = "0x002"
+    elif speed == "100":
+        mask = "0x00a"
+
     cmd = [
-        "/usr/bin/sudo", "/usr/bin/ethtool", "-s", "end0",
-        "speed", str(speed), "duplex", "full", "autoneg", autoneg
+        "/usr/bin/sudo", "/usr/bin/ethtool", "-s", "end0", "advertise", mask
     ]
     try:
         subprocess.run(cmd, check=False, capture_output=True)
@@ -498,6 +503,7 @@ def restart_diretta_services():
     """Restarts the Diretta and Roon Bridge services."""
     app.logger.info("Restarting Diretta and Roon Bridge services...")
     try:
+        subprocess.run(["/usr/bin/sudo", "/usr/bin/systemctl", "daemon-reload"], check=True)
         subprocess.run(
             ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "diretta_alsa.service"],
             check=True
@@ -599,7 +605,10 @@ def _async_hardware_transition(expected_speed, expected_ct, expected_ic, current
     update_setting_inf(cycle_time=expected_ct, info_cycle=expected_ic)
     restart_diretta_services()
 
-    # 4. Enforce Target state
+    # 4. Give the Target 2 seconds to recover its SSH/Systemd stack after service restarts
+    time.sleep(2)
+
+    # 5. Enforce Target state
     if current_state in ["Purist", "SuperPurist"]:
         run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
 

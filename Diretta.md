@@ -2207,7 +2207,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roon-ir-remote.service
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roonbridge.service
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart diretta_alsa.service
-    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/ethtool end0 *
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/ethtool -s end0 *
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/setting.inf.tmp /opt/diretta-alsa/setting.inf
     EOT
     sudo chmod 0440 /etc/sudoers.d/webui-restarts
@@ -2248,6 +2248,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
 13. **Enable and Start the Web App:**
     ```bash
     sudo systemctl daemon-reload
+    sudo systemctl stop purist-webui.service
     sudo systemctl enable --now purist-webui.service
     ```
 
