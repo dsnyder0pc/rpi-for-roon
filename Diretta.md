@@ -323,6 +323,29 @@ Install the `dnsutils` package so that the **menu** update will have access to t
 sudo pacman -S --noconfirm --needed dnsutils
 ```
 
+#### 4.3.1. Protect 6.12.77-1-rpi+ Kernel Headers from Upstream Purges
+```bash
+PACMAN_CONF="/etc/pacman.conf"
+TARGET_MODULE_DIR="/usr/lib/modules/6.12.77-1-rpi+/build"
+
+# Verify the specific kernel tree exists before applying the shield
+if [ -d "$TARGET_MODULE_DIR" ]; then
+    if grep -q "usr/lib/modules/6.12.77-1-rpi+/build" "$PACMAN_CONF"; then
+        echo "6.12.77-1-rpi+ header protection is already configured in $PACMAN_CONF. Skipping."
+    else
+        echo "Configuring 6.12.77-1-rpi+ header protection in $PACMAN_CONF..."
+
+        # Uncomment and populate the NoUpgrade line
+        sudo sed -i 's|^#NoUpgrade[[:space:]]*=|NoUpgrade   = usr/lib/modules/6.12.77-1-rpi+/build/*|' "$PACMAN_CONF"
+
+        # Uncomment and populate the NoExtract line
+        sudo sed -i 's|^#NoExtract[[:space:]]*=|NoExtract   = usr/lib/modules/6.12.77-1-rpi+/build/*|' "$PACMAN_CONF"
+    fi
+else
+    echo "$TARGET_MODULE_DIR not found. Active kernel has likely advanced past 6.12.77. Skipping configuration."
+fi
+```
+
 #### 4.4. Run System and Menu Updates
 
 Use the AudioLinux menu system to perform all updates. Have your email from Piero with your image download user and password. You'll need these for the menu update. It will ask for **your menu update user**, which is a bit confusing. It's asking for the username and password that you used to download the AudioLinux install image.
@@ -345,11 +368,11 @@ Use the AudioLinux menu system to perform all updates. Have your email from Pier
 3. Select **Kernel update**.
 4. You will see a menu similar to this:
 ```text
-Your kernel                                6.12.59-1-rpi LTS RT LTO
+Your kernel                                6.12.77-1-rpi+ LTS RT LTO
 Audiolinux LTS RT LTO                      6.12.77-1
-Audiolinux last RT LTO                     6.18.20-1
+Audiolinux last RT LTO                     6.18.32-2
 Audiolinux LTS RT LTO 16k (only Pi 5)      6.12.77-1
-Audiolinux last RT LTO 16k (only Pi 5)     6.18.19-1
+Audiolinux last RT LTO 16k (only Pi 5)     6.18.32-2
 ```
 
 #### 4.5. Select option **1** (`Audiolinux LTS RT LTO`).
@@ -910,7 +933,6 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ```text
     What do you want to do?
 
-    0) Install previous stable version
     1) Install/update last version
     2) Enable/Disable Diretta Target
     3) Configure Audio card
@@ -970,7 +992,6 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     ```text
     What do you want to do?
 
-    0) Install previous stable version
     1) Install/update last version
     2) Enable/Disable Diretta daemon
     3) Set Ethernet interface
@@ -994,8 +1015,8 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         ```
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient; however, here are some tuned settings you may wish to try:
         ```text
-        FlexCycle=disable
         InfoCycle=80000
+        FlexCycle=disable
         CycleTime=800
         periodMin=16
         periodSizeMin=2048
@@ -2204,6 +2225,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/webui-restarts
     # Allow the webui (running as audiolinux) to enforce host profiles and restart services
+    audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl daemon-reload
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roon-ir-remote.service
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roonbridge.service
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart diretta_alsa.service
@@ -2625,7 +2647,7 @@ sudo systemctl enable --now limit-speed-100m.service
 
 ***
 > **Note on Playback Latency:**
-> You may notice a slight increase in the delay between pressing "Play" and hearing music (up to ~1 second). This is expected behavior. By restricting the link to 100 Mbps, we are intentionally throttling the initial data burst to ensure the connection operates at a lower, quieter frequency. The system is trading instantaneous start times for a steadier, lower-noise steady state during playback.
+> You may notice a slight increase in the delay between pressing "Play" and hearing music (up to ~1 second). This is expected behavior. By restricting the link to 10 or 100 Mbps, we are intentionally throttling the initial data burst to ensure the connection operates at a lower, quieter frequency. The system is trading instantaneous start times for a steadier, lower-noise steady state during playback.
 ***
 
 >
@@ -2856,6 +2878,30 @@ vcgencmd bootloader_version
 
 The system update process requires a strict sequence to ensure the custom kernel, compilation toolchains, and ALSA daemon remain perfectly synchronized.
 
+#### Protect 6.12.77-1-rpi+ Kernel Headers from Upstream Purges
+```bash
+PACMAN_CONF="/etc/pacman.conf"
+TARGET_MODULE_DIR="/usr/lib/modules/6.12.77-1-rpi+/build"
+
+# Verify the specific kernel tree exists before applying the shield
+if [ -d "$TARGET_MODULE_DIR" ]; then
+    if grep -q "usr/lib/modules/6.12.77-1-rpi+/build" "$PACMAN_CONF"; then
+        echo "6.12.77-1-rpi+ header protection is already configured in $PACMAN_CONF. Skipping."
+    else
+        echo "Configuring 6.12.77-1-rpi+ header protection in $PACMAN_CONF..."
+
+        # Uncomment and populate the NoUpgrade line
+        sudo sed -i 's|^#NoUpgrade[[:space:]]*=|NoUpgrade   = usr/lib/modules/6.12.77-1-rpi+/build/*|' "$PACMAN_CONF"
+
+        # Uncomment and populate the NoExtract line
+        sudo sed -i 's|^#NoExtract[[:space:]]*=|NoExtract   = usr/lib/modules/6.12.77-1-rpi+/build/*|' "$PACMAN_CONF"
+    fi
+else
+    echo "$TARGET_MODULE_DIR not found. Active kernel has likely advanced past 6.12.77. Skipping configuration."
+fi
+```
+
+#### Now, proceed with the updates
 1. Launch the AudioLinux configuration tool by typing `menu` at the command prompt.
 2. Navigate to the **Install/Update menu** and select **UPDATE System**.
 3. While still in the **Install/Update menu**, select **UPDATE menu**.

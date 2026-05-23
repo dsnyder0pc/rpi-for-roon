@@ -109,13 +109,22 @@ fi
 
 # --- Clean and Set IgnorePkg ---
 PACMAN_CONF="/etc/pacman.conf"
-echo "Setting IgnorePkg for required version tools..."
+EXISTING_STR=$(grep -oP '^\s*#*\s*IgnorePkg\s*=\s*\K.*' "${PACMAN_CONF}")
+read -r -a PARSED_EXISTING <<< "${EXISTING_STR}"
+COMBINED_LIST=("${PACKAGES_TO_IGNORE[@]}" "${PARSED_EXISTING[@]}")
 
-# Remove any existing IgnorePkg lines (commented or uncommented) to avoid duplicates
+declare -A UNIQUE_MAP
+UNIQUE_LIST=()
+for PKG in "${COMBINED_LIST[@]}"; do
+    if [[ -n "$PKG" && -z "${UNIQUE_MAP[$PKG]}" ]]; then
+        UNIQUE_MAP[$PKG]=1
+        UNIQUE_LIST+=("$PKG")
+    fi
+done
+
+IGNORE_LIST_STRING="${UNIQUE_LIST[*]}"
 sudo sed -i '/^#*IgnorePkg\s*=/d' "${PACMAN_CONF}"
-
-# Join array into a space-separated string for the pacman.conf entry
-IGNORE_LIST_STRING="${PACKAGES_TO_IGNORE[*]}"
+sudo sed -i "/^\[options\]/a IgnorePkg = ${IGNORE_LIST_STRING}" "${PACMAN_CONF}"
 
 # Add the new IgnorePkg line directly after the [options] header
 sudo sed -i "/^\[options\]/a IgnorePkg = ${IGNORE_LIST_STRING}" "${PACMAN_CONF}"
