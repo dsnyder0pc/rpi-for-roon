@@ -109,10 +109,18 @@ fi
 
 # --- Clean and Set IgnorePkg ---
 PACMAN_CONF="/etc/pacman.conf"
+echo "Dynamically updating IgnorePkg without clobbering existing settings..."
+
+# 1. Extract existing values (handles both commented and uncommented IgnorePkg targets)
 EXISTING_STR=$(grep -oP '^\s*#*\s*IgnorePkg\s*=\s*\K.*' "${PACMAN_CONF}")
+
+# 2. Split the string cleanly into an array to appease ShellCheck (SC2206)
 read -r -a PARSED_EXISTING <<< "${EXISTING_STR}"
+
+# 3. Combine the arrays securely
 COMBINED_LIST=("${PACKAGES_TO_IGNORE[@]}" "${PARSED_EXISTING[@]}")
 
+# 4. Filter for strictly unique package entries
 declare -A UNIQUE_MAP
 UNIQUE_LIST=()
 for PKG in "${COMBINED_LIST[@]}"; do
@@ -122,14 +130,16 @@ for PKG in "${COMBINED_LIST[@]}"; do
     fi
 done
 
+# 5. Join the unique array entries into a clean space-separated string
 IGNORE_LIST_STRING="${UNIQUE_LIST[*]}"
+
+# 6. Remove old structural variations safely to avoid duplicate configuration blocks
 sudo sed -i '/^#*IgnorePkg\s*=/d' "${PACMAN_CONF}"
+
+# 7. Append the fresh, comprehensive tracking line directly under [options]
 sudo sed -i "/^\[options\]/a IgnorePkg = ${IGNORE_LIST_STRING}" "${PACMAN_CONF}"
 
-# Add the new IgnorePkg line directly after the [options] header
-sudo sed -i "/^\[options\]/a IgnorePkg = ${IGNORE_LIST_STRING}" "${PACMAN_CONF}"
-
-echo "Set IgnorePkg to: ${IGNORE_LIST_STRING}"
+echo "Set combined IgnorePkg to: ${IGNORE_LIST_STRING}"
 
 # --- Verification ---
 echo "Verifying installation..."
