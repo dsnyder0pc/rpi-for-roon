@@ -187,11 +187,14 @@ EOT
   # --- END OF CLEANUP SYNCHRONIZATION ---
 
   if [ -d "${MOUNT_POINT}/opt/diretta-alsa-target" ]; then
-    dl=$(find "${MOUNT_POINT}/opt/diretta-alsa-target" ! -name 'diretta*')
-    if [ -n "${dl}" ]; then
-      echo "- Diretta License File Found."
-      sudo mv -v "${dl}" "${WORK_FILE%.img}"."$(basename "${dl}")"
-    fi
+    # Use a while loop to handle multi-line results safely, ignoring the base directory itself
+    find "${MOUNT_POINT}/opt/diretta-alsa-target" -type f ! -name 'diretta*' | while read -r file; do
+      if [ -n "$file" ]; then
+        echo "- Diretta License File Found: $(basename "$file")"
+        # Move the individual file using its specific basename
+        sudo mv -v "$file" "${WORK_FILE%.img}.$(basename "$file")"
+      fi
+    done
   fi
 )
 
