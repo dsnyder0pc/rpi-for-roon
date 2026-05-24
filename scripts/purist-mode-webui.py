@@ -144,7 +144,6 @@ LANDING_PAGE_CONTENT = """
     <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-4">
         <div class="text-left">
             <h2 class="font-semibold text-lg text-white">License Activation Required</h2>
-            <p class="text-sm text-yellow-400 mt-1">Evaluation mode detected. High-resolution playback is locked to Super Purist boundaries (10 Mbps limit).</p>
         </div>
         <div class="flex flex-col sm:flex-row items-start justify-between gap-6 text-left">
             <div class="text-sm text-gray-300 flex-1">
