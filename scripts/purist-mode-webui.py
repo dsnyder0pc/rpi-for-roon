@@ -235,7 +235,7 @@ STATUS_PANEL_TEMPLATE = """
                         <li>Optimized for maximum micro-dynamic expression and the quietest background at the cost of restricted format support.</li>
                     </ul>
                     <div class="p-3 mt-3 text-xs text-yellow-400 bg-yellow-900/20 rounded-lg border border-yellow-700/30">
-                        <strong>⚠️ Required Roon Setting:</strong> You must set the Max sample rate (PCM) to 96 kHz. See advanced Audio settings for this zone in Roon. Native DSD is unsupported.
+                        <strong>⚠️ Required Roon Setting:</strong> You must set the Max sample rate (PCM) to 96 kHz. See advanced Audio settings for this zone in Roon. Native DSD64 may work but DoP will not.
                     </div>
                 </div>
             {% endif %}
