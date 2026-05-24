@@ -2609,12 +2609,23 @@ We will create a service on the **Host** that forces it to advertise *either* 10
 **Create the restriction script and service:** *(Perform on Host Only)*
 ```bash
 cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
+cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
 #!/bin/bash
 # Set link speed based on the Super Purist web UI flag using safe advertisement masks
 FLAG_FILE="/home/audiolinux/purist-mode-webui/super_purist.flag"
 INTERFACE="end0"
 
-# 1. Apply the advertisement mask based on flag state
+# CRITICAL: Wait up to 15 seconds for the physical interface to initialize carrier link layer
+echo "Synchronizing with physical link layer..."
+for i in {1..15}; do
+    if [ -f /sys/class/net/$INTERFACE/carrier ] && [ "$(cat /sys/class/net/$INTERFACE/carrier 2>/dev/null)" "==" "1" ]; then
+        echo "Physical link layer detected after $i seconds."
+        break
+    fi
+    sleep 1
+done
+
+# Apply the advertisement mask based on flag state
 if [ -f "$FLAG_FILE" ]; then
     echo "Super Purist flag detected. Advertising 10 Mbps Full Duplex..."
     /usr/bin/ethtool -s $INTERFACE advertise 0x002
@@ -2623,14 +2634,13 @@ else
     /usr/bin/ethtool -s $INTERFACE advertise 0x00a
 fi
 
-# 2. Platform-specific negotiation handling
+# Platform-specific negotiation handling
 if grep -q "Raspberry Pi 4" /proc/device-tree/model 2>/dev/null; then
     echo "Raspberry Pi 4 detected. Triggering mandatory hardware renegotiation pulse..."
     /usr/bin/ethtool -r $INTERFACE
 elif grep -q "Raspberry Pi 5" /proc/device-tree/model 2>/dev/null; then
     echo "Raspberry Pi 5 detected. Internal phylib automatic pulse relied upon; skipping manual reset."
 else
-    # Fallback safety valve for unspecified platforms
     /usr/bin/ethtool -r $INTERFACE || true
 fi
 
