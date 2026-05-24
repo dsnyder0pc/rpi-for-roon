@@ -353,7 +353,7 @@ Use the AudioLinux menu system to perform all updates. Have your email from Pier
 1.  Run `menu` in the terminal.
 2.  Select **INSTALL/UPDATE menu**.
 3.  On the next screen, select **UPDATE system** and let the process complete.
-4.  After the system update finishes, select **Update menu** from the same screen to get the latest version of the AudioLinux scripts.
+4.  After the system update finishes, select **Update menu** from the same screen to get the latest version of the AudioLinux scripts. *Note:* You will need the email address you used to purchase AudioLinux and your download username and password.
 5.  Exit the menu system to get back to the terminal.
 
 ---
