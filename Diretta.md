@@ -2609,18 +2609,38 @@ We will create a service on the **Host** that forces it to advertise *either* 10
 **Create the restriction script and service:** *(Perform on Host Only)*
 ```bash
 cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
+cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
 #!/bin/bash
 # Set link speed based on the Super Purist web UI flag using safe advertisement masks
 FLAG_FILE="/home/audiolinux/purist-mode-webui/super_purist.flag"
+INTERFACE="end0"
 
 if [ -f "$FLAG_FILE" ]; then
     echo "Super Purist flag detected. Advertising 10 Mbps Full Duplex..."
-    /usr/bin/ethtool -s end0 advertise 0x002
+    /usr/bin/ethtool -s $INTERFACE advertise 0x002
 else
     echo "Standard/Purist mode. Advertising up to 100 Mbps Full Duplex..."
-    /usr/bin/ethtool -s end0 advertise 0x00a
+    /usr/bin/ethtool -s $INTERFACE advertise 0x00a
 fi
-sudo ethtool -r end0
+
+# Try restarting autonegotiation up to 5 times if the link state is transient
+RETRY_COUNT=5
+for ((i=1; i<=RETRY_COUNT; i++)); do
+    if sudo /usr/bin/ethtool -r $INTERFACE 2>/dev/null; then
+        echo "Successfully triggered link renegotiation on attempt $i."
+        exit 0
+    fi
+
+    if [ $i -lt $RETRY_COUNT ]; then
+        echo "Renegotiation transient or busy (attempt $i/$RETRY_COUNT). Retrying in 1 second..."
+        sleep 1
+    else
+        echo "Warning: Forced renegotiation timed out after $RETRY_COUNT attempts. Hardware auto-negotiation cycle will finalize dynamically."
+    fi
+done
+
+# Exit cleanly even if the forced pulse timed out, as the register mask is already saved
+exit 0
 EOT
 sudo chmod +x /usr/local/bin/set-link-speed.sh
 
