@@ -2043,12 +2043,21 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     ssh-keygen -t ed25519 -f ~/.ssh/purist_app_key -N "" -C "purist-app-key"
     ```
 
-3.  **Copy the Key to the Target:**
-    This step will securely copy the public key to the Target.
+3.  **Confirure SSH and Copy the Key to the Target:**
+    This step will create an SSH config and securely copy the public key to the Target.
     ```bash
-    echo "--- Authorizing the new SSH key on the Diretta Target ---"
+    mkdir -p ~/.ssh
+    chmod go-rwx ~/.ssh
+    cat <<'EOT' > ~/.ssh/config
+    Host diretta-target target
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+        GlobalKnownHostsFile /dev/null
+        LogLevel ERROR
+        ConnectTimeout 5
+		EOT
 
-    # Step A: Copy the public key to the Target's home directory
+    # Copy the public key to the Target's home directory
     echo "--> Copying public key to the Target..."
     scp -o StrictHostKeyChecking=accept-new ~/.ssh/purist_app_key.pub diretta-target:
     ```
