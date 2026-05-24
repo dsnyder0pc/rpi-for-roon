@@ -2609,7 +2609,6 @@ We will create a service on the **Host** that forces it to advertise *either* 10
 **Create the restriction script and service:** *(Perform on Host Only)*
 ```bash
 cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
-cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
 #!/bin/bash
 # Set link speed based on the Super Purist web UI flag using safe advertisement masks
 FLAG_FILE="/home/audiolinux/purist-mode-webui/super_purist.flag"
