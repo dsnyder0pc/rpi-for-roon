@@ -2614,6 +2614,7 @@ cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
 FLAG_FILE="/home/audiolinux/purist-mode-webui/super_purist.flag"
 INTERFACE="end0"
 
+# 1. Apply the advertisement mask based on flag state
 if [ -f "$FLAG_FILE" ]; then
     echo "Super Purist flag detected. Advertising 10 Mbps Full Duplex..."
     /usr/bin/ethtool -s $INTERFACE advertise 0x002
@@ -2622,24 +2623,18 @@ else
     /usr/bin/ethtool -s $INTERFACE advertise 0x00a
 fi
 
-# Try restarting autonegotiation up to 5 times if the link state is transient
-RETRY_COUNT=5
-for ((i=1; i<=RETRY_COUNT; i++)); do
-    if sudo /usr/bin/ethtool -r $INTERFACE 2>/dev/null; then
-        echo "Successfully triggered link renegotiation on attempt $i."
-        exit 0
-    fi
+# 2. Platform-specific negotiation handling
+if grep -q "Raspberry Pi 4" /proc/device-tree/model 2>/dev/null; then
+    echo "Raspberry Pi 4 detected. Triggering mandatory hardware renegotiation pulse..."
+    /usr/bin/ethtool -r $INTERFACE
+elif grep -q "Raspberry Pi 5" /proc/device-tree/model 2>/dev/null; then
+    echo "Raspberry Pi 5 detected. Internal phylib automatic pulse relied upon; skipping manual reset."
+else
+    # Fallback safety valve for unspecified platforms
+    /usr/bin/ethtool -r $INTERFACE || true
+fi
 
-    if [ $i -lt $RETRY_COUNT ]; then
-        echo "Renegotiation transient or busy (attempt $i/$RETRY_COUNT). Retrying in 1 second..."
-        sleep 1
-    else
-        echo "Warning: Forced renegotiation timed out after $RETRY_COUNT attempts. Hardware auto-negotiation cycle will finalize dynamically."
-    fi
-done
-
-# Exit cleanly even if the forced pulse timed out, as the register mask is already saved
-exit 0
+echo "Link speed policy successfully finalized."
 EOT
 sudo chmod +x /usr/local/bin/set-link-speed.sh
 
