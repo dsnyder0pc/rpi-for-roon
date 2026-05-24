@@ -2569,7 +2569,7 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
 
 **Objective:** Reduce electrical noise and improve OS scheduler precision by limiting the dedicated network link speed and explicitly disabling Energy Efficient Ethernet (EEE).
 
-While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps on the dedicated link (`end0`) can improve sound quality. The lower operating frequency of 100BASE-TX (31.25 MHz vs 62.5 MHz) generates less RFI. In the extreme, lowering the frequency to 10 Mbps reduces the frequency to 10 Mhz). Furthermore, ensuring EEE is disabled prevents the link from entering sleep states, eliminating potential latency spikes (flapping) and ensuring rock-solid stability on Raspberry Pi 5 hardware.
+While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps (or even 10 Mbps) on the dedicated link (`end0`) can improve sound quality. The lower operating frequency of 100BASE-TX (31.25 MHz vs 62.5 MHz) generates less RFI. In the extreme, lowering the frequency to 10 Mbps reduces the frequency to 10 Mhz). Furthermore, ensuring EEE is disabled prevents the link from entering sleep states, eliminating potential latency spikes (flapping) and ensuring rock-solid stability on Raspberry Pi 5 hardware.
 
 > **Note:** You may see "buffer low" warnings in the Target logs (`LatencyBuffer` dropping to 1). This is normal behavior due to the increased serialization latency of the slower link and does not cause audible dropouts.
 
