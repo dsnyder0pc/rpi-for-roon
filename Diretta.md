@@ -2615,9 +2615,9 @@ cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
 FLAG_FILE="/home/audiolinux/purist-mode-webui/super_purist.flag"
 INTERFACE="end0"
 
-# CRITICAL: Wait up to 15 seconds for the physical interface to initialize carrier link layer
+# CRITICAL: Wait up to 60 seconds for the physical interface to initialize carrier link layer
 echo "Synchronizing with physical link layer..."
-for i in {1..15}; do
+for i in {1..60}; do
     if [ -f /sys/class/net/$INTERFACE/carrier ] && [ "$(cat /sys/class/net/$INTERFACE/carrier 2>/dev/null)" "==" "1" ]; then
         echo "Physical link layer detected after $i seconds."
         break
