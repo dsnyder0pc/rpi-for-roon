@@ -2059,7 +2059,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
         GlobalKnownHostsFile /dev/null
         LogLevel ERROR
         ConnectTimeout 5
-		EOT
+    EOT
 
     # Copy the public key to the Target's home directory
     echo "--> Copying public key to the Target..."
