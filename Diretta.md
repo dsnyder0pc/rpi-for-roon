@@ -1727,7 +1727,7 @@ Description=Activate Purist Mode 60 seconds after boot
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c "sleep 60 && /usr/local/bin/purist-mode"
+ExecStart=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done && sleep 60 && /usr/local/bin/purist-mode"
 
 [Install]
 WantedBy=multi-user.target
@@ -2009,6 +2009,8 @@ On the **Diretta Target**, we will create a new user with very limited permissio
 
     [Service]
     Type=simple
+    # Block execution cleanly here until the Host replies to a ping
+    ExecStartPre=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done"
     ExecStart=/usr/local/bin/create-diretta-cache.sh
     Restart=no
 

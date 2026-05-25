@@ -25,8 +25,9 @@ activate_mode() {
     # Modify config files and network state
     echo "  -> Disabling DNS lookups..."
     sudo sed -i -E 's/^(hosts:).*/\1 files myhostname/' "$NSSWITCH_CONF"
-    echo "  -> Dropping default gateway..."
-    sudo ip route del default &>/dev/null
+
+    echo "  -> Overriding gateway with high-priority blackhole route..."
+    sudo ip route add blackhole default metric 10 &>/dev/null
 
     echo ""
     echo "✅ Purist Mode is ACTIVE."
@@ -42,15 +43,20 @@ revert_mode() {
 
     echo "⏪ Reverting to Standard Mode..."
 
-    # Restore network and DNS configuration.
+    # Restore network and DNS configuration
     sudo mv "$BACKUP_FILE" "$NSSWITCH_CONF"
 
-    # If no default route exists, restart networking.
+    # Remove the high-priority blackhole route if it exists
+    if ip route | grep -q "blackhole default"; then
+        sudo ip route del blackhole default metric 10 &>/dev/null
+    fi
+
+    # If no default route exists, restart networking to fetch the standard gateway
     if ! ip route | grep -q default; then
         sudo systemctl restart systemd-networkd &>/dev/null
     fi
 
-    # Always restart services when this script is called.
+    # Always restart services when this script is called
     echo "  -> Restarting services..."
     sudo systemctl start chronyd &>/dev/null
 
@@ -84,9 +90,9 @@ if [[ "$1" == "--revert" || "$1" == "-r" ]]; then
     revert_mode
 else
     if [ -f "$BACKUP_FILE" ]; then
-        # Already active. Enforce the route drop silently in case a physical link 
-        # speed change caused the OS network daemon to resurrect the gateway.
-        sudo ip route del default &>/dev/null
+        # Already active. Enforce the blackhole route silently in case a physical link
+        # speed change caused the OS network daemon to resurrect a standard gateway.
+        sudo ip route add blackhole default metric 10 &>/dev/null
         echo "✅ Purist Mode is active. Enforced route isolation."
         exit 0
     fi
