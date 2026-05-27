@@ -21,6 +21,9 @@ patch_target() {
     rm purist-mode
 
     echo "- Updating the Delayed Auto-Activation Service"
+    curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh
+    sudo install -m 0755 create-diretta-cache.sh /usr/local/bin/
+    rm create-diretta-cache.sh
     cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
 [Unit]
 Description=Activate Purist Mode 60 seconds after boot
