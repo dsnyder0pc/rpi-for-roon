@@ -6,6 +6,8 @@ Diretta Purist Mode states and Roon IR Remote settings.
 To be run on the Diretta Host.
 """
 
+# pylint: disable=too-many-lines
+
 import os
 import time
 import subprocess
@@ -31,6 +33,10 @@ app.secret_key = os.urandom(24)
 # --- Global State ---
 ENFORCEMENT_STATE = {"last_time": 0}
 ENFORCEMENT_LOCK = threading.Lock()
+TRANSITION_STATE = {"active": False}
+STATUS_CACHE = {"data": None, "timestamp": 0.0}
+STATUS_CACHE_LOCK = threading.Lock()
+STATUS_FETCH_LOCK = threading.Lock()
 
 # --- Configure Logging ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -173,6 +179,9 @@ PURIST_APP_TEMPLATE = """
     <div class="p-8 text-center text-gray-400">
         <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
         <p class="mt-2">Connecting to Diretta Target...</p>
+        <p class="text-xs text-gray-500 mt-4 max-w-md mx-auto">
+            <strong>Troubleshooting Tip:</strong> If this connection screen persists or the UI keeps spinning, the physical network link may be renegotiating. You may need to power cycle your Target computer to restore service.
+        </p>
     </div>
 </div>
 """
@@ -250,12 +259,18 @@ STATUS_PANEL_TEMPLATE = """
                     <p class="text-xs text-gray-400">System will always initialize in Standard Mode after a reboot.</p>
                 {% endif %}
             </div>
-            <button hx-post="/toggle-auto" hx-target="#control-panel" hx-swap="innerHTML"
+            <button hx-post="/toggle-auto" hx-target="#control-panel" hx-swap="innerHTML" hx-disabled-elt="this"
                     class="relative inline-flex items-center justify-center w-24 h-10 px-3 py-1.5 text-xs font-semibold rounded-lg shadow-sm transition-colors duration-200
                         {% if status.auto_start_enabled %} bg-green-600 hover:bg-green-500 text-white {% else %} bg-yellow-600 hover:bg-yellow-500 text-gray-900 {% endif %}">
                 <span class="btn-text">{% if status.auto_start_enabled %}Disable{% else %}Enable{% endif %}</span>
                 <span class="absolute btn-spinner hidden h-4 w-4 rounded-full border-2 border-white"></span>
             </button>
+        </div>
+
+        <div class="text-center mt-6 p-3 bg-gray-900/30 border border-gray-800 rounded-xl">
+            <p class="text-xs text-gray-500">
+                <strong>💡 Troubleshooting:</strong> If the interface remains unresponsive or keeps spinning during optimization transitions, please power cycle your Target computer to restore the network link.
+            </p>
         </div>
     </div>
 </div>
@@ -296,6 +311,29 @@ MUSIC_PLAYING_TEMPLATE = """
 
 # --- BACKEND LOGIC (Helper Functions) ---
 
+def ping_target(timeout=1, blocking=False, block_timeout=15):
+    """Pings the Diretta Target to check reachability, optionally blocking."""
+    cmd = ["ping", "-c", "1", "-W", str(timeout), REMOTE_HOST]
+    start_time = time.time()
+    while True:
+        try:
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True
+            )
+            if result.returncode == 0:
+                return True
+        except (subprocess.CalledProcessError, OSError):
+            pass
+
+        if not blocking or (time.time() - start_time >= block_timeout):
+            break
+        time.sleep(1)
+    return False
+
+
 def is_music_playing():
     """Checks if music is actively playing by inspecting /proc/asound/."""
     status_file_path = "/proc/asound/card0/pcm0p/sub0/status"
@@ -310,7 +348,10 @@ def is_music_playing():
         app.logger.info("No playback detected on Host via /proc (state is not RUNNING).")
         return False
     except FileNotFoundError:
-        app.logger.info("ALSA status file not found at %s. Assuming no playback.", status_file_path)
+        app.logger.info(
+            "ALSA status file not found at %s. Assuming no playback.",
+            status_file_path
+        )
         return False
     except OSError as err:
         app.logger.error("OS Error checking playback status via /proc: %s", err)
@@ -331,14 +372,19 @@ def run_remote_command(command):
     try:
         app.logger.info("Running remote command: %s", " ".join(ssh_command))
         result = subprocess.run(
-            ssh_command, capture_output=True, text=True, check=True, timeout=15
+            ssh_command,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=15
         )
         output = result.stdout.strip()
         app.logger.info("Remote command successful. Output: %s", output)
         return output
     except subprocess.CalledProcessError as err:
         app.logger.error(
-            "Remote command failed with return code %s: %s", err.returncode, err.stderr
+            "Remote command failed with return code %s: %s",
+            err.returncode, err.stderr
         )
         return None
     except subprocess.TimeoutExpired:
@@ -349,23 +395,60 @@ def run_remote_command(command):
         return None
 
 
-def get_status_from_target():
-    """Gets the current status from the Diretta Target."""
-    raw_status = run_remote_command("/usr/local/bin/pm-get-status")
-    if not raw_status:
-        return None
+def get_status_from_target(bypass_cache=False):
+    """Gets the current status from the Diretta Target, using a brief cache."""
+    now = time.time()
 
-    try:
-        status_data = json.loads(raw_status)
-        if status_data.get("license_needs_activation"):
-            license_url = run_remote_command("/usr/local/bin/pm-get-license-url")
-            status_data["activation_url"] = license_url if license_url else ""
-        else:
-            status_data["activation_url"] = ""
-        return status_data
-    except json.JSONDecodeError:
-        app.logger.error("Failed to decode JSON status from remote host. Received: %s", raw_status)
-        return None
+    if not bypass_cache:
+        with STATUS_CACHE_LOCK:
+            if (
+                STATUS_CACHE["data"] is not None
+                and (now - STATUS_CACHE["timestamp"]) < 3.0
+            ):
+                app.logger.info("Returning cached Target status.")
+                return STATUS_CACHE["data"]
+
+    # Use a lock to ensure only one thread performs the slow SSH fetch at a time
+    with STATUS_FETCH_LOCK:
+        now = time.time()
+        if not bypass_cache:
+            with STATUS_CACHE_LOCK:
+                if (
+                    STATUS_CACHE["data"] is not None
+                    and (now - STATUS_CACHE["timestamp"]) < 3.0
+                ):
+                    app.logger.info("Returning cached Target status (after lock).")
+                    return STATUS_CACHE["data"]
+
+        raw_status = run_remote_command("/usr/local/bin/pm-get-status")
+        if not raw_status:
+            return None
+
+        try:
+            status_data = json.loads(raw_status)
+            if status_data.get("license_needs_activation"):
+                license_url = run_remote_command("/usr/local/bin/pm-get-license-url")
+                status_data["activation_url"] = license_url if license_url else ""
+            else:
+                status_data["activation_url"] = ""
+
+            with STATUS_CACHE_LOCK:
+                STATUS_CACHE["data"] = status_data
+                STATUS_CACHE["timestamp"] = now
+            return status_data
+        except json.JSONDecodeError:
+            app.logger.error(
+                "Failed to decode JSON status from remote host. Received: %s",
+                raw_status
+            )
+            return None
+
+
+def invalidate_status_cache():
+    """Clears the target status cache to force a fresh SSH poll."""
+    with STATUS_CACHE_LOCK:
+        STATUS_CACHE["data"] = None
+        STATUS_CACHE["timestamp"] = 0.0
 
 
 def get_roon_zone_from_host():
@@ -412,7 +495,10 @@ def is_diretta_isolated():
     by querying the active process affinity directly from the kernel scheduler.
     """
     try:
-        pid_cmd = ["systemctl", "show", "--property", "MainPID", "--value", "diretta_alsa.service"]
+        pid_cmd = [
+            "systemctl", "show", "--property", "MainPID",
+            "--value", "diretta_alsa.service"
+        ]
         pid_result = subprocess.run(pid_cmd, capture_output=True, text=True, check=False)
         pid = pid_result.stdout.strip()
 
@@ -430,7 +516,10 @@ def is_diretta_isolated():
             # Exact string matching prevents matching wide default masks like "0,1,2,3"
             valid_masks = ["2", "3", "2-3", "2,3", "3,2"]
             if affinity_list in valid_masks:
-                app.logger.info("Live core isolation verified. Affinity list: %s", affinity_list)
+                app.logger.info(
+                    "Live core isolation verified. Affinity list: %s",
+                    affinity_list
+                )
                 return True
 
             app.logger.warning(
@@ -502,13 +591,22 @@ def restart_diretta_services():
     """Restarts the Diretta and Roon Bridge services."""
     app.logger.info("Restarting Diretta and Roon Bridge services...")
     try:
-        subprocess.run(["/usr/bin/sudo", "/usr/bin/systemctl", "daemon-reload"], check=True)
         subprocess.run(
-            ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "diretta_alsa.service"],
+            ["/usr/bin/sudo", "/usr/bin/systemctl", "daemon-reload"],
             check=True
         )
         subprocess.run(
-            ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "roonbridge.service"],
+            [
+                "/usr/bin/sudo", "/usr/bin/systemctl",
+                "restart", "diretta_alsa.service"
+            ],
+            check=True
+        )
+        subprocess.run(
+            [
+                "/usr/bin/sudo", "/usr/bin/systemctl",
+                "restart", "roonbridge.service"
+            ],
             check=True
         )
     except subprocess.CalledProcessError as err:
@@ -521,7 +619,10 @@ def _get_current_speed():
     """Parses ethtool output to return the current speed string."""
     try:
         ethtool_out = subprocess.run(
-            ["/usr/bin/ethtool", "end0"], capture_output=True, text=True, check=False
+            ["/usr/bin/ethtool", "end0"],
+            capture_output=True,
+            text=True,
+            check=False
         ).stdout
         for line in ethtool_out.split("\n"):
             if "Speed:" in line:
@@ -595,15 +696,42 @@ def _async_hardware_transition(expected_speed, expected_ct, expected_ic, current
     run_remote_command(f"/usr/local/bin/pm-set-link {expected_speed}")
     _set_link_speed(expected_speed, "on")
 
-    # 2. Wait for physical layer to settle
-    time.sleep(4)
+    # 2. Wait for physical layer to settle using block pinging
+    app.logger.info("Waiting for physical layer to settle...")
+    ping_target(blocking=True, block_timeout=15)
 
     # 3. Apply settings and restart
     update_setting_inf(cycle_time=expected_ct, info_cycle=expected_ic)
     restart_diretta_services()
 
-    # 4. Give the Target 2 seconds to recover its SSH/Systemd stack after service restarts
-    time.sleep(2)
+    # 4. Give the Target up to 10 seconds to recover its SSH/Systemd stack
+    app.logger.info("Waiting for Target to recover after service restarts...")
+    ping_target(blocking=True, block_timeout=10)
+
+    # 5. Enforce Target state
+    if current_state in ["Purist", "SuperPurist"]:
+        run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
+
+
+def _sync_hardware_transition(expected_speed, expected_ct, expected_ic, current_state):
+    """Executes the link and profile adjustments synchronously."""
+    app.logger.info("Synchronously transitioning link and Diretta profile...")
+
+    # 1. Coordinate link speed
+    run_remote_command(f"/usr/local/bin/pm-set-link {expected_speed}")
+    _set_link_speed(expected_speed, "on")
+
+    # 2. Wait for physical layer to settle using block pinging
+    app.logger.info("Waiting for physical layer to settle...")
+    ping_target(blocking=True, block_timeout=15)
+
+    # 3. Apply settings and restart
+    update_setting_inf(cycle_time=expected_ct, info_cycle=expected_ic)
+    restart_diretta_services()
+
+    # 4. Give the Target up to 10 seconds to recover its SSH/Systemd stack
+    app.logger.info("Waiting for Target to recover after service restarts...")
+    ping_target(blocking=True, block_timeout=10)
 
     # 5. Enforce Target state
     if current_state in ["Purist", "SuperPurist"]:
@@ -619,11 +747,17 @@ def check_and_enforce_host_profile(target_status):
     if not target_status:
         return
 
+    # Skip background enforcement if we are already in an active UI transition
+    if TRANSITION_STATE["active"]:
+        return
+
     current_speed_str = _get_current_speed()
 
     # SAFETY GATE: If the link state is unstable or negotiating, do not enforce rules
     if not current_speed_str or "Unknown" in current_speed_str:
-        app.logger.info("Physical link is currently negotiating or down. Skipping enforcement.")
+        app.logger.info(
+            "Physical link is currently negotiating or down. Skipping enforcement."
+        )
         return
 
     current_speed_val = current_speed_str.replace("Mb/s", "").strip()
@@ -722,10 +856,16 @@ def remote_app():
                     json.dump(config, file_handle, indent=2)
 
                 subprocess.run(
-                    ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "roon-ir-remote.service"],
+                    [
+                        "/usr/bin/sudo", "/usr/bin/systemctl",
+                        "restart", "roon-ir-remote.service"
+                    ],
                     check=True
                 )
-                app.logger.info("Roon zone updated to '%s' and service restarted.", new_zone_name)
+                app.logger.info(
+                    "Roon zone updated to '%s' and service restarted.",
+                    new_zone_name
+                )
                 flash(f"Successfully updated Roon Zone to: {new_zone_name}")
             except OSError as err:
                 app.logger.error("Failed to update Roon zone config file: %s", err)
@@ -752,12 +892,20 @@ def remote_app():
 @app.route("/status")
 def status():
     """Serves the status panel for HTMX updates."""
+    if TRANSITION_STATE["active"]:
+        # Pause/ignore refresh during active UI transition to prevent
+        # race conditions or spinner interrupts
+        return "", 204
+
     if is_music_playing():
         return render_template_string(MUSIC_PLAYING_TEMPLATE)
 
     target_status = get_status_from_target()
     if target_status is None:
-        return '<div class="p-8 text-center text-red-400">Error: Could not connect to Target.</div>'
+        return (
+            '<div class="p-8 text-center text-red-400">'
+            'Error: Could not connect to Target.</div>'
+        )
 
     # Enforce Host profile (speed and CycleTime) dynamically based on Target status
     check_and_enforce_host_profile(target_status)
@@ -811,18 +959,77 @@ def _transition_to_super_purist(is_currently_purist):
 @app.route("/set-state/<state_name>", methods=["POST"])
 def set_state(state_name):
     """HTMX endpoint to transition the system explicitly between operational states."""
-    target_status = get_status_from_target()
-    if not target_status:
-        return status()
+    TRANSITION_STATE["active"] = True
+    try:
+        # Condition 1: Verify Target is reachable initially
+        app.logger.info(
+            "State transition to %s requested. Verifying Target reachability...",
+            state_name
+        )
+        if not ping_target(blocking=True, block_timeout=15):
+            app.logger.error("Target not reachable before transition. Aborting.")
+            flash(
+                "Error: Diretta Target is not reachable. "
+                "Cannot transition state."
+            )
+            return status()
 
-    is_currently_purist = target_status.get("purist_mode_active", False)
+        # Retrieve current target status before doing the transition
+        target_status = get_status_from_target(bypass_cache=True)
+        if not target_status:
+            flash("Error: Could not retrieve current Target status via SSH.")
+            return status()
 
-    if state_name == "Standard":
-        _transition_to_standard(is_currently_purist)
-    elif state_name == "Purist":
-        _transition_to_purist(is_currently_purist)
-    elif state_name == "SuperPurist":
-        _transition_to_super_purist(is_currently_purist)
+        is_currently_purist = target_status.get("purist_mode_active", False)
+
+        # Condition 2: Run SSH command(s) and wait for them to return
+        app.logger.info("Executing state transition command via SSH...")
+        if state_name == "Standard":
+            _transition_to_standard(is_currently_purist)
+        elif state_name == "Purist":
+            _transition_to_purist(is_currently_purist)
+        elif state_name == "SuperPurist":
+            _transition_to_super_purist(is_currently_purist)
+
+        invalidate_status_cache()
+
+        # Check if a hardware link profile adjustment is necessary based on the new target state
+        updated_status = get_status_from_target(bypass_cache=True)
+        if updated_status:
+            current_speed_str = _get_current_speed()
+            if current_speed_str and "Unknown" not in current_speed_str:
+                current_speed_val = current_speed_str.replace("Mb/s", "").strip()
+                current_ct = _get_current_cycletime()
+
+                current_state = get_current_system_state(updated_status)
+                expected_speed = get_target_speed(current_state, updated_status)
+                expected_ct, expected_ic = get_target_profile(current_state)
+
+                if current_speed_val != expected_speed or current_ct != expected_ct:
+                    app.logger.info(
+                        "Synchronous hardware enforcement needed: "
+                        "Speed %s -> %s | CycleTime %s -> %s",
+                        current_speed_val, expected_speed,
+                        current_ct, expected_ct
+                    )
+                    _sync_hardware_transition(
+                        expected_speed, expected_ct,
+                        expected_ic, current_state
+                    )
+
+        # Condition 3: Wait for Target to return to being reachable (network may drop)
+        app.logger.info("Waiting for Target to return to being reachable...")
+        if not ping_target(blocking=True, block_timeout=30):
+            app.logger.warning("Target failed to respond to pings within 30 seconds.")
+            flash(
+                "Warning: Transition completed, but the Target did not "
+                "recover ping response within 30s."
+            )
+        else:
+            app.logger.info("Target successfully returned to being reachable.")
+
+    finally:
+        TRANSITION_STATE["active"] = False
 
     return status()
 
@@ -830,7 +1037,37 @@ def set_state(state_name):
 @app.route("/toggle-auto", methods=["POST"])
 def toggle_auto():
     """Toggles the auto-start service on/off."""
-    run_remote_command("/usr/local/bin/pm-toggle-auto")
+    TRANSITION_STATE["active"] = True
+    try:
+        # Condition 1: Verify Target is reachable initially
+        app.logger.info("Toggle auto-start requested. Checking Target reachability...")
+        if not ping_target(blocking=True, block_timeout=15):
+            app.logger.error("Target not reachable before toggle-auto. Aborting.")
+            flash(
+                "Error: Diretta Target is not reachable. "
+                "Cannot toggle auto-start."
+            )
+            return status()
+
+        # Condition 2: Run SSH command and wait for it to return
+        app.logger.info("Executing auto-start toggle command via SSH...")
+        run_remote_command("/usr/local/bin/pm-toggle-auto")
+        invalidate_status_cache()
+
+        # Condition 3: Verify reachability is stable
+        app.logger.info("Verifying Target reachability is stable...")
+        if not ping_target(blocking=True, block_timeout=15):
+            app.logger.error("Target became unreachable after toggle-auto command.")
+            flash(
+                "Warning: Toggle-auto command executed, "
+                "but Target became unreachable."
+            )
+        else:
+            app.logger.info("Target reachability verified.")
+
+    finally:
+        TRANSITION_STATE["active"] = False
+
     return status()
 
 
@@ -842,7 +1079,7 @@ def restart_target():
     restarts the Roon Bridge service on the Host.
     """
     app.logger.info("Starting license activation sequence...")
-    t_status = get_status_from_target()
+    t_status = get_status_from_target(bypass_cache=True)
 
     if t_status and t_status.get("purist_mode_active"):
         app.logger.info("Purist Mode is active. Disabling it before restart.")
@@ -852,6 +1089,7 @@ def restart_target():
 
     app.logger.info("Restarting Diretta ALSA Target service...")
     run_remote_command("/usr/local/bin/pm-restart-target")
+    invalidate_status_cache()
 
     app.logger.info("Restarting Roon Bridge service on Host...")
     try:
@@ -863,9 +1101,10 @@ def restart_target():
         app.logger.error("Failed to restart Roon Bridge during activation: %s", err)
 
     now = datetime.now().strftime("%H:%M:%S")
-    return f"""
-    <span>Restart commands sent at {now}. Allow 10-15 seconds for backend initialization.</span>
-    """
+    return (
+        f"<span>Restart commands sent at {now}. "
+        "Allow 10-15 seconds for backend initialization.</span>"
+    )
 
 
 if __name__ == "__main__":
