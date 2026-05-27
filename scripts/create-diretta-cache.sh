@@ -27,22 +27,25 @@ fi
 
 # 4. If we reach here, it either output a URL or threw a curl network error.
 # In both cases, the device is trying to reach the internet, meaning it is UNLICENSED.
-timeout=75
-check_start_time="$(date +"%s")"
 
 logger -t "$LOG_TAG" "Unlicensed hardware or network error detected. Waiting for gateway to reach $LICENSE_URI"
 
-until curl -kIs --connect-timeout 5 "$LICENSE_URI" &>/dev/null; do
-    sleep 2
-    now="$(date +"%s")"
-    elapsed=$((now - check_start_time))
-    if [ "$elapsed" -gt "$timeout" ]; then
-        logger -t "$LOG_TAG" "Error: Timeout reached ($timeout s) waiting for Diretta server."
-        # Cache the last output just in case it was a valid URL
-        if [[ "$activation_output" == http* ]]; then
-            echo "$activation_output" > "$CACHE_FILE"
-        fi
-        exit 0
+while true; do
+    curl -kIs --connect-timeout 5 "$LICENSE_URI" &>/dev/null
+    curl_status=$?
+
+    # 0 means pure success, we are done
+    if [[ $curl_status -eq 0 ]]; then
+        break
+    fi
+
+    # Only retry if the error points to a local routing/DNS delay on the Host
+    if [[ $curl_status -eq 6 || $curl_status -eq 7 || $curl_status -eq 28 || $curl_status -eq 97 ]]; then
+        sleep 2
+    else
+        logger -t "$LOG_TAG" "Curl failed with permanent exit code $curl_status. Breaking loop."
+        echo "Restart Target to Connect to Diretta License Server" > "$CACHE_FILE"
+        exit 1
     fi
 done
 
