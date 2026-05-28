@@ -605,6 +605,18 @@ if ! grep -q "$HOST_IP\s\+$HOST_NAME" "$HOSTS_FILE"; then
 fi
 ```
 
+> ### ⚠️ Critical Topology Warning: Upstream Filter Placement Only
+>
+> If you plan to enhance this project with LAN regenerators, galvanic isolators, or filters (such as the StackAudio SmoothLAN, iFi SilentPower LAN iSilencer, or LAN iPurifier Pro), they **must be placed upstream of the Diretta Host** (between your main network switch/router and the Host's USB-to-Ethernet adapter).
+>
+> **Never place a network filter or active reclocking device on the point-to-point link between the Host and the Target.** Doing so will almost always degrade audio performance and can cause severe connection regressions.
+>
+> * **The Main LAN is the Primary Source of Noise:** The connection from your home router or main switch is flooded with electromagnetic interference (EMI), radio frequency interference (RFI), and broadcast "junk" traffic. Placing a regenerator *before* the Host strips away this digital pollution at the boundary. The Host then processes a pristine stream, keeping its own CPU overhead, power fluctuations, and thermal noise to an absolute minimum.
+> * **Preserving Layer 2 Timing:** Introducing an active device on the direct point-to-point bridge interferes with Diretta's ultra-tight timing constraints (`CycleTime` and `syncBufferCount`). This harms the precise delivery of the Layer 2 frames, yielding diminished sonic returns, latency artifacts, or a complete failure of the Target to negotiate network speed changes.
+> * **The Cascade Isolation Principle:** True isolation is built in layers to completely decouple your sensitive DAC from the household network:
+>   * **Main Network** → `[ LAN Filter/Regenerator ]` → **Diretta Host** *(Isolates Host from the home network)*
+>   * **Diretta Host** → `[ Dedicated Ethernet Cable ]` → **Diretta Target** *(Isolated via point-to-point link and the protocol stack)*
+
 #### 5.3. The Physical Connection Change
 
 > **Warning:** Double-check the contents of the files you just created. A typo could make a device inaccessible after rebooting, requiring a console session or re-flashing the SD card to fix.
@@ -2320,6 +2332,10 @@ From the landing page, a navigation bar at the top will guide you to the differe
 
 * **IR Remote App:** If you have completed the IR remote setup (Appendix 2), this link will appear. This page provides a simple form to view and update the Roon Zone name your remote will control. This page does not auto-refresh, so you can take as long as you need to make your edits.
 
+### 🔗 Note on Full Web UI Functionality
+
+To unlock the full capabilities of the System Control Web UI—specifically the network **Link Speed** adjustments and the **Super Purist** toggle—you must also complete the hardware and service configurations detailed in [**Appendix 8: Optional Purist Network Speeds**](#17-appendix-8-optional-purist-network-speeds)[cite: 1]. The web interface relies directly on the underlying scripts, flags, and services established in that section to successfully modify and enforce physical link speed boundaries on your point-to-point connection[cite: 1].
+
 > ---
 > ### ✅ Checkpoint: Verify Your Web UI Setup
 >
@@ -2576,6 +2592,16 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
 **Objective:** Reduce electrical noise and improve OS scheduler precision by limiting the dedicated network link speed and explicitly disabling Energy Efficient Ethernet (EEE).
 
 While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps (or even 10 Mbps) on the dedicated link (`end0`) can improve sound quality. The lower operating frequency of 100BASE-TX (31.25 MHz vs 62.5 MHz) generates less RFI. In the extreme, lowering the frequency to 10 Mbps reduces the frequency to 10 Mhz). Furthermore, ensuring EEE is disabled prevents the link from entering sleep states, eliminating potential latency spikes (flapping) and ensuring rock-solid stability on Raspberry Pi 5 hardware.
+
+> ### 🎧 Deep Dive: Why a 10 Mbps Limit Restores Sonic "Calm"
+>
+> Restricting your dedicated audio link to 10 Mbps introduces strict format limitations—capping your playback at **Native DSD64** and **32-bit/96 kHz PCM**. However, for audiophiles who prioritize redbook CD quality or standard high-res files, the trade-off yields profound sonic benefits by addressing the root causes of digital glare.
+>
+> * **Drastically Lower Carrier Frequencies:** Standard Gigabit Ethernet operates at a high-frequency carrier signal of 62.5 MHz (using complex multi-level encoding). Dropping down to 100 Mbps lowers this to 31.25 MHz. Stepping all the way down to a 10 Mbps link (10BASE-T) utilizes a beautifully simple Manchester encoding scheme running at a native carrier frequency of just **10 MHz**. This massive reduction in operating frequency significantly lowers the radio frequency (RFI) emissions generated inside the chassis and along the cable.
+> * **Reduced Processing Overhead on the Target:** High-bandwidth networks force the network interface card (NIC) and CPU to handle data packets at a rapid, aggressive cadence. By capping the link speed to match the actual demands of standard audio data, you drastically reduce the sheer volume of network interrupts the Target's operating system must process.
+> * **Synergy with Diretta's Core Philosophy:** The entire goal of the Diretta protocol is to eliminate bursty processing and stabilize current draw. A 10 Mbps pipe acts as a physical equalizer for the data flow, preventing the high-speed data spikes that cause power supply fluctuations.
+>
+> The result of this "Super Purist" constriction is an instantly recognizable drop in the digital noise floor. Listeners frequently report a wider, more relaxed soundstage, cleaner high-frequency transient tracking, and an overall sense of analog ease and calm that perfectly complements what AudioLinux and Diretta are trying to achieve.
 
 > **Note:** You may see "buffer low" warnings in the Target logs (`LatencyBuffer` dropping to 1). This is normal behavior due to the increased serialization latency of the slower link and does not cause audible dropouts.
 
