@@ -1724,6 +1724,7 @@ echo "- Creating the Delayed Auto-Activation Service"
 cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
 [Unit]
 Description=Activate Purist Mode 60 seconds after boot
+After=diretta-cache.service
 
 [Service]
 Type=oneshot
@@ -2009,7 +2010,8 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     Before=purist-mode-auto.service
 
     [Service]
-    Type=simple
+    Type=oneshot
+    RemainAfterExit=yes
     # Block execution cleanly here until the Host replies to a ping
     TimeoutStartSec=infinity
     ExecStartPre=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done"

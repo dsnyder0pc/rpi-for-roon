@@ -30,6 +30,9 @@ fi
 
 logger -t "$LOG_TAG" "Unlicensed hardware or network error detected. Waiting for gateway to reach $LICENSE_URI"
 
+# Protect licensed machines that might fall through due to curl failures when completely offline
+timeout=30
+check_start_time="$(date +"%s")"
 while true; do
     curl -kIs --connect-timeout 5 "$LICENSE_URI" &>/dev/null
     curl_status=$?
@@ -37,6 +40,23 @@ while true; do
     # 0 means pure success, we are done
     if [[ $curl_status -eq 0 ]]; then
         break
+    fi
+
+    # Check for timeout to ensure we don't loop forever when offline or when Purist Mode is activated
+    now="$(date +"%s")"
+    elapsed=$((now - check_start_time))
+    if [[ $elapsed -gt $timeout ]]; then
+        logger -t "$LOG_TAG" "Timeout reached ($timeout s) waiting for gateway."
+        # If the original activation output was a registration URL, cache it
+        if [[ "$activation_output" == http* ]]; then
+            echo "$activation_output" > "$CACHE_FILE"
+            logger -t "$LOG_TAG" "Unlicensed URL cached after timeout."
+        else
+            # Otherwise, it was a curl error on a licensed machine, so cache "Licensed"
+            echo "Licensed" > "$CACHE_FILE"
+            logger -t "$LOG_TAG" "Assuming Licensed state after timeout."
+        fi
+        exit 0
     fi
 
     # Only retry if the error points to a local routing/DNS delay on the Host

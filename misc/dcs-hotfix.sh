@@ -20,24 +20,12 @@ patch_target() {
     sudo install -m 0755 purist-mode /usr/local/bin
     rm purist-mode
 
-    echo "- Updating the Delayed Auto-Activation Service"
+    echo "- Updating the Delayed Diretta License Cache Creation Script"
     curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh
     sudo install -m 0755 create-diretta-cache.sh /usr/local/bin/
     rm create-diretta-cache.sh
-    cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
-[Unit]
-Description=Activate Purist Mode 60 seconds after boot
 
-[Service]
-Type=oneshot
-TimeoutStartSec=infinity
-ExecStart=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done && sleep 60 && /usr/local/bin/purist-mode"
-
-[Install]
-WantedBy=multi-user.target
-EOT
-
-    echo "- Updating the Delayed Diretta License Cache Creation Script"
+    echo "- Updating the Diretta License Cache Collector Service"
     cat <<'EOT' | sudo tee /etc/systemd/system/diretta-cache.service
 [Unit]
 Description=Asynchronous Diretta License Cache Collector
@@ -45,12 +33,28 @@ After=network.target purist-mode-revert-on-boot.service
 Before=purist-mode-auto.service
 
 [Service]
-Type=simple
+Type=oneshot
+RemainAfterExit=yes
 # Block execution cleanly here until the Host replies to a ping
 TimeoutStartSec=infinity
 ExecStartPre=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done"
 ExecStart=/usr/local/bin/create-diretta-cache.sh
 Restart=no
+
+[Install]
+WantedBy=multi-user.target
+EOT
+
+    echo "- Updating the Delayed Auto-Activation Service"
+    cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
+[Unit]
+Description=Activate Purist Mode 60 seconds after boot
+After=diretta-cache.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=infinity
+ExecStart=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done && sleep 60 && /usr/local/bin/purist-mode"
 
 [Install]
 WantedBy=multi-user.target
