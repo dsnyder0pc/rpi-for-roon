@@ -1,4 +1,13 @@
 #!/bin/bash
+################################################################################
+#
+# How to run:
+# curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/misc/dcs-hotfix.sh | bash
+#
+# Optional Check:
+# curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh | sudo bash
+#
+################################################################################
 
 patch_target() {
     local was_active=false
