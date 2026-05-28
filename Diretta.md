@@ -605,6 +605,7 @@ if ! grep -q "$HOST_IP\s\+$HOST_NAME" "$HOSTS_FILE"; then
 fi
 ```
 
+> ---
 > ### ⚠️ Critical Topology Warning: Upstream Filter Placement Only
 >
 > If you plan to enhance this project with LAN regenerators, galvanic isolators, or filters (such as the StackAudio SmoothLAN, iFi SilentPower LAN iSilencer, or LAN iPurifier Pro), they **must be placed upstream of the Diretta Host** (between your main network switch/router and the Host's USB-to-Ethernet adapter).
@@ -616,6 +617,7 @@ fi
 > * **The Cascade Isolation Principle:** True isolation is built in layers to completely decouple your sensitive DAC from the household network:
 >   * **Main Network** → `[ LAN Filter/Regenerator ]` → **Diretta Host** *(Isolates Host from the home network)*
 >   * **Diretta Host** → `[ Dedicated Ethernet Cable ]` → **Diretta Target** *(Isolated via point-to-point link and the protocol stack)*
+> ---
 
 #### 5.3. The Physical Connection Change
 
@@ -2593,6 +2595,7 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
 
 While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps (or even 10 Mbps) on the dedicated link (`end0`) can improve sound quality. The lower operating frequency of 100BASE-TX (31.25 MHz vs 62.5 MHz) generates less RFI. In the extreme, lowering the frequency to 10 Mbps reduces the frequency to 10 Mhz). Furthermore, ensuring EEE is disabled prevents the link from entering sleep states, eliminating potential latency spikes (flapping) and ensuring rock-solid stability on Raspberry Pi 5 hardware.
 
+> ---
 > ### 🎧 Deep Dive: Why a 10 Mbps Limit Restores Sonic "Calm"
 >
 > Restricting your dedicated audio link to 10 Mbps introduces strict format limitations—capping your playback at **Native DSD64** and **32-bit/96 kHz PCM**. However, for audiophiles who prioritize redbook CD quality or standard high-res files, the trade-off yields profound sonic benefits by addressing the root causes of digital glare.
@@ -2602,6 +2605,7 @@ While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps (or eve
 > * **Synergy with Diretta's Core Philosophy:** The entire goal of the Diretta protocol is to eliminate bursty processing and stabilize current draw. A 10 Mbps pipe acts as a physical equalizer for the data flow, preventing the high-speed data spikes that cause power supply fluctuations.
 >
 > The result of this "Super Purist" constriction is an instantly recognizable drop in the digital noise floor. Listeners frequently report a wider, more relaxed soundstage, cleaner high-frequency transient tracking, and an overall sense of analog ease and calm that perfectly complements what AudioLinux and Diretta are trying to achieve.
+> ---
 
 > **Note:** You may see "buffer low" warnings in the Target logs (`LatencyBuffer` dropping to 1). This is normal behavior due to the increased serialization latency of the slower link and does not cause audible dropouts.
 
