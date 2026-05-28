@@ -14,68 +14,33 @@ if [ ! -x "$LICENSE_APP" ]; then
     exit 0
 fi
 
-# 2. Query the binary and capture BOTH stdout and stderr
-logger -t "$LOG_TAG" "Querying hardware activation status..."
-activation_output=$("$LICENSE_APP" 2>&1)
-
-# 3. If the output is "valid" or completely empty (no errors either), it is licensed.
-if [[ "$activation_output" == "valid" || -z "$activation_output" ]]; then
-    echo "Licensed" > "$CACHE_FILE"
-    logger -t "$LOG_TAG" "Valid local hardware license verified. Skipping activation."
-    exit 0
-fi
-
-# 4. If we reach here, it either output a URL or threw a curl network error.
-# In both cases, the device is trying to reach the internet, meaning it is UNLICENSED.
-
-logger -t "$LOG_TAG" "Unlicensed hardware or network error detected. Waiting for gateway to reach $LICENSE_URI"
-
-# Protect licensed machines that might fall through due to curl failures when completely offline
-timeout=30
-check_start_time="$(date +"%s")"
+# 2. Loop indefinitely until we receive a definitive response from the hardware activation binary
 while true; do
-    curl -kIs --connect-timeout 5 "$LICENSE_URI" &>/dev/null
-    curl_status=$?
+    logger -t "$LOG_TAG" "Querying hardware activation status..."
+    activation_output=$("$LICENSE_APP" 2>&1)
 
-    # 0 means pure success, we are done
-    if [[ $curl_status -eq 0 ]]; then
-        break
-    fi
-
-    # Check for timeout to ensure we don't loop forever when offline or when Purist Mode is activated
-    now="$(date +"%s")"
-    elapsed=$((now - check_start_time))
-    if [[ $elapsed -gt $timeout ]]; then
-        logger -t "$LOG_TAG" "Timeout reached ($timeout s) waiting for gateway."
-        # If the original activation output was a registration URL, cache it
-        if [[ "$activation_output" == http* ]]; then
-            echo "$activation_output" > "$CACHE_FILE"
-            logger -t "$LOG_TAG" "Unlicensed URL cached after timeout."
-        else
-            # Otherwise, it was a curl error on a licensed machine, so cache "Licensed"
-            echo "Licensed" > "$CACHE_FILE"
-            logger -t "$LOG_TAG" "Assuming Licensed state after timeout."
-        fi
+    # Case 1: Clean local license affirmation
+    if [[ "$activation_output" == "valid" || -z "$activation_output" ]]; then
+        echo "Licensed" > "$CACHE_FILE"
+        logger -t "$LOG_TAG" "Valid local hardware license verified."
         exit 0
     fi
 
-    # Only retry if the error points to a local routing/DNS delay on the Host
-    if [[ $curl_status -eq 6 || $curl_status -eq 7 || $curl_status -eq 28 || $curl_status -eq 97 ]]; then
+    # Case 2: Clean registration URL found (Unlicensed state confirmed)
+    if [[ "$activation_output" == http* ]]; then
+        echo "$activation_output" > "$CACHE_FILE"
+        logger -t "$LOG_TAG" "Unlicensed URL verified and cached."
+        exit 0
+    fi
+
+    # Case 3: Network/Host link error (e.g. "curl_easy_perform() failed:")
+    if [[ "$activation_output" == *failed:* || "$activation_output" == *resolve* || "$activation_output" == *connect* ]]; then
+        logger -t "$LOG_TAG" "Network path unavailable. Retrying initialization..."
         sleep 2
     else
-        logger -t "$LOG_TAG" "Curl failed with permanent exit code $curl_status. Breaking loop."
+        # Safe catch-all fallback for unexpected application errors
         echo "Restart Target to Connect to Diretta License Server" > "$CACHE_FILE"
+        logger -t "$LOG_TAG" "Unexpected output encountered: $activation_output"
         exit 1
     fi
 done
-
-# Gateway is up! Re-run the binary to push the activation handshake and fetch the fresh URL
-# This time, we only care about stdout for the URL.
-license_url=$("$LICENSE_APP" 2>/dev/null)
-if [[ -n "$license_url" && "$license_url" == http* ]]; then
-    echo "$license_url" > "$CACHE_FILE"
-    logger -t "$LOG_TAG" "Success: Dynamic activation URL cached."
-else
-    echo "Licensed" > "$CACHE_FILE"
-    logger -t "$LOG_TAG" "System successfully processed activation handshake."
-fi
