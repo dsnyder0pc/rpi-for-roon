@@ -51,7 +51,7 @@ apply_default() {
 [global]
 Interface=end0
 TargetProfileLimitTime=200
-ThredMode=1
+ThredMode=17
 InfoCycle=100000
 FlexCycle=enable
 CycleTime=10000
@@ -78,8 +78,8 @@ apply_tuned() {
 [global]
 Interface=end0
 TargetProfileLimitTime=0
-ThredMode=1
-InfoCycle=100000
+ThredMode=17
+InfoCycle=80000
 FlexCycle=disable
 CycleTime=800
 CycleMinTime=

@@ -100,6 +100,14 @@ EOT
     curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py -o ~/purist-mode-webui/app.py
     sudo systemctl daemon-reload
     sudo systemctl restart purist-webui.service
+
+    echo "- Updating ThredMode bitmask for Core Isolation"
+    if [ -f "/opt/diretta-alsa/setting.inf" ]; then
+        sudo sed -i 's/^ThredMode=1$/ThredMode=17/' /opt/diretta-alsa/setting.inf
+        echo "  -> Restarting Diretta Alsa daemon..."
+        sudo systemctl daemon-reload
+        sudo systemctl restart diretta_alsa.service
+    fi
 }
 
 if [[ "$HOSTNAME" == "diretta-target" ]]; then
