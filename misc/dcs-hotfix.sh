@@ -101,9 +101,14 @@ EOT
     sudo systemctl daemon-reload
     sudo systemctl restart purist-webui.service
 
-    echo "- Updating ThredMode bitmask for Core Isolation"
+    echo "- Updating ThredMode bitmask and ScanOnlineStop for Core Isolation"
     if [ -f "/opt/diretta-alsa/setting.inf" ]; then
         sudo sed -i 's/^ThredMode=1$/ThredMode=17/' /opt/diretta-alsa/setting.inf
+        if grep -q '^ScanOnlineStop=' /opt/diretta-alsa/setting.inf; then
+            sudo sed -i 's/^ScanOnlineStop=.*/ScanOnlineStop=enable/' /opt/diretta-alsa/setting.inf
+        else
+            sudo sed -i '/^\[global\]/a ScanOnlineStop=enable' /opt/diretta-alsa/setting.inf
+        fi
         echo "  -> Restarting Diretta Alsa daemon..."
         sudo systemctl daemon-reload
         sudo systemctl restart diretta_alsa.service

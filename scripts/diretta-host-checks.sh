@@ -141,6 +141,7 @@ run_appendix7_checks() {
     check "Diretta 'CpuSend' pinned to Core 2" "grep -q '^CpuSend=2' $CONFIG"
     check "Diretta 'CpuOther' pinned to Core 3" "grep -q '^CpuOther=3' $CONFIG"
     check "Diretta 'CPUFLOW' optimization enabled" "grep -q '^CPUFLOW=3' $CONFIG"
+    check "Diretta 'ScanOnlineStop' is enabled" "grep -q '^ScanOnlineStop=enable' $CONFIG"
     check "ThredMode bitmask activates Critical Priority and Core Pinning" "perl -F= -ane 'if(/^ThredMode=/){\$f=1; exit((int(\$F[1])&0x11)==0x11?0:1)} END{exit 1 if !\$f}' $CONFIG"
 }
 run_appendix8_checks() {
@@ -268,6 +269,7 @@ check "'diretta-alsa-dkms' package is installed" "pacman -Q diretta-alsa-dkms"
 check "'diretta_alsa' service is enabled" "systemctl is-enabled diretta_alsa.service"
 check "'diretta_alsa' service is active" "systemctl is-active diretta_alsa.service"
 check "Diretta is configured for 'end0' interface" "grep -q 'Interface=end0' /opt/diretta-alsa/setting.inf"
+check "Diretta 'ScanOnlineStop' is enabled" "grep -q '^ScanOnlineStop=enable' /opt/diretta-alsa/setting.inf"
 check "Diretta service is set to auto-restart" "[ -f /etc/systemd/system/diretta_alsa.service.d/restart.conf ] && grep -q 'Restart=on-failure' /etc/systemd/system/diretta_alsa.service.d/restart.conf"
 
 header "Section 8a" "Diretta Compiler Toolchain"
