@@ -1029,6 +1029,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         ```
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient; however, here are some tuned settings you may wish to try:
         ```text
+        ScanOnlineStop=enable
         InfoCycle=80000
         FlexCycle=disable
         CycleTime=800
@@ -1042,7 +1043,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         [global]
         Interface=end0
         Broadcast=disable
-        ScanOnlineStop=disable
+        ScanOnlineStop=enable
         ScanInterval=
         TargetProfileLimitTime=200
         ThredMode=1
@@ -2550,7 +2551,7 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     [global]
     Interface=end0
     Broadcast=disable
-    ScanOnlineStop=disable
+    ScanOnlineStop=enable
     ScanInterval=
     TargetProfileLimitTime=200
     ThredMode=17

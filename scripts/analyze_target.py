@@ -1,0 +1,301 @@
+#!/usr/bin/env python3
+"""Diretta Target Telemetry & Link Isolation Parser.
+
+This script parses target network captures to analyze and visualize
+inbound audio streams, outbound telemetry, and environmental noise floor.
+"""
+
+import argparse
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+
+def load_csv(csv_file):
+    """Load the CSV file and return the normalized DataFrame or None if an error occurs."""
+    try:
+        df = pd.read_csv(csv_file)
+        df.columns = df.columns.str.strip().str.lower()
+        return df
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        print(f"❌ Error parsing CSV file: {e}")
+        return None
+
+
+def _determine_macs(df, audio_df):
+    """Determine Host and Target MAC addresses."""
+    src_col = 'eth.src'
+    dst_col = 'eth.dst'
+
+    if not audio_df.empty and src_col in df.columns:
+        dominant_flow = (
+            audio_df.groupby([src_col, dst_col])
+            .size()
+            .reset_index(name='count')
+        )
+        host_mac = dominant_flow.loc[dominant_flow['count'].idxmax()][src_col]
+        target_mac = dominant_flow.loc[dominant_flow['count'].idxmax()][dst_col]
+    elif src_col in df.columns:
+        # Fallback for idle profiles: identify by unicast conversation
+        unicast_df = df[df[dst_col] != '33:33:00:00:00:01']
+        if not unicast_df.empty:
+            counts = (
+                unicast_df.groupby([src_col, dst_col])
+                .size()
+                .reset_index(name='count')
+            )
+            host_mac = counts.loc[counts['count'].idxmax()][dst_col]
+            target_mac = counts.loc[counts['count'].idxmax()][src_col]
+        else:
+            host_mac, target_mac = "Unknown Host", "Unknown Target"
+    else:
+        host_mac, target_mac = "Unknown Host", "Unknown Target"
+
+    return host_mac, target_mac
+
+
+def classify_traffic(df):
+    """Classify traffic into audio, telemetry, and noise DataFrames."""
+    src_col = 'eth.src'
+    dst_col = 'eth.dst'
+    type_col = 'eth.type'
+
+    # Identify Audio frames
+    audio_mask = df[type_col] == '0xcb4b'
+    audio_df = df[audio_mask].copy()
+
+    # Determine Host and Target MAC addresses
+    host_mac, target_mac = _determine_macs(df, audio_df)
+
+    # Separate telemetry updates (Target -> Host) from true network noise
+    if src_col in df.columns:
+        telemetry_mask = (
+            (df[src_col] == target_mac) &
+            (df[dst_col] == host_mac) &
+            (df[type_col] == '0x86dd')
+        )
+        telemetry_df = df[telemetry_mask].copy()
+
+        # True noise is anything that isn't audio stream or authorized telemetry
+        noise_mask = ~audio_mask & ~telemetry_mask
+        noise_df = df[noise_mask].copy()
+    else:
+        telemetry_df = pd.DataFrame()
+        noise_df = pd.DataFrame()
+
+    return audio_df, telemetry_df, noise_df
+
+
+def analyze_audio(audio_df, time_col):
+    """Analyze and print details about the inbound audio stream.
+
+    Returns the detected cycle time (or 0.0 if empty).
+    """
+    print("\n--- 🎛️ Inbound Audio Stream (Host -> Target) ---")
+    if not audio_df.empty:
+        audio_df['delta_us'] = audio_df[time_col].diff() * 1e6
+        audio_steady = audio_df[audio_df[time_col] > 1.0].copy()
+
+        if audio_steady.empty:
+            audio_steady = audio_df
+
+        detected_cyc = audio_steady['delta_us'].median()
+        jitter_iqr = (
+            np.percentile(audio_steady['delta_us'], 75) -
+            np.percentile(audio_steady['delta_us'], 25)
+        )
+
+        print(f"Audio Packets Captured: {len(audio_df):,}")
+        print(f"Target Link CycleTime:  {detected_cyc:.2f} µs")
+        print(f"Pacing Jitter (IQR):    {jitter_iqr:.2f} µs")
+        return detected_cyc
+    print("No active audio streaming payload detected (Idle Baseline).")
+    return 0.0
+
+
+def analyze_telemetry(telemetry_df, time_col):
+    """Analyze and print details about the outbound telemetry.
+
+    Returns loop_deltas and info_cycle_ms (or None and 0.0 if empty).
+    """
+    print("\n--- ⏱️ Target Telemetry Metronome (InfoCycle) ---")
+    if not telemetry_df.empty:
+        # Calculate deltas between consecutive telemetry bursts
+        # Telemetry often fires in pairs/groups per cycle; look at the cycle-to-cycle steps
+        telemetry_df['delta_ms'] = telemetry_df[time_col].diff() * 1e3
+
+        # Filter micro-gaps within the same burst window to find true loop intervals
+        loop_deltas = telemetry_df[telemetry_df['delta_ms'] > 5.0]['delta_ms']
+
+        if not loop_deltas.empty:
+            info_cycle_ms = loop_deltas.median()
+            info_cycle_std = loop_deltas.std()
+            print(f"Telemetry Frames Sent:  {len(telemetry_df):,}")
+            print(
+                f"Detected InfoCycle:     {info_cycle_ms:.2f} ms "
+                f"(Frequency: {1000/info_cycle_ms:.1f} Hz)"
+            )
+            print(f"Metronome Deviation:    {info_cycle_std * 1000:.2f} µs (Clock Stability)")
+            return loop_deltas, info_cycle_ms
+
+        print(
+            f"Telemetry Frames Sent:  {len(telemetry_df):,} "
+            "(Insufficient periods to calculate cadence)"
+        )
+        return None, 0.0
+
+    print("No outbound system telemetry frames detected.")
+    return None, 0.0
+
+
+def analyze_noise(noise_df, df_len, type_col):
+    """Analyze and print details about the environmental noise floor."""
+    print("\n--- 🛡️ Environmental Noise Isolation ---")
+    percentage = len(noise_df) / df_len * 100
+    print(f"Isolated Noise Packets: {len(noise_df):<8} ({percentage:.2f}%)")
+    if not noise_df.empty and type_col in noise_df.columns:
+        print("Top Extraneous EtherTypes Detected on Link:")
+        print(noise_df[type_col].value_counts().head(3).to_string())
+
+
+def generate_visualization(csv_file, datasets, params):
+    """Generate and save the target report visualization."""
+    time_col = params['time_col']
+    detected_cyc = params['detected_cyc']
+    info_cycle_ms = params['info_cycle_ms']
+
+    plt.figure(figsize=(12, 14))
+
+    # Panel 1: Inbound Audio Pacing
+    plt.subplot(3, 1, 1)
+    if not datasets['audio'].empty:
+        plot_audio = (
+            datasets['audio'].iloc[::5]
+            if len(datasets['audio']) > 50000
+            else datasets['audio']
+        )
+        plt.scatter(
+            plot_audio[time_col], plot_audio['delta_us'],
+            color='#3498db', alpha=0.4, s=2
+        )
+        plt.axhline(
+            y=detected_cyc, color='#2ecc71', linestyle='-', alpha=0.6,
+            label=f'Cycle ({detected_cyc:.0f}µs)'
+        )
+        plt.ylim(0, detected_cyc * 3 if detected_cyc > 0 else 100)
+        plt.title("Inbound Audio Stream Pacing Consistency (Host -> Target)")
+        plt.ylabel("Packet Arrival Interval (µs)")
+    else:
+        plt.text(
+            0.5, 0.5, "Transport Idle: No Audio Payload to Profile",
+            ha='center', va='center', fontsize=12
+        )
+    plt.grid(True, alpha=0.3)
+
+    # Panel 2: Telemetry Loop Cadence
+    plt.subplot(3, 1, 2)
+    has_telemetry = (
+        not datasets['telemetry'].empty
+        and datasets['loop_deltas'] is not None
+        and not datasets['loop_deltas'].empty
+    )
+    if has_telemetry:
+        plt.plot(
+            datasets['telemetry'][datasets['telemetry']['delta_ms'] > 5.0][time_col],
+            datasets['loop_deltas'],
+            color='#9b59b6', marker='o', linestyle='--', alpha=0.6, markersize=4
+        )
+        plt.axhline(
+            y=info_cycle_ms, color='purple', linestyle='-', alpha=0.4,
+            label=f'InfoCycle ({info_cycle_ms:.1f}ms)'
+        )
+        plt.title("Target Internal Telemetry Processing Pacing (InfoCycle Loop)")
+        plt.ylabel("Execution Interval (ms)")
+        plt.ylim(info_cycle_ms * 0.5, info_cycle_ms * 1.5)
+    else:
+        plt.text(
+            0.5, 0.5, "No Regular Status Telemetry Collected",
+            ha='center', va='center', fontsize=12
+        )
+    plt.grid(True, alpha=0.3)
+
+    # Panel 3: Environmental Isolation Forensics
+    plt.subplot(3, 1, 3)
+    if not datasets['noise'].empty:
+        # Group by EtherType to color-code out-of-band anomalies
+        for name, group in datasets['noise'].groupby(params['type_col']):
+            plt.scatter(
+                group[time_col], group[params['len_col']],
+                alpha=0.6, s=15, label=f'EtherType {name}'
+            )
+        plt.title("Link-Layer Isolation Forensics (Extraneous/Background Traffic)")
+        plt.ylabel("Packet Payload Length (Bytes)")
+        plt.ylim(0, 1600)
+        plt.legend(loc='upper right')
+    else:
+        plt.text(
+            0.5, 0.5, "Perfect Architectural Firewall Achieved (0 Noise)",
+            ha='center', va='center', fontsize=12, color='green'
+        )
+        plt.title("Link-Layer Noise Floor")
+        plt.ylim(0, 100)
+    plt.xlabel("Time (seconds)")
+    plt.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    output_img = csv_file.replace('.csv', '_target_report.png')
+    plt.savefig(output_img, dpi=150)
+    print(f"\n✅ Target forensic report visualization generated: {output_img}\n")
+
+
+def analyze_target_capture(csv_file):
+    """Analyze the target capture CSV file and generate forensic reports."""
+    df = load_csv(csv_file)
+    if df is None:
+        return
+
+    time_col = 'frame.time_relative' if 'frame.time_relative' in df.columns else 'time'
+    type_col = 'eth.type'
+
+    if time_col not in df.columns:
+        print("❌ Error: Missing relative time telemetry column.")
+        return
+
+    print(f"📊 Total raw frames observed on link: {len(df):,}")
+
+    audio_df, telemetry_df, noise_df = classify_traffic(df)
+
+    detected_cyc = analyze_audio(audio_df, time_col)
+
+    loop_deltas, info_cycle_ms = analyze_telemetry(telemetry_df, time_col)
+
+    analyze_noise(noise_df, len(df), type_col)
+
+    generate_visualization(
+        csv_file,
+        {
+            'audio': audio_df,
+            'telemetry': telemetry_df,
+            'noise': noise_df,
+            'loop_deltas': loop_deltas,
+        },
+        {
+            'time_col': time_col,
+            'len_col': 'frame.len',
+            'type_col': type_col,
+            'detected_cyc': detected_cyc,
+            'info_cycle_ms': info_cycle_ms,
+        }
+    )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='Diretta Target Telemetry & Link Isolation Parser'
+    )
+    parser.add_argument(
+        'csv_file', help='Path to the Wireshark Target CSV capture export'
+    )
+    args = parser.parse_args()
+    analyze_target_capture(args.csv_file)

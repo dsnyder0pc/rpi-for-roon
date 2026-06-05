@@ -52,15 +52,13 @@ until sudo id; do
   echo "try again"
 done
 
-# Ensure tools are installed
-if ! command -v tshark &> /dev/null; then
-    echo "Installing wireshark-cli..."
-    sudo pacman -S --noconfirm --needed wireshark-cli
-fi
-if ! command -v tcpdump &> /dev/null; then
-    echo "Installing tcpdump..."
-    sudo pacman -S --noconfirm --needed tcpdump
-fi
+# Verify dependencies (Audiolinux/Arch)
+for cmd in tcpdump tshark; do
+    if ! command -v "$cmd" &> /dev/null; then
+        echo "Installing $cmd..."
+        sudo pacman -Sy --noconfirm --needed wireshark-cli tcpdump
+    fi
+done
 
 echo "▶️  Starting ${CAPTURE_DURATION}-second Benchmark Capture on ${CAPTURE_INTERFACE}..."
 echo "    (Capturing ALL traffic headers to analyze noise)"
