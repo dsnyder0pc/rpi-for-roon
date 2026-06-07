@@ -2904,29 +2904,6 @@ vcgencmd bootloader_version
 
 The system update process requires a strict sequence to ensure the custom kernel, compilation toolchains, and ALSA daemon remain perfectly synchronized.
 
-#### Protect 6.12.77-1-rpi+ Kernel Headers from Upstream Purges
-```bash
-PACMAN_CONF="/etc/pacman.conf"
-TARGET_MODULE_DIR="/usr/lib/modules/6.12.77-1-rpi+/build"
-
-# Verify the specific kernel tree exists before applying the shield
-if [ -d "$TARGET_MODULE_DIR" ]; then
-    if grep -q "usr/lib/modules/6.12.77-1-rpi+/build" "$PACMAN_CONF"; then
-        echo "6.12.77-1-rpi+ header protection is already configured in $PACMAN_CONF. Skipping."
-    else
-        echo "Configuring 6.12.77-1-rpi+ header protection in $PACMAN_CONF..."
-
-        # Uncomment and populate the NoUpgrade line
-        sudo sed -i 's|^#NoUpgrade[[:space:]]*=|NoUpgrade   = usr/lib/modules/6.12.77-1-rpi+/build/*|' "$PACMAN_CONF"
-
-        # Uncomment and populate the NoExtract line
-        sudo sed -i 's|^#NoExtract[[:space:]]*=|NoExtract   = usr/lib/modules/6.12.77-1-rpi+/build/*|' "$PACMAN_CONF"
-    fi
-else
-    echo "$TARGET_MODULE_DIR not found. Active kernel has likely advanced past 6.12.77. Skipping configuration."
-fi
-```
-
 #### Now, proceed with the updates
 1. Launch the AudioLinux configuration tool by typing `menu` at the command prompt.
 2. Navigate to the **Install/Update menu** and select **UPDATE System**.
