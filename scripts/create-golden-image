@@ -31,21 +31,92 @@ fi
 DEVICE="${mmc_devices[0]}"
 echo "✅ Success! Using device: ${DEVICE}"
 
+# --- Auto-Detect Image Type and Diretta Version ---
+echo
+echo "🔎 Mounting the device filesystem to detect configuration..."
+
+# Define Partition
+if [[ "${DEVICE}" == *"mmcblk"* ]]; then
+  ROOT_PART="${DEVICE}p2"
+else
+  ROOT_PART="${DEVICE}2"
+fi
+
+# Create Temp Mount
+TMP_MOUNT=$(mktemp -d)
+
+# Make sure we clean up the mount on unexpected exit
+cleanup() {
+  if mount | grep -q "${TMP_MOUNT}"; then
+    sudo umount "${TMP_MOUNT}"
+  fi
+  if [ -d "${TMP_MOUNT}" ]; then
+    rmdir "${TMP_MOUNT}"
+  fi
+}
+trap cleanup EXIT
+
+sudo mount "${ROOT_PART}" "${TMP_MOUNT}"
+
+# 1. Detect image type based on directory presence
+if [ -d "${TMP_MOUNT}/opt/diretta-alsa" ]; then
+  IMG_TYPE="host"
+  echo "   - Auto-detected image type: Host"
+elif [ -d "${TMP_MOUNT}/opt/diretta-alsa-target" ]; then
+  IMG_TYPE="target"
+  echo "   - Auto-detected image type: Target"
+else
+  echo "   - Neither 'diretta-alsa' nor 'diretta-alsa-target' was found under /opt."
+  while true; do
+    read -r -p "   - Please enter a name for the image type (alphanumeric only, no spaces): " user_img_type
+    if [[ "${user_img_type}" =~ ^[a-zA-Z0-9]+$ ]]; then
+      # Convert to lowercase to be consistent
+      IMG_TYPE=$(echo "${user_img_type}" | tr '[:upper:]' '[:lower:]')
+      break
+    else
+      echo "     ❌ Invalid name. Please use only alphanumeric characters with no spaces."
+    fi
+  done
+fi
+
+# 2. Detect Diretta package version
+if [[ "${IMG_TYPE}" == "host" ]]; then
+  PKG_NAME="diretta-alsa-daemon"
+elif [[ "${IMG_TYPE}" == "target" ]]; then
+  PKG_NAME="diretta-alsa-target"
+else
+  PKG_NAME=""
+fi
+
+DIRETTA_VER=""
+if [[ -n "${PKG_NAME}" ]]; then
+  # Find the package directory in Pacman DB
+  # Arch stores metadata in /var/lib/pacman/local/pkgname-version-rel/
+  PKG_DIR=$(find "${TMP_MOUNT}/var/lib/pacman/local" -maxdepth 1 -type d -name "${PKG_NAME}*" | head -n 1)
+
+  if [[ -n "${PKG_DIR}" ]]; then
+    # Extract version from the 'desc' file
+    # The %VERSION% tag is followed by the version string on the next line
+    RAW_VER=$(grep -A 1 "%VERSION%" "${PKG_DIR}/desc" | tail -n 1)
+
+    # Sanitize version string for filename (e.g. 147_12-1 -> _v147_12_1)
+    DIRETTA_VER="_v${RAW_VER//-/_}"
+    echo "   - Auto-detected ${PKG_NAME} version: ${RAW_VER}"
+  else
+    echo "   - ⚠️  Could not detect ${PKG_NAME} package version in Pacman DB. Using generic filename."
+  fi
+else
+  echo "   - Custom image type. Skipping Diretta version detection."
+fi
+
+# Unmount immediately
+sudo umount "${TMP_MOUNT}"
+rmdir "${TMP_MOUNT}"
+trap - EXIT # Clear exit trap
+
 # --- User Interaction ---
 
-# 1. Prompt for Diretta Type (Host/Target)
-echo
-echo "Select the image type:"
-select IMG_TYPE in "Host" "Target"; do
-  if [ -n "${IMG_TYPE}" ]; then
-    IMG_TYPE=$(echo "${IMG_TYPE}" | tr '[:upper:]' '[:lower:]') # lowercase
-    break
-  else
-    echo "Invalid selection. Please enter 1 for Host or 2 for Target."
-  fi
-done
-
-# 2. Prompt for the process stage
+# Prompt for the process stage
 echo
 echo "Select the process stage:"
 options=(
@@ -104,48 +175,6 @@ select stage_choice in "${options[@]}"; do
     echo "Invalid selection. Please try again."
   fi
 done
-
-# --- Auto-Detect Diretta Version ---
-echo
-echo "🔎 Detecting Diretta version from filesystem..."
-
-# Define Partition and Package Name
-if [[ "${DEVICE}" == *"mmcblk"* ]]; then
-  ROOT_PART="${DEVICE}p2"
-else
-  ROOT_PART="${DEVICE}2"
-fi
-
-if [[ "${IMG_TYPE}" == "host" ]]; then
-  PKG_NAME="diretta-alsa-daemon"
-else
-  PKG_NAME="diretta-alsa-target"
-fi
-
-# Create Temp Mount
-TMP_MOUNT=$(mktemp -d)
-sudo mount "${ROOT_PART}" "${TMP_MOUNT}"
-
-# Find the package directory in Pacman DB
-# Arch stores metadata in /var/lib/pacman/local/pkgname-version-rel/
-PKG_DIR=$(find "${TMP_MOUNT}/var/lib/pacman/local" -maxdepth 1 -type d -name "${PKG_NAME}*" | head -n 1)
-
-if [[ -n "${PKG_DIR}" ]]; then
-  # Extract version from the 'desc' file
-  # The %VERSION% tag is followed by the version string on the next line
-  RAW_VER=$(grep -A 1 "%VERSION%" "${PKG_DIR}/desc" | tail -n 1)
-
-  # Sanitize version string for filename (e.g. 147_12-1 -> _v147_12_1)
-  DIRETTA_VER="_v${RAW_VER//-/_}"
-  echo "✅ Detected ${PKG_NAME} version: ${RAW_VER}"
-else
-  echo "⚠️  Could not detect ${PKG_NAME}. Using generic filename."
-  DIRETTA_VER=""
-fi
-
-# Unmount immediately
-sudo umount "${TMP_MOUNT}"
-rmdir "${TMP_MOUNT}"
 
 # --- Calculation and Execution ---
 
