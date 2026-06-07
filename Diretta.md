@@ -9,7 +9,7 @@ The **Diretta Host** will connect to your main network (to access your music ser
 I aim to keep this guide compatible with the current official AudioLinux download link provided by Piero.
 
 **Current Validation:**
-These instructions were last tested with **AudioLinux V5** (Image: `audiolinux_pi4-pi5_510`, Menu Version: `532`).
+These instructions were last tested with **AudioLinux V5** (Image: `audiolinux_pi4-pi5_520`, Menu Version: `536`).
 
 **A Note on Updates:**
 Because AudioLinux is based on Arch (a rolling release), a fresh install will always pull the absolute latest software. Once your system is singing, you have two choices:
@@ -323,73 +323,33 @@ Install the `dnsutils` package so that the **menu** update will have access to t
 sudo pacman -S --noconfirm --needed dnsutils
 ```
 
-#### 4.3.1. Protect 6.12.77-1-rpi+ Kernel Headers from Upstream Purges
-```bash
-PACMAN_CONF="/etc/pacman.conf"
-TARGET_MODULE_DIR="/usr/lib/modules/6.12.77-1-rpi+/build"
-
-# Verify the specific kernel tree exists before applying the shield
-if [ -d "$TARGET_MODULE_DIR" ]; then
-    if grep -q "usr/lib/modules/6.12.77-1-rpi+/build" "$PACMAN_CONF"; then
-        echo "6.12.77-1-rpi+ header protection is already configured in $PACMAN_CONF. Skipping."
-    else
-        echo "Configuring 6.12.77-1-rpi+ header protection in $PACMAN_CONF..."
-
-        # Uncomment and populate the NoUpgrade line
-        sudo sed -i 's|^#NoUpgrade[[:space:]]*=|NoUpgrade   = usr/lib/modules/6.12.77-1-rpi+/build/*|' "$PACMAN_CONF"
-
-        # Uncomment and populate the NoExtract line
-        sudo sed -i 's|^#NoExtract[[:space:]]*=|NoExtract   = usr/lib/modules/6.12.77-1-rpi+/build/*|' "$PACMAN_CONF"
-    fi
-else
-    echo "$TARGET_MODULE_DIR not found. Active kernel has likely advanced past 6.12.77. Skipping configuration."
-fi
-```
-
 #### 4.4. Run System and Menu Updates
 
 Use the AudioLinux menu system to perform all updates. Have your email from Piero with your image download user and password. You'll need these for the menu update. It will ask for **your menu update user**, which is a bit confusing. It's asking for the username and password that you used to download the AudioLinux install image.
 
 1.  Run `menu` in the terminal.
 2.  Select **INSTALL/UPDATE menu**.
+    ```text
+    Verifying license...
+    Please enter the email address used at the time of purchase
+    (You will only be asked once)
+    ?
+    <email address used to purchase AudioLinux support>
+    OK
+    OK
+
+    Please type your menu update user
+    ?
+    <AUDIOLINUX RASPBERRY "user:" from your license email)>
+    Please type your menu update password
+    ?
+    <AUDIOLINUX RASPBERRY "password:" from your license email)>
+    ```
 3.  On the next screen, select **UPDATE system** and let the process complete.
 4.  After the system update finishes, select **Update menu** from the same screen to get the latest version of the AudioLinux scripts. *Note:* You will need the email address you used to purchase AudioLinux and your download username and password.
 5.  Exit the menu system to get back to the terminal.
 
----
-#### **4.4.1 Critical: Select the 6.12.x Kernel (Downgrade Required)**
-
-> **⚠️ WARNING: Do Not Use the Default Kernel (6.18+)**
-> The latest AudioLinux images may ship with Kernel `6.18.x` (confirm what you have by running `uname -r`). This version contains a known regression in the Raspberry Pi 5 Ethernet driver (`macb`) that causes the connection to permanently drop if the Host reboots.
-> **You MUST switch to the 6.12.x kernel to ensure network stability.**
-
-1. Run `menu` in the terminal.
-2. Select **Update/Install**.
-3. Select **Kernel update**.
-4. You will see a menu similar to this:
-```text
-Your kernel                                6.12.77-1-rpi+ LTS RT LTO
-Audiolinux LTS RT LTO                      6.12.77-1
-Audiolinux last RT LTO                     6.18.32-2
-Audiolinux LTS RT LTO 16k (only Pi 5)      6.12.77-1
-Audiolinux last RT LTO 16k (only Pi 5)     6.18.32-2
-```
-
-#### 4.5. Select option **1** (`Audiolinux LTS RT LTO`).
-   *Verify the version is `6.12.77-1`.*
-
----
-> Note: Workaround for Pacman Update Issue
->
-> There was a [known issue](https://archlinux.org/news/linux-firmware-2025061312fe085f-5-upgrade-requires-manual-intervention/) that could prevent the system from updating due to conflicting NVIDIA firmware files (even though the RPi doesn't use them). If you encounter this issue, to progress with the system upgrade, first remove `linux-firmware`, then reinstall it as part of the upgrade:
->
-> ```bash
-> sudo pacman -Rdd --noconfirm linux-firmware
-> sudo pacman -Syu --noconfirm linux-firmware
-> ```
----
-
-#### 4.6. Reboot
+#### 4.5. Reboot
 Reboot to load the kernel and other updates:
 ```bash
 sudo sync && sudo reboot
