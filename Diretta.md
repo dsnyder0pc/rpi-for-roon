@@ -1184,15 +1184,12 @@ sudo argonone-cli --decode
 To adjust those values, you must create a config file. Use these values to start:
 ```bash
 cat <<'EOT' | sudo tee /etc/argononed.conf
-[Schedule]
 temp0=55
 fan0=0
 temp1=60
 fan1=50
 temp2=65
 fan2=100
-
-[Setting]
 hysteresis=3
 EOT
 ```

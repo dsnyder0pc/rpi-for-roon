@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-#         Remote System Preparation & Shutdown Script (v6 - with Cleanup)
+#         Remote System Preparation & Shutdown Script (v7 - with Cleanup)
 #
 # Meant to be run with a command that first clears the calling user's history:
 # history -c; rm -f ~/.bash_history; export HISTSIZE=0; curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/prepare_system | sudo bash
@@ -16,6 +16,55 @@ CUSTOM_MIRROR="http://ca.us.mirror.archlinuxarm.org/\$arch/\$repo"
 # --- Colors ---
 RED_BOLD='\033[1;31m'
 NC='\033[0m' # No Color
+
+# --- Helper Functions ---
+update_config_key() {
+    local file="$1"
+    local key="$2"
+    local value="$3"
+
+    if [ ! -f "$file" ]; then
+        echo "   - ⚠️  Warning: Config file '$file' not found."
+        return 1
+    fi
+
+    if grep -q "^${key}=" "$file"; then
+        # Replace existing key
+        sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+        echo "   - Updated ${key} to ${value} in $(basename "$file")"
+    else
+        # Append key
+        echo "${key}=${value}" >> "$file"
+        echo "   - Added ${key}=${value} to $(basename "$file")"
+    fi
+}
+
+update_network_mtu() {
+    local mtu="$1"
+    local file="/etc/systemd/network/end0.network"
+
+    if [ ! -f "$file" ]; then
+        echo "   - ⚠️  Warning: Network file '$file' not found."
+        return 1
+    fi
+
+    if grep -q "^MTUBytes=" "$file"; then
+        # Replace existing MTUBytes
+        sed -i "s|^MTUBytes=.*|MTUBytes=${mtu}|" "$file"
+        echo "   - Updated MTUBytes to ${mtu} in $(basename "$file")"
+    else
+        # If [Link] section exists, append under [Link]
+        if grep -q -i "^\[Link\]" "$file"; then
+            sed -i "/^\[[Ll]ink\]/a MTUBytes=${mtu}" "$file"
+            echo "   - Added MTUBytes=${mtu} under [Link] in $(basename "$file")"
+        else
+            # Append [Link] and MTUBytes to the file
+            echo -e "\n[Link]\nMTUBytes=${mtu}" >> "$file"
+            echo "   - Appended [Link] and MTUBytes=${mtu} to $(basename "$file")"
+        fi
+    fi
+}
+
 
 if [[ $EUID -ne 0 ]]; then
    echo "🛑 Error: This script must be run with root privileges."
@@ -89,7 +138,91 @@ chmod 600 "/opt/configuration/data"
 
 echo "------------------------------------------------"
 
-# Step 6: Clean up root's Bash history
+# Step 6: Remove test scripts in /home/audiolinux
+echo "🧹 Removing test scripts from /home/$TARGET_USER..."
+for test_script in tspc.sh hspc.sh; do
+    script_path="/home/$TARGET_USER/$test_script"
+    if [ -f "$script_path" ]; then
+        rm -fv "$script_path"
+    fi
+done
+
+echo "------------------------------------------------"
+
+# Step 7: Truncate specific log files under /var/log
+echo "🧹 Truncating log files under /var/log..."
+for logfile in btmp wtmp argononed.log; do
+    logpath="/var/log/$logfile"
+    if [ -f "$logpath" ]; then
+        truncate -s 0 "$logpath"
+        echo "   - Truncated $logpath"
+    fi
+done
+
+echo "------------------------------------------------"
+
+# Step 8: Ensure cpu script is installed
+echo "📥 Checking for cpu script..."
+CPU_BIN="/usr/local/bin/cpu"
+if [ ! -f "$CPU_BIN" ]; then
+    echo "   - Downloading and installing cpu script..."
+    if curl -fsSL "https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/cpu" -o "$CPU_BIN"; then
+        chmod 0555 "$CPU_BIN"
+        echo "   - Successfully installed to $CPU_BIN with permissions 0555."
+    else
+        echo "   - ⚠️  Error: Failed to download cpu script."
+    fi
+else
+    echo "   - cpu script already present at $CPU_BIN."
+fi
+
+echo "------------------------------------------------"
+
+# Step 9: Apply network and MTU configurations (Target vs Host)
+echo "⚙️  Applying network and MTU configurations..."
+
+# Target-specific configurations
+if [ -d "/opt/diretta-alsa-target" ]; then
+    echo "   - Target system detected."
+    TARGET_CONF="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
+    if [ -f "$TARGET_CONF" ]; then
+        update_config_key "$TARGET_CONF" "ExtEtherMTU" "2046"
+        update_config_key "$TARGET_CONF" "EtherMTU" "2032"
+        update_config_key "$TARGET_CONF" "TrgetName" "AnCaolas Link"
+        update_config_key "$TARGET_CONF" "VolumeCtl" "disable"
+        update_config_key "$TARGET_CONF" "AlsaLatency" "30"
+        update_config_key "$TARGET_CONF" "DSDNativ" "enable"
+        update_config_key "$TARGET_CONF" "DSD48" "disable"
+    else
+        echo "   - ⚠️  Warning: Target config file not found at $TARGET_CONF"
+    fi
+    update_network_mtu "2032"
+
+    ISO_CONF="/opt/configuration/isolated.conf"
+    if [ -f "$ISO_CONF" ]; then
+        update_config_key "$ISO_CONF" "IRQ1" '"134 129 104"'
+        update_config_key "$ISO_CONF" "DEVICES1" '"end0 xhci-hcd:usb1 xhci-hcd:usb3"'
+    else
+        echo "   - ⚠️  Warning: Isolated config file not found at $ISO_CONF"
+    fi
+fi
+
+# Host-specific configurations
+if [ -d "/opt/diretta-alsa" ]; then
+    echo "   - Host system detected."
+    HOST_CONF="/opt/diretta-alsa/setting.inf"
+    if [ -f "$HOST_CONF" ]; then
+        update_config_key "$HOST_CONF" "InfoCycle" "70000"
+        update_config_key "$HOST_CONF" "CycleTime" "700"
+    else
+        echo "   - ⚠️  Warning: Host config file not found at $HOST_CONF"
+    fi
+    update_network_mtu "2032"
+fi
+
+echo "------------------------------------------------"
+
+# Step 10: Clean up root's Bash history
 echo "🧹 Cleaning up root user's Bash history..."
 history -c
 if [ -f "$HOME/.bash_history" ]; then
@@ -101,7 +234,7 @@ echo "   - History disabled for this session."
 
 echo "------------------------------------------------"
 
-# Step 7: Clean up audiolinux user's Bash history
+# Step 11: Clean up audiolinux user's Bash history
 echo "🧹 Cleaning up audiolinux user's Bash history..."
 USER_HISTORY="/home/$TARGET_USER/.bash_history"
 if [ -f "$USER_HISTORY" ]; then
@@ -111,7 +244,7 @@ fi
 
 echo "------------------------------------------------"
 
-# Step 8: Reclaim Disk Space
+# Step 12: Reclaim Disk Space
 echo "🧹 Reclaiming disk space..."
 if [ -d "/home/$TARGET_USER/.pyenv" ]; then
     echo "   - Removing Python build artifacts..."
@@ -124,11 +257,11 @@ pacman -Scc --noconfirm &>/dev/null
 
 echo "------------------------------------------------"
 
-# Step 9: Clean up audiolinux user's wget logs
+# Step 13: Clean up audiolinux user's wget logs
 echo "🧹 Cleaning up audiolinux user's wget logs..."
-WGET_LOGS="/home/$TARGET_USER/wget-log*"
-if ls $WGET_LOGS &> /dev/null; then
-    rm -fv $WGET_LOGS
+WGET_LOG_FILES=(/home/"$TARGET_USER"/wget-log*)
+if [ -e "${WGET_LOG_FILES[0]}" ]; then
+    rm -fv "${WGET_LOG_FILES[@]}"
     echo "   - Removed wget-log files."
 else
     echo "   - No wget-log files found. Skipping."
@@ -136,7 +269,7 @@ fi
 
 echo "------------------------------------------------"
 
-# Step 10: Sync disks and power off the system
+# Step 14: Sync disks and power off the system
 echo "✅ Preparation complete. System will power off in 5 seconds."
 sleep 5
 sync
