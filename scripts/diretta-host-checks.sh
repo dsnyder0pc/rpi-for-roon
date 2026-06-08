@@ -37,6 +37,20 @@ check_hash() {
     local url=$2
     [ -f "$file" ] && [[ $(md5sum "$file" | awk '{print $1}') == $(curl -sL "$url" | md5sum | awk '{print $1}') ]]
 }
+is_kernel_6_18_or_newer() {
+    local kver
+    kver=$(uname -r | cut -d'-' -f1)
+    local IFS='.'
+    local major minor
+    read -r major minor _ <<< "$kver"
+    major=${major:-0}
+    minor=${minor:-0}
+    if [ "$major" -gt 6 ] || { [ "$major" -eq 6 ] && [ "$minor" -ge 18 ]; }; then
+        return 0
+    else
+        return 1
+    fi
+}
 
 # --- State for Optional Checks ---
 PYTHON_CHECK_COMPLETE=0
@@ -148,11 +162,13 @@ run_appendix8_checks() {
     header "Appendix 8" "Optional: Purist 100Mbps Network Mode"
     check "'limit-speed-100m' service is enabled" "systemctl is-enabled limit-speed-100m.service"
     check "'limit-speed-100m' service is active" "systemctl is-active limit-speed-100m.service"
-    check "'disable-eee' service is enabled" "systemctl is-enabled disable-eee.service"
-    check "'disable-eee' service is active" "systemctl is-active disable-eee.service"
     check "Link speed is optimized (10Mb/s or 100Mb/s)" "ethtool end0 | grep -qEe 'Speed: (10|100)Mb/s'"
     check "Duplex is Full" "ethtool end0 | grep -q 'Duplex: Full'"
-    check "Energy Efficient Ethernet (EEE) is disabled" "! ethtool --show-eee end0 | grep -q 'enabled - active'"
+    if is_kernel_6_18_or_newer; then
+        check "'disable-eee' service is enabled" "systemctl is-enabled disable-eee.service"
+        check "'disable-eee' service is active" "systemctl is-active disable-eee.service"
+        check "Energy Efficient Ethernet (EEE) is disabled" "ethtool --show-eee end0 | grep -q 'EEE status: disabled'"
+    fi
 }
 run_appendix9_checks() {
     header "Appendix 9" "Optional: Jumbo Frames Optimization"
