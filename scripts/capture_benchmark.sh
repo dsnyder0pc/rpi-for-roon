@@ -52,11 +52,18 @@ until sudo id; do
   echo "try again"
 done
 
-# Verify dependencies (Audiolinux/Arch)
+# Verify dependencies (Audiolinux/Arch and Debian/Ubuntu support)
 for cmd in tcpdump tshark; do
     if ! command -v "$cmd" &> /dev/null; then
         echo "Installing $cmd..."
-        sudo pacman -Sy --noconfirm --needed wireshark-cli tcpdump
+        if command -v pacman &> /dev/null; then
+            sudo pacman -Sy --noconfirm --needed wireshark-cli tcpdump
+        elif command -v apt-get &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y tshark tcpdump
+        else
+            echo "Error: package manager not supported. Please install $cmd manually."
+            exit 1
+        fi
     fi
 done
 
