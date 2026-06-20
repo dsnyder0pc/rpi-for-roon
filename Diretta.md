@@ -776,7 +776,7 @@ If you are a Linux user and want your SSH key passphrase to persist across reboo
   * **Configure your shell:** Add the following line to your `~/.bashrc` (or `~/.zshrc`, `~/.profile`, etc.) to start `keychain` when you open a terminal. It will prompt for your passphrase only once, the first time you open a terminal after a reboot.
 
     ```bash
-    eval `keychain --eval --quiet id_ed25519`
+    eval "$(keychain --eval --quiet id_ed25519)"
     ```
 
   * Reload your shell by opening a new terminal or running `source ~/.bashrc`.
@@ -1418,13 +1418,13 @@ if ! pyenv versions --bare | grep -q "^${PYVER}$"; then
     fi
 
     echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
-    pyenv install $PYVER
+    pyenv install "$PYVER"
     [ -n "$TMPDIR" ] && [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"
 else
     echo "--- Python ${PYVER} is already installed. ---"
 fi
 
-pyenv global $PYVER
+pyenv global "$PYVER"
 ```
 
 **Note:** It's normal for the `Installing Python-3.14.5...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
@@ -2716,10 +2716,10 @@ SSH into the Target (`diretta-target`) and paste the following block.
 ```bash
 # 1. Detect Link Limit (Full vs Baby)
 echo "Testing Link Capability..."
-if ping -c 1 -w 1 -M do -s 8972 host &>/dev/null; then
+if ping -c 1 -w 1 -M "do" -s 8972 host &>/dev/null; then
   NEW_MTU=9000
   echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
-elif ping -c 1 -w 1 -M do -s 2004 host &>/dev/null; then
+elif ping -c 1 -w 1 -M "do" -s 2004 host &>/dev/null; then
   NEW_MTU=2032
   echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
 else
@@ -2775,10 +2775,10 @@ echo "Testing Link Capability..."
 # Give the link a moment to settle after the manual MTU change
 sleep 2
 
-if ping -c 1 -w 1 -M do -s 8972 target &>/dev/null; then
+if ping -c 1 -w 1 -M "do" -s 8972 target &>/dev/null; then
   NEW_MTU=9000
   echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
-elif ping -c 1 -w 1 -M do -s 2004 target &>/dev/null; then
+elif ping -c 1 -w 1 -M "do" -s 2004 target &>/dev/null; then
   NEW_MTU=2032
   echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
 else
