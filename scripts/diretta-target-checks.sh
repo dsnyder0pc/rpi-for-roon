@@ -13,7 +13,6 @@ C_BLUE=$'\033[0;34m'
 C_BOLD=$'\033[1m'
 
 # --- State Variables ---
-UPGRADE_REQUIRED=0
 
 # --- Helper Functions ---
 check() {
@@ -22,10 +21,6 @@ check() {
         printf '[%sPASS%s]\n' "$C_GREEN" "$C_RESET"
     else
         printf '[%sFAIL%s]\n' "$C_RED" "$C_RESET"
-        # Flag for legacy upgrade if scripts are out of date or cache service is missing
-        if [[ "$1" == *"up-to-date"* ]] || [[ "$1" == *"diretta-cache"* ]]; then
-            UPGRADE_REQUIRED=1
-        fi
     fi
 }
 check_status() {
@@ -307,20 +302,4 @@ check_optional_section "grep -q '^ExtEtherMTU=' /opt/diretta-alsa-target/diretta
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}"
 
-if [ "$UPGRADE_REQUIRED" -eq 1 ]; then
-    echo -e "\n${C_YELLOW}${C_BOLD}========================================================================${C_RESET}"
-    echo -e "${C_YELLOW}${C_BOLD}                           UPGRADE NOTICE                               ${C_RESET}"
-    echo -e "${C_YELLOW}${C_BOLD}========================================================================${C_RESET}"
-    echo -e "${C_YELLOW}The failures above indicate you are running an older configuration.${C_RESET}"
-    echo -e "${C_YELLOW}To safely upgrade to the latest features (including Super Purist mode)${C_RESET}"
-    echo -e "${C_YELLOW}without causing a network deadlock, you MUST re-run the following${C_RESET}"
-    echo -e "${C_YELLOW}sections on ${C_BOLD}BOTH${C_RESET}${C_YELLOW} the Target and the Host:${C_RESET}\n"
-    echo -e "  ${C_RED}1. Appendix 3: Optional: Purist Mode${C_RESET}"
-    echo -e "  ${C_RED}2. Appendix 4: Optional: Purist Mode Web UI${C_RESET}"
-    echo -e "  ${C_RED}3. Appendix 8: Optional: Purist 100Mbps Network Mode${C_RESET}\n"
-    echo -e "${C_YELLOW}${C_BOLD}WARNING:${C_RESET} ${C_YELLOW}Even if Appendix 8 shows as [PASS], it MUST be updated to${C_RESET}"
-    echo -e "${C_YELLOW}use the new link advertisement masks to prevent connectivity loss.${C_RESET}"
-    echo -e "${C_YELLOW}${C_BOLD}========================================================================${C_RESET}\n"
-else
-    echo ""
-fi
+echo ""
