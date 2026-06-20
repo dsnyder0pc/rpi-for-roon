@@ -37,3 +37,20 @@ When modifications to [Diretta.md](file:///home/dsnyder/src/rpi-for-roon/Diretta
    ```bash
    python3 scripts/sync_translations.py --verify
    ```
+
+### Critical Rules for Translating Code Blocks and Links
+
+1. **Table of Contents (TOC) & Section Anchors**
+   - **TOC anchors must match the translated headings**: If a heading in the text is translated (e.g. `## 1. Prerequisites` -> `## 1. Vorbereitungen`), its corresponding link target in the TOC must point to the slug of the translated heading (e.g. `#1-vorbereitungen`).
+   - **GitHub GFM Slugification rules**: 
+     - Lowercase the heading.
+     - Replace whitespace with hyphens (`-`).
+     - Remove punctuation (periods, colons, parentheses, etc.).
+     - **Double Hyphens**: If a colon is surrounded by spaces (e.g., `Annexe 7 : Optimisations`), GFM replaces spaces with hyphens first and then strips the colon, leaving a double hyphen (`--`). Ensure these double hyphens are preserved (e.g., `#16-annexe-7--optimisations...`).
+     - A utility script `scratch/fix_toc_links.py` is available in scratch files to automate this replacement.
+
+2. **Echo Commands & Logging Statements**
+   - **Translate human-facing messages**: Logging and print statements that write messages to standard output or standard error (e.g., `echo "Welcome to the interactive timezone setup."` or `echo "Error: License cache not found" >&2`) must be translated to the target language.
+   - **Protect shell variables & subshells**: Do not translate variables (e.g., `$timezone`, `${TOTAL_MEM}`) or subshell executions (e.g., `$(cat /etc/machine-id)`) inside quotes.
+   - **Do NOT translate config writes**: Statements that write technical code or config parameters to files (e.g. `echo "net.ipv4.ip_forward=1" | sudo tee ...` or heredocs `cat <<'EOT'`) must remain 100% identical in English.
+
