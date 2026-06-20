@@ -198,7 +198,7 @@ Une fois que vous avez l'adresse IP de l'un de vos Raspberry Pi, utilisez le cli
 ```bash
 cmd=$(cat <<'EOT'
 read -rp "Enter the address of your RPi and hit [enter]: " RPi_IP_Address
-echo 'Reminder: the default password is in your AudioLinux email from Piero'
+echo 'Rappel : le mot de passe par défaut se trouve dans votre e-mail AudioLinux de Piero'
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 EOT
@@ -212,10 +212,10 @@ Le `machine-id` est un identifiant unique pour l'installation de l'OS. Il **doit
 
 ```bash
 echo ""
-echo "Old Machine ID: $(cat /etc/machine-id)"
+echo "Ancien identifiant de machine : $(cat /etc/machine-id)"
 sudo rm /etc/machine-id
 sudo systemd-machine-id-setup
-echo "New Machine ID: $(cat /etc/machine-id)"
+echo "Nouvel identifiant de machine : $(cat /etc/machine-id)"
 ```
 
 #### 3.2. Définir des Hostnames uniques
@@ -273,18 +273,18 @@ chronyc sources
 ```bash
 cmd=$(cat <<'EOT'
 clear
-echo "Welcome to the interactive timezone setup."
-echo "You will first select a region, then a specific timezone."
+echo "Bienvenue dans la configuration interactive du fuseau horaire."
+echo "Vous sélectionnerez d'abord une région, puis un fuseau horaire spécifique."
 
 # Permettre à l'utilisateur de sélectionner une région
 PS3="
 Please select a number for your region: "
 select region in $(timedatectl list-timezones | grep -F / | cut -d/ -f1 | sort -u); do
   if [[ -n "$region" ]]; then
-    echo "You have selected the region: $region"
+    echo "Vous avez sélectionné la région : $region"
     break
   else
-    echo "Invalid selection. Please try again."
+    echo "Sélection invalide. Veuillez réessayer."
   fi
 done
 
@@ -295,22 +295,22 @@ PS3="
 Please select a number for your timezone: "
 select timezone in $(timedatectl list-timezones | grep "^$region/"); do
   if [[ -n "$timezone" ]]; then
-    echo "You have selected the timezone: $timezone"
+    echo "Vous avez sélectionné le fuseau horaire : $timezone"
     break
   else
-    echo "Invalid selection. Please try again."
+    echo "Sélection invalide. Veuillez réessayer."
   fi
 done
 
 # Définir le fuseau horaire sélectionné
 echo
-echo "Setting timezone to ${timezone}..."
+echo "Configuration du fuseau horaire sur ${timezone}..."
 sudo timedatectl set-timezone "$timezone"
-echo "✅ Timezone has been set."
+echo "✅ Le fuseau horaire a été configuré."
 
 # Vérifier le changement
 echo
-echo "Current system time and timezone:"
+echo "Heure et fuseau horaire actuels du système :"
 timedatectl status
 EOT
 )
@@ -663,16 +663,16 @@ EOF
 
 # --- Préfixer les paramètres globaux s'ils n'existent pas ---
 if ! grep -q "AddKeysToAgent yes" "$SSH_CONFIG_FILE"; then
-  echo "✅ Adding recommended global SSH settings..."
+  echo "✅ Ajout des paramètres SSH globaux recommandés..."
   # Utiliser un fichier temporaire pour ajouter les paramètres au début
   echo "$GLOBAL_SETTINGS" | cat - "$SSH_CONFIG_FILE" > temp_ssh_config && mv temp_ssh_config "$SSH_CONFIG_FILE"
 else
-  echo "✅ Recommended global SSH settings already exist. No changes made."
+  echo "✅ Les paramètres SSH globaux recommandés existent déjà. Aucune modification apportée."
 fi
 
 # --- Ajouter les configurations d'hôte spécifiques à Diretta ---
 if grep -q "Host diretta-host" "$SSH_CONFIG_FILE"; then
-  echo "✅ SSH configuration for 'diretta-host' already exists. No changes made."
+  echo "✅ La configuration SSH pour 'diretta-host' existe déjà. Aucune modification apportée."
 else
   read -rp "Enter the LAN IP address of your Diretta Host and press [Enter]: " Diretta_Host_IP
 
@@ -690,7 +690,7 @@ Host diretta-target target
     ProxyJump diretta-host
 EOT_HOSTS
 
-  echo "✅ SSH configuration for 'diretta-host' and 'diretta-target' has been added."
+  echo "✅ La configuration SSH pour 'diretta-host' et 'diretta-target' a été ajoutée."
 fi
 
 # --- Nettoyer StrictHostKeyChecking des anciennes versions de ce guide ---
@@ -703,7 +703,7 @@ if command -v sed >/dev/null; then
 fi
 
 echo ""
-echo "--- Your ~/.ssh/config file now contains: ---"
+echo "--- Votre fichier ~/.ssh/config contient désormais : ---"
 cat "$SSH_CONFIG_FILE"
 EOT
 )
@@ -827,11 +827,11 @@ print @lines;
 
 # Valider le nouveau fichier avec visudo avant l'installation
 if [ -s "$TEMP_SUDOERS" ] && sudo visudo -c -f "$TEMP_SUDOERS"; then
-    echo "Sudoers file passed validation. Installing corrected version..."
+    echo "Le fichier sudoers a été validé avec succès. Installation de la version corrigée..."
     # Utiliser install pour définir les propriétaires/permissions corrects et remplacer l'original
     sudo install -m 0440 -o root -g root "$TEMP_SUDOERS" "$SUDOERS_FILE"
 else
-    echo "ERROR: The modified sudoers file failed validation. No changes were made." >&2
+    echo "ERREUR : La validation du fichier sudoers modifié a échoué. Aucune modification n'a été apportée." >&2
 fi
 rm -f "$TEMP_SUDOERS"
 ```
@@ -1198,7 +1198,7 @@ Redémarrez le service pour appliquer les nouvelles valeurs de configuration :
 ```bash
 sudo systemctl restart argononed.service
 echo ""
-echo "Updated fan values:"
+echo "Valeurs mises à jour du ventilateur :"
 sleep 5
 sudo argonone-cli --decode
 ```
@@ -1260,10 +1260,10 @@ Ce guide fournit des instructions pour installer et configurer une télécommand
 
         # Ajouter l'overlay de la télécommande IR s'il n'y est pas déjà
         if ! sed 's/#.*//' $BOOT_CONFIG | grep -q -F "$IR_CONFIG"; then
-          echo "Enabling Argon One IR Receiver..."
+          echo "Activation du récepteur IR Argon One..."
           sudo sed -i "/# Uncomment this to enable infrared communication./a $IR_CONFIG" /boot/config.txt
         else
-          echo "Argon One IR Receiver already enabled."
+          echo "Le récepteur IR Argon One est déjà activé."
         fi
         ```
       * Un redémarrage est nécessaire pour que la modification matérielle prenne effet.
@@ -1357,11 +1357,11 @@ Déconnectez-vous et reconnectez-vous pour que cette modification prenne effet. 
 ```bash
 echo ""
 echo ""
-echo "Checking your group memberships:"
+echo "Vérification de vos appartenances aux groupes :"
 echo "\$ groups"
 groups
 echo ""
-echo "Above, you should see:"
+echo "Ci-dessus, vous devriez voir :"
 echo "audiolinux realtime video input audio wheel"
 ```
 
@@ -1378,10 +1378,10 @@ sudo pacman -S --noconfirm --needed base-devel git zlib bzip2 xz expat libffi op
 
 # Installer pyenv uniquement s'il n'est pas déjà installé
 if [ ! -d "$HOME/.pyenv" ]; then
-  echo "--- Installing pyenv ---"
+  echo "--- Installation de pyenv ---"
   curl -fsSL https://pyenv.run | bash
 else
-  echo "--- pyenv is already installed. Skipping installation. ---"
+  echo "--- pyenv est déjà installé. Installation ignorée. ---"
 fi
 
 # Configurer le shell pour pyenv
@@ -1408,20 +1408,20 @@ if ! pyenv versions --bare | grep -q "^${PYVER}$"; then
     TOTAL_MEM=$(awk '/^MemTotal:/ {print int($2/1024)}' /proc/meminfo)
 
     if [ "$TOTAL_MEM" -lt 1900 ]; then
-        echo "--- Physical RAM is ${TOTAL_MEM}MB. Limiting to 1 core to prevent lockup. ---"
+        echo "--- La RAM physique est de ${TOTAL_MEM}Mo. Limitation à 1 cœur pour éviter tout blocage. ---"
         export MAKE_OPTS="-j1"
         export MAKEFLAGS="-j1"
         mkdir -p "$HOME/pyenv_build_scratch"
         export TMPDIR="$HOME/pyenv_build_scratch"
     else
-        echo "--- Physical RAM is ${TOTAL_MEM}MB. Proceeding with parallel build. ---"
+        echo "--- La RAM physique est de ${TOTAL_MEM}Mo. Poursuite de la compilation en parallèle. ---"
     fi
 
-    echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
+    echo "--- Installation de Python ${PYVER}. Cela va prendre plusieurs minutes... ---"
     pyenv install "$PYVER"
     [ -n "$TMPDIR" ] && [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"
 else
-    echo "--- Python ${PYVER} is already installed. ---"
+    echo "--- Python ${PYVER} est déjà installé. ---"
 fi
 
 pyenv global "$PYVER"
@@ -1456,8 +1456,8 @@ bash <<'EOF'
 # --- Début du script ---
 
 # Obtenir la zone Roon et la stocker dans une variable
-echo "Enter the name of your Roon zone."
-echo "IMPORTANT: This must match the zone name in the Roon app exactly (case-sensitive)."
+echo "Saisissez le nom de votre zone Roon."
+echo "IMPORTANT : Cela doit correspondre exactement au nom de la zone dans l'application Roon (sensible à la casse)."
 # Cette ligne est la correction : < /dev/tty indique à read d'utiliser le terminal
 read -rp "Enter your Roon Zone name: " MY_ROON_ZONE < /dev/tty
 
@@ -1465,11 +1465,11 @@ read -rp "Enter your Roon Zone name: " MY_ROON_ZONE < /dev/tty
 if [ -f "/etc/systemd/system/ir-keymap.service" ]; then
     VOL_UP_CODE="KEY_VOLUMEUP"
     VOL_DOWN_CODE="KEY_VOLUMEDOWN"
-    echo "--- Standard IR receiver detected. Using KEY_VOLUMEUP/DOWN. ---"
+    echo "--- Récepteur IR standard détecté. Utilisation de KEY_VOLUMEUP/DOWN. ---"
 else
     VOL_UP_CODE="KEY_UP"
     VOL_DOWN_CODE="KEY_DOWN"
-    echo "--- Flirc/HID adapter detected. Using KEY_UP/DOWN for volume. ---"
+    echo "--- Adaptateur Flirc/HID détecté. Utilisation de KEY_UP/DOWN pour le volume. ---"
 fi
 
 # S'assurer que le répertoire cible existe
@@ -1507,7 +1507,7 @@ cat <<EOD > roon-ir-remote/app_info.json
 EOD
 
 echo ""
-echo "✅ Configuration file 'roon-ir-remote/app_info.json' created successfully."
+echo "✅ Fichier de configuration 'roon-ir-remote/app_info.json' créé avec succès."
 
 # --- Fin du script ---
 EOF
@@ -1523,10 +1523,10 @@ Installez les dépendances du script dans un environnement virtuel et exécutez-
 cd ~/roon-ir-remote
 # Créer l'environnement virtuel uniquement s'il n'existe pas déjà
 if ! pyenv versions --bare | grep -q "^roon-ir-remote$"; then
-  echo "--- Creating 'roon-ir-remote' virtual environment ---"
+  echo "--- Création de l'environnement virtuel 'roon-ir-remote' ---"
   pyenv virtualenv roon-ir-remote
 else
-  echo "--- 'roon-ir-remote' virtual environment already exists ---"
+  echo "--- L'environnement virtuel 'roon-ir-remote' existe déjà ---"
 fi
 pyenv activate roon-ir-remote
 pip3 install --upgrade pip
@@ -1671,11 +1671,11 @@ Si vous avez décidé que vous préférez le son lorsque le Mode Puriste est act
 
 ```bash
 echo ""
-echo "- Disabling Purist Mode to ensure a clean state"
+echo "- Désactivation du Purist Mode pour garantir un état propre"
 purist-mode --revert
 
 echo ""
-echo "- Creating the Service to Revert to Standard Mode on Every Boot"
+echo "- Création du service pour revenir au Standard Mode à chaque démarrage"
 cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-revert-on-boot.service
 [Unit]
 Description=Revert Purist Mode on Boot to Ensure Standard Operation
@@ -1692,7 +1692,7 @@ WantedBy=multi-user.target
 EOT
 
 echo ""
-echo "- Creating the Delayed Auto-Activation Service"
+echo "- Création du service d'auto-activation différée"
 cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
 [Unit]
 Description=Activate Purist Mode 60 seconds after boot
@@ -1708,7 +1708,7 @@ WantedBy=multi-user.target
 EOT
 
 echo ""
-echo "- Enabling the new services"
+echo "- Activation des nouveaux services"
 sudo systemctl daemon-reload
 sudo systemctl enable purist-mode-revert-on-boot.service
 sudo systemctl enable purist-mode-auto.service
@@ -1724,7 +1724,7 @@ if grep -q menu_wrapper ~/.bashrc; then
   :
 else
   echo ""
-  echo "Add a wrapper around the menu command"
+  echo "Ajouter un wrapper autour de la commande menu"
   cat <<'EOT' | tee -a ~/.bashrc
 
 # Custom wrapper pour le menu AudioLinux afin de gérer le Mode Puriste
@@ -1737,10 +1737,10 @@ menu_wrapper() {
 
   # Si le Mode Puriste était actif, l'annuler temporairement pour le menu.
   if [ "$was_active" = true ]; then
-    echo "Checking credentials to manage Purist Mode..."
+    echo "Vérification des identifiants pour gérer le Purist Mode..."
     sudo -v
 
-    echo "Temporarily disabling Purist Mode to run menu..."
+    echo "Désactivation temporaire du Purist Mode pour exécuter menu..."
     purist-mode --revert > /dev/null 2>&1 # Revert quietly
   fi
 
@@ -1749,17 +1749,17 @@ menu_wrapper() {
 
   # Si le Mode Puriste était actif auparavant, le réactiver maintenant.
   if [ "$was_active" = true ]; then
-    echo "Re-activating Purist Mode..."
+    echo "Réactivation du Purist Mode..."
     purist-mode > /dev/null 2>&1 # Activate quietly
-    echo "Purist Mode is active again."
+    echo "Le Purist Mode est de nouveau actif."
   fi
 }
 
 # Associer la commande 'menu' par alias à notre nouvelle fonction wrapper
 alias menu='menu_wrapper'
 # Alias pour gérer le service automatique du Mode Puriste
-alias purist-mode-auto-enable='echo "Enabling Purist Mode on boot..."; purist-mode; sudo systemctl enable purist-mode-auto.service'
-alias purist-mode-auto-disable='echo "Disabling Purist Mode on boot..."; purist-mode --revert; sudo systemctl disable --now purist-mode-auto.service'
+alias purist-mode-auto-enable='echo "Activation du Purist Mode au démarrage..."; purist-mode; sudo systemctl enable purist-mode-auto.service'
+alias purist-mode-auto-disable='echo "Désactivation du Purist Mode au démarrage..."; purist-mode --revert; sudo systemctl disable --now purist-mode-auto.service'
 EOT
 fi
 
@@ -1917,7 +1917,7 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
         cat "$CACHE_FILE"
     else
         # Sinon, afficher une erreur utile sur stderr et quitter.
-        echo "Error: License cache not found or is empty." >&2
+        echo "Erreur : Cache de licence introuvable ou vide." >&2
         exit 1
     fi
     EOT
@@ -1931,13 +1931,13 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
     SPEED="$1"
 
     if [ "$SPEED" = "10" ]; then
-        echo "Scheduling 10Mbps clamp (Super Purist)..."
+        echo "Planification du bridage à 10 Mbps (Super Purist)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x002" >/dev/null 2>&1 < /dev/null &
     elif [ "$SPEED" = "100" ]; then
-        echo "Scheduling 100Mbps clamp (Purist)..."
+        echo "Planification du bridage à 100 Mbps (Purist)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x008" >/dev/null 2>&1 < /dev/null &
     elif [ "$SPEED" = "1000" ]; then
-        echo "Releasing clamps. Restoring full 10/100/1000 portfolio (Standard)..."
+        echo "Libération des bridages. Restauration de la gamme complète 10/100/1000 (Standard)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x03f" >/dev/null 2>&1 < /dev/null &
     else
         echo "Usage: $0 [10|100|1000]"
@@ -2036,7 +2036,7 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
     EOT
 
     # Copier la clé publique dans le répertoire personnel du Target
-    echo "--> Copying public key to the Target..."
+    echo "--> Copie de la clé publique vers la Target..."
     scp -o StrictHostKeyChecking=accept-new ~/.ssh/purist_app_key.pub diretta-target:
     ```
 
@@ -2048,7 +2048,7 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
 
     Une fois connecté au Target, exécutez ce script pour configurer la clé pour l'utilisateur 'purist-app'
     ```bash
-    echo "--> Running setup script on the Target..."
+    echo "--> Exécution du script de configuration sur la Target..."
     set -e
     # Lire la clé publique depuis le fichier que nous venons de copier
     PUB_KEY=$(cat purist_app_key.pub)
@@ -2067,7 +2067,7 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
     # Nettoyer le fichier de clé publique copié
     rm purist_app_key.pub
 
-    echo "✅ SSH key has been successfully authorized on the Target."
+    echo "✅ La clé SSH a été autorisée avec succès sur la Target."
     ```
 
 5.  **Tester manuellement les commandes à distance (recommandé) :**
@@ -2089,10 +2089,10 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
 
     # Installer pyenv uniquement s'il n'est pas déjà installé
     if [ ! -d "$HOME/.pyenv" ]; then
-      echo "--- Installing pyenv ---"
+      echo "--- Installation de pyenv ---"
       curl -fsSL https://pyenv.run | bash
     else
-      echo "--- pyenv is already installed. Skipping installation. ---"
+      echo "--- pyenv is already installed. Installation ignorée. ---"
     fi
 
     # Configurer le shell pour pyenv
@@ -2118,20 +2118,20 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
       TOTAL_MEM=$(awk '/^MemTotal:/ {print int($2/1024)}' /proc/meminfo)
 
       if [ "$TOTAL_MEM" -lt 1900 ]; then
-        echo "--- Physical RAM is ${TOTAL_MEM}MB. Limiting to 1 core to prevent lockup. ---"
+        echo "--- La RAM physique est de ${TOTAL_MEM}Mo. Limitation à 1 cœur pour éviter tout blocage. ---"
         export MAKE_OPTS="-j1"
         export MAKEFLAGS="-j1"
         mkdir -p "$HOME/pyenv_build_scratch"
         export TMPDIR="$HOME/pyenv_build_scratch"
       else
-        echo "--- Physical RAM is ${TOTAL_MEM}MB. Proceeding with parallel build. ---"
+        echo "--- La RAM physique est de ${TOTAL_MEM}Mo. Poursuite de la compilation en parallèle. ---"
       fi
 
-      echo "--- Installing Python ${PYVER}. This will take several minutes... ---"
+      echo "--- Installation de Python ${PYVER}. Cela va prendre plusieurs minutes... ---"
       pyenv install $PYVER
       [ -n "$TMPDIR" ] && [ -d "$TMPDIR" ] && rm -rf "$TMPDIR"
     else
-      echo "--- Python ${PYVER} is already installed. ---"
+      echo "--- Python ${PYVER} est déjà installé. ---"
     fi
 
     pyenv global $PYVER
@@ -2158,7 +2158,7 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
     USB_INTERFACE=$(ip -o link show | awk -F': ' '/en[pu]/{print $2}')
 
     # Créer une surcharge de configuration pour Avahi afin de l'isoler sur l'interface USB
-    echo "--- Configuring Avahi to use interface: $USB_INTERFACE ---"
+    echo "--- Configuration d'Avahi pour utiliser l'interface : $USB_INTERFACE ---"
     sudo mkdir -p /etc/avahi/avahi-daemon.conf.d
     cat <<EOT | sudo tee /etc/avahi/avahi-daemon.conf.d/interface-scoping.conf
     [server]
@@ -2174,13 +2174,13 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
     echo "Flask" > ~/purist-mode-webui/requirements.txt
 
     # Créer un environnement virtuel et installer les dépendances
-    echo "--- Setting up Python environment for the Web UI ---"
+    echo "--- Configuration de l'environnement Python pour l'interface Web ---"
     # Créer l'environnement virtuel uniquement s'il n'existe pas déjà
     if ! pyenv versions --bare | grep -q "^purist-webui$"; then
-      echo "--- Creating 'purist-webui' virtual environment ---"
+      echo "--- Création de l'environnement virtuel 'purist-webui' ---"
       pyenv virtualenv purist-webui
     else
-      echo "--- 'purist-webui' virtual environment already exists ---"
+      echo "--- L'environnement virtuel 'purist-webui' existe déjà ---"
     fi
     pyenv activate purist-webui
     pip install -r ~/purist-mode-webui/requirements.txt
@@ -2203,7 +2203,7 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
     PYTHON_EXEC=$(readlink -f /home/audiolinux/.pyenv/versions/purist-webui/bin/python)
 
     # Accorder la capacité de liaison aux ports directement à l'exécutable Python final
-    echo "Applying capability to the real file: ${PYTHON_EXEC}"
+    echo "Application de la capability au fichier réel : ${PYTHON_EXEC}"
     sudo setcap 'cap_net_bind_service=+ep' "$PYTHON_EXEC"
     ```
 
@@ -2618,10 +2618,10 @@ FLAG_FILE="/home/audiolinux/purist-mode-webui/super_purist.flag"
 INTERFACE="end0"
 
 # CRITICAL: Attendre jusqu'à 60 secondes pour que l'interface physique initialise la couche de liaison porteuse
-echo "Synchronizing with physical link layer..."
+echo "Synchronisation avec la couche de liaison physique..."
 for i in {1..60}; do
     if [ -f /sys/class/net/$INTERFACE/carrier ] && [ "$(cat /sys/class/net/$INTERFACE/carrier 2>/dev/null)" "==" "1" ]; then
-        echo "Physical link layer detected after $i seconds."
+        echo "Couche de liaison physique détectée après $i secondes."
         break
     fi
     sleep 1
@@ -2629,24 +2629,24 @@ done
 
 # Appliquer le masque de négociation en fonction de l'état de l'indicateur
 if [ -f "$FLAG_FILE" ]; then
-    echo "Super Purist flag detected. Advertising 10 Mbps Full Duplex..."
+    echo "Indicateur Super Purist détecté. Annonce de 10 Mbps Full Duplex..."
     /usr/bin/ethtool -s $INTERFACE advertise 0x002
 else
-    echo "Standard/Purist mode. Advertising up to 100 Mbps Full Duplex..."
+    echo "Mode Standard/Purist. Annonce jusqu'à 100 Mbps Full Duplex..."
     /usr/bin/ethtool -s $INTERFACE advertise 0x00a
 fi
 
 # Gestion de la négociation spécifique à la plateforme
 if grep -q "Raspberry Pi 4" /proc/device-tree/model 2>/dev/null; then
-    echo "Raspberry Pi 4 detected. Triggering mandatory hardware renegotiation pulse..."
+    echo "Raspberry Pi 4 détecté. Déclenchement de l'impulsion de renégociation matérielle obligatoire..."
     /usr/bin/ethtool -r $INTERFACE
 elif grep -q "Raspberry Pi 5" /proc/device-tree/model 2>/dev/null; then
-    echo "Raspberry Pi 5 detected. Internal phylib automatic pulse relied upon; skipping manual reset."
+    echo "Raspberry Pi 5 détecté. Impulsion automatique phylib interne utilisée ; réinitialisation manuelle ignorée."
 else
     /usr/bin/ethtool -r $INTERFACE || true
 fi
 
-echo "Link speed policy successfully finalized."
+echo "Politique de vitesse de liaison finalisée avec succès."
 EOT
 sudo chmod +x /usr/local/bin/set-link-speed.sh
 
@@ -2666,7 +2666,7 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOT
 
-echo "Enable and start the service:"
+echo "Activer et démarrer le service :"
 sudo systemctl daemon-reload
 sudo systemctl enable --now limit-speed-100m.service
 ```
@@ -2699,9 +2699,9 @@ Nous devons forcer temporairement les interfaces réseau à un MTU de 9000 pour 
 sudo sh -c 'ip link set end0 down; sleep 2; ip link set end0 mtu 9000; ip link set end0 up'
 end0_mtu=$(ip link show dev end0 | awk '/mtu/ {print $5}')
 if [[ "9000" == "$end0_mtu" ]]; then
-  echo "SUCCESS: Kernel supports Jumbo frames. Proceed to Step 2."
+  echo "SUCCÈS : Le noyau prend en charge les trames Jumbo. Passez à l'étape 2."
 else
-  echo "STOP: Your kernel does not appear to support Jumbo frames."
+  echo "STOP : Votre noyau ne semble pas prendre en charge les trames Jumbo."
 fi
 ```
 
@@ -2715,15 +2715,15 @@ Connectez-vous en SSH au Target (`diretta-target`) et collez le bloc suivant.
 
 ```bash
 # 1. Détecter la limite de la liaison (Full vs Baby)
-echo "Testing Link Capability..."
+echo "Test de la capacité de la liaison..."
 if ping -c 1 -w 1 -M "do" -s 8972 host &>/dev/null; then
   NEW_MTU=9000
-  echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
+  echo "SUCCÈS : Trames Jumbo complètes (MTU 9000) prises en charge."
 elif ping -c 1 -w 1 -M "do" -s 2004 host &>/dev/null; then
   NEW_MTU=2032
-  echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
+  echo "SUCCÈS : Trames Baby Jumbo (MTU 2032) prises en charge."
 else
-  echo "FAIL: Link cannot support Jumbo Frames. Reverting to safe defaults."
+  echo "ÉCHEC : La liaison ne peut pas prendre en charge les trames Jumbo. Retour aux valeurs par défaut sécurisées."
   sudo ip link set end0 mtu 1500
   false
 fi && {
@@ -2745,7 +2745,7 @@ EOF
   sudo networkctl reload
 
   # 3. Appliquer la configuration de Diretta
-  echo "Configuring Diretta Target..."
+  echo "Configuration de Diretta Target..."
   CONF="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
   sudo sed -i '/^ExtEtherMTU=/d' $CONF
   sudo sed -i '/^EtherMTU=/d' $CONF
@@ -2758,7 +2758,7 @@ EOF
     echo "EtherMTU=2032" | sudo tee -a $CONF
   fi
   sudo systemctl restart diretta_alsa_target
-  echo "DONE: Target optimization complete."
+  echo "TERMINÉ : Optimisation de la Target terminée."
 }
 
 ```
@@ -2771,18 +2771,18 @@ Connectez-vous en SSH au Host (`diretta-host`) et collez le bloc suivant. Il tes
 
 ```bash
 # 1. Détecter la limite de la liaison (Full vs Baby)
-echo "Testing Link Capability..."
+echo "Test de la capacité de la liaison..."
 # Laisser le temps à la liaison de se stabiliser après le changement manuel de MTU
 sleep 2
 
 if ping -c 1 -w 1 -M "do" -s 8972 target &>/dev/null; then
   NEW_MTU=9000
-  echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
+  echo "SUCCÈS : Trames Jumbo complètes (MTU 9000) prises en charge."
 elif ping -c 1 -w 1 -M "do" -s 2004 target &>/dev/null; then
   NEW_MTU=2032
-  echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
+  echo "SUCCÈS : Trames Baby Jumbo (MTU 2032) prises en charge."
 else
-  echo "FAIL: Link cannot support Jumbo Frames. Reverting to safe defaults."
+  echo "ÉCHEC : La liaison ne peut pas prendre en charge les trames Jumbo. Retour aux valeurs par défaut sécurisées."
   sudo ip link set end0 mtu 1500
   false
 fi && {
@@ -2802,24 +2802,24 @@ EOF
   sudo networkctl reload
 
   # 3. Appliquer la configuration de Diretta
-  echo "Configuring Diretta Host..."
+  echo "Configuration de Diretta Host..."
 
   # Toujours activer FlexCycle pour les Jumbo Frames afin de garantir la stabilité
   sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
 
   # Optimisation conditionnelle du CycleTime et de l'InfoCycle
   if [ "$NEW_MTU" -eq 9000 ]; then
-    echo "Optimization: Full Jumbo Frames detected. Relaxing CycleTime to 1000us."
+    echo "Optimisation : Trames Jumbo complètes détectées. Assouplissement du CycleTime à 1000us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=1000/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=100000/' /opt/diretta-alsa/setting.inf
   else
-    echo "Optimization: Baby Jumbo Frames detected. Setting CycleTime to 700us."
+    echo "Optimisation : Trames Baby Jumbo détectées. Configuration du CycleTime sur 700us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=70000/' /opt/diretta-alsa/setting.inf
   fi
 
   sudo systemctl restart diretta_alsa
-  echo "DONE: Host optimization complete."
+  echo "TERMINÉ : Optimisation du Host terminée."
 }
 ```
 
@@ -2949,7 +2949,7 @@ Bien que cela soit généralement sans conséquence pour les transports audio pu
 if ! grep -q "^usb_max_current_enable=" /boot/config.txt; then
   echo "usb_max_current_enable=1" | sudo tee -a /boot/config.txt
 else
-  echo "Optimization already present in /boot/config.txt. Skipping configuration."
+  echo "Optimisation déjà présente dans /boot/config.txt. Configuration ignorée."
 fi
 sudo sync && sudo reboot
 ```

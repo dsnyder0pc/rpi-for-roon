@@ -104,11 +104,16 @@ def analyze_lines(lines):
             continue
         
         if in_code_block:
-            # Inside a code block, only lines containing comments (#) need translation
+            is_translatable = False
             if "#" in line:
-                needs_translation[line_num] = True
-            else:
-                needs_translation[line_num] = False
+                is_translatable = True
+            elif "echo " in line:
+                m = re.search(r'echo\s+("[^"]+"|\'[^\']+\')', line)
+                if m:
+                    content = m.group(1).strip("\"'")
+                    if re.search(r'[a-zA-Z]{2,}\s+[a-zA-Z]{2,}', content):
+                        is_translatable = True
+            needs_translation[line_num] = is_translatable
         else:
             # Outside a code block, empty lines are skipped; others need translation
             if stripped == "":
@@ -148,6 +153,45 @@ def apply_hunks_to_lines(lines, hunks):
             
     return new_lines, inserted_placeholders
 
+def check_variables_match(src, dst):
+    """Verify that any shell variables or subshells inside the line are preserved exactly."""
+    vars_src = re.findall(r'(\$\([^)]+\)|\$\{[^}]+\}|\$[a-zA-Z_][a-zA-Z0-9_]*)', src)
+    vars_dst = re.findall(r'(\$\([^)]+\)|\$\{[^}]+\}|\$[a-zA-Z_][a-zA-Z0-9_]*)', dst)
+    return vars_src == vars_dst
+
+def verify_echo_match(src, dst):
+    """Check if the echo commands are structurally identical, allowing only string arguments to differ."""
+    if not check_variables_match(src, dst):
+        return False
+    # Normalize double-quoted and single-quoted strings that do not contain nested quotes
+    src_norm = re.sub(r'echo\s+("[^"]*"|\'[^\']*\')', 'echo <STR>', src)
+    dst_norm = re.sub(r'echo\s+("[^"]*"|\'[^\']*\')', 'echo <STR>', dst)
+    # Perform a second pass for nested contexts (e.g. inside aliases)
+    src_norm = re.sub(r'echo\s+("[^"]*"|\'[^\']*\')', 'echo <STR>', src_norm)
+    dst_norm = re.sub(r'echo\s+("[^"]*"|\'[^\']*\')', 'echo <STR>', dst_norm)
+    return src_norm.strip() == dst_norm.strip()
+
+def verify_codeblock_line(src, dst):
+    """Verify code block lines, allowing translated comments and echo strings."""
+    if src.strip() == dst.strip():
+        return True
+        
+    # Check for inline comments
+    src_parts = src.split("#", 1)
+    dst_parts = dst.split("#", 1)
+    if len(src_parts) == 2 and len(dst_parts) == 2:
+        cmd_src, cmd_dst = src_parts[0], dst_parts[0]
+        if cmd_src.strip() == cmd_dst.strip():
+            return True
+        if "echo " in cmd_src and "echo " in cmd_dst:
+            return verify_echo_match(cmd_src, cmd_dst)
+            
+    # Check for simple echo statements
+    if "echo " in src and "echo " in dst:
+        return verify_echo_match(src, dst)
+        
+    return False
+
 def verify_translation(src_lines, dst_lines):
     """Verify that a translation file matches the source file's format, code blocks, and indentation."""
     if len(src_lines) != len(dst_lines):
@@ -182,16 +226,9 @@ def verify_translation(src_lines, dst_lines):
                 if errors > 5: break
                 
             if not is_src_comment:
-                if src.strip() != dst.strip():
-                    src_parts = src.split("#", 1)
-                    dst_parts = dst.split("#", 1)
-                    if len(src_parts) == 2 and len(dst_parts) == 2:
-                        if src_parts[0].strip() != dst_parts[0].strip():
-                            print(f"  [Error] Line {i+1}: Code block command mismatch (with inline comment).")
-                            errors += 1
-                    else:
-                        print(f"  [Error] Line {i+1}: Code block command mismatch.")
-                        errors += 1
+                if not verify_codeblock_line(src, dst):
+                    print(f"  [Error] Line {i+1}: Code block command mismatch. SRC={repr(src)}, DST={repr(dst)}")
+                    errors += 1
                     if errors > 5: break
                     
         src_space = len(src) - len(src.lstrip())
