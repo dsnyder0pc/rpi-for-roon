@@ -77,6 +77,7 @@ echo "Working on: ${WORK_FILE}"
   MOUNT_POINT="/mnt/image_root"
   LOOP_DEVICE=""
 
+  # shellcheck disable=SC2329
   cleanup() {
     echo "--- Cleaning up modification phase ---"
     if mountpoint -q "${MOUNT_POINT}"; then

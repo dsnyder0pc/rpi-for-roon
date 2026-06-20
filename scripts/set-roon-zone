@@ -18,7 +18,7 @@ fi
 
 # --- Main Script ---
 # Prompt user for the new Roon Zone name
-read -p "Enter the exact Roon Zone name: " ROON_ZONE
+read -r -p "Enter the exact Roon Zone name: " ROON_ZONE
 
 # Exit if the input is empty
 if [ -z "$ROON_ZONE" ]; then

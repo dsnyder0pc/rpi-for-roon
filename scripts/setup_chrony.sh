@@ -30,8 +30,7 @@ echo "--- Installing chrony ---"
 # 3. Install chrony using pacman
 #    -Sy: Syncs repositories and installs the package. Does NOT upgrade the system.
 #    --noconfirm: Skips all confirmation prompts.
-pacman -Sy --noconfirm --needed chrony
-if [ $? -ne 0 ]; then
+if ! pacman -Sy --noconfirm --needed chrony; then
     echo "Error: Failed to install chrony. Aborting."
     exit 1
 fi
@@ -68,8 +67,7 @@ echo "New configuration written to /etc/chrony.conf"
 
 echo "--- Starting and Enabling chrony service ---"
 # 6. Enable and start the chronyd service with systemctl
-systemctl enable --now chronyd
-if [ $? -ne 0 ]; then
+if ! systemctl enable --now chronyd; then
     echo "Error: Failed to start or enable the chronyd service."
     exit 1
 fi

@@ -5,7 +5,6 @@
 readonly CACHE_FILE="/tmp/diretta_license_url.cache"
 readonly TARGET_DIR="/opt/diretta-alsa-target"
 readonly LICENSE_APP="${TARGET_DIR}/diretta_app_activate"
-readonly LICENSE_URI="https://certificarono.diretta.link/app/"
 readonly LOG_TAG="diretta-cache"
 
 # 1. Verify the activation binary is accessible
