@@ -277,8 +277,8 @@ echo "対話型タイムゾーン設定へようこそ。"
 echo "最初に地域を選択し、次に特定のタイムゾーンを選択します。"
 
 # ユーザーが地域を選択できるようにする
-PS3="
-Please select a number for your region: "
+PS3="地域に対応する番号を選択してください: "
+
 select region in $(timedatectl list-timezones | grep -F / | cut -d/ -f1 | sort -u); do
   if [[ -n "$region" ]]; then
     echo "次の地域が選択されました: $region"
@@ -291,8 +291,8 @@ done
 echo ""
 
 # その地域内のタイムゾーンをユーザーが選択できるようにする
-PS3="
-Please select a number for your timezone: "
+PS3="タイムゾーンに対応する番号を選択してください: "
+
 select timezone in $(timedatectl list-timezones | grep "^$region/"); do
   if [[ -n "$timezone" ]]; then
     echo "次のタイムゾーンが選択されました: $timezone"

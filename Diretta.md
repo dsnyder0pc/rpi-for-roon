@@ -277,8 +277,8 @@ echo "Welcome to the interactive timezone setup."
 echo "You will first select a region, then a specific timezone."
 
 # Allow the user to select a region
-PS3="
-Please select a number for your region: "
+PS3="Please select a number for your region: "
+
 select region in $(timedatectl list-timezones | grep -F / | cut -d/ -f1 | sort -u); do
   if [[ -n "$region" ]]; then
     echo "You have selected the region: $region"
@@ -291,8 +291,8 @@ done
 echo ""
 
 # Allow the user to select a timezone within that region
-PS3="
-Please select a number for your timezone: "
+PS3="Please select a number for your timezone: "
+
 select timezone in $(timedatectl list-timezones | grep "^$region/"); do
   if [[ -n "$timezone" ]]; then
     echo "You have selected the timezone: $timezone"

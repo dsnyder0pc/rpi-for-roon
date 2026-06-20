@@ -119,6 +119,12 @@ def analyze_lines(lines):
                     content = m.group(2).strip("\"'")
                     if re.search(r'[a-zA-Z]{2,}\s+[a-zA-Z]{2,}', content):
                         is_translatable = True
+            elif "PS3=" in line:
+                m = re.search(r'PS3\s*=\s*("[^"]+"|\'[^\']+\')', line)
+                if m:
+                    content = m.group(1).strip("\"'")
+                    if re.search(r'[a-zA-Z]{2,}\s+[a-zA-Z]{2,}', content):
+                        is_translatable = True
             needs_translation[line_num] = is_translatable
         else:
             # Outside a code block, empty lines are skipped; others need translation
@@ -185,8 +191,16 @@ def verify_read_match(src, dst):
     dst_norm = re.sub(r'read\s+(-\S+\s+)?("[^"]*"|\'[^\']*\')', r'read \1<STR>', dst)
     return src_norm.strip() == dst_norm.strip()
 
+def verify_ps3_match(src, dst):
+    """Check if the PS3 prompt assignment is structurally identical, allowing only the prompt string to differ."""
+    if not check_variables_match(src, dst):
+        return False
+    src_norm = re.sub(r'PS3\s*=\s*("[^"]*"|\'[^\']*\')', 'PS3=<STR>', src)
+    dst_norm = re.sub(r'PS3\s*=\s*("[^"]*"|\'[^\']*\')', 'PS3=<STR>', dst)
+    return src_norm.strip() == dst_norm.strip()
+
 def verify_codeblock_line(src, dst):
-    """Verify code block lines, allowing translated comments, echo strings, and read prompts."""
+    """Verify code block lines, allowing translated comments, echo strings, read prompts, and PS3 prompts."""
     if src.strip() == dst.strip():
         return True
         
@@ -202,6 +216,8 @@ def verify_codeblock_line(src, dst):
         if "read " in cmd_src and "read " in cmd_dst:
             if ("-p" in cmd_src and "-p" in cmd_dst) or ("-rp" in cmd_src and "-rp" in cmd_dst):
                 return verify_read_match(cmd_src, cmd_dst)
+        if "PS3=" in cmd_src and "PS3=" in cmd_dst:
+            return verify_ps3_match(cmd_src, cmd_dst)
             
     # Check for simple echo statements
     if "echo " in src and "echo " in dst:
@@ -211,6 +227,10 @@ def verify_codeblock_line(src, dst):
     if "read " in src and "read " in dst:
         if ("-p" in src and "-p" in dst) or ("-rp" in src and "-rp" in dst):
             return verify_read_match(src, dst)
+            
+    # Check for simple PS3 prompts
+    if "PS3=" in src and "PS3=" in dst:
+        return verify_ps3_match(src, dst)
         
     return False
 

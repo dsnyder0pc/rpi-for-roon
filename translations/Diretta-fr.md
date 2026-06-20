@@ -277,8 +277,8 @@ echo "Bienvenue dans la configuration interactive du fuseau horaire."
 echo "Vous sélectionnerez d'abord une région, puis un fuseau horaire spécifique."
 
 # Permettre à l'utilisateur de sélectionner une région
-PS3="
-Please select a number for your region: "
+PS3="Veuillez sélectionner un numéro pour votre région : "
+
 select region in $(timedatectl list-timezones | grep -F / | cut -d/ -f1 | sort -u); do
   if [[ -n "$region" ]]; then
     echo "Vous avez sélectionné la région : $region"
@@ -291,8 +291,8 @@ done
 echo ""
 
 # Permettre à l'utilisateur de sélectionner un fuseau horaire dans cette région
-PS3="
-Please select a number for your timezone: "
+PS3="Veuillez sélectionner un numéro pour votre fuseau horaire : "
+
 select timezone in $(timedatectl list-timezones | grep "^$region/"); do
   if [[ -n "$timezone" ]]; then
     echo "Vous avez sélectionné le fuseau horaire : $timezone"
