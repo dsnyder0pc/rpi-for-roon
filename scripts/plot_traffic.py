@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-import pandas as pd
+"""
+Network Traffic Analysis script to plot comparison of RAAT and Diretta network streams.
+"""
+import os
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
-import os
+import pandas as pd
 
 # --- Configuration ---
 # Adjust these filenames if necessary or pass them as command line arguments
@@ -61,6 +64,20 @@ def find_busiest_window_centered(df, window_span=0.004):
 
     return start_time
 
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+def configure_plot(ax, title, ylabel, xlabel=None, xlim=None, ylim=None):
+    """Configures common parameters for a subplot."""
+    ax.set_title(title, fontsize=14)
+    ax.set_ylabel(ylabel)
+    if xlabel:
+        ax.set_xlabel(xlabel)
+    ax.set_yscale('log')
+    if xlim:
+        ax.set_xlim(*xlim)
+    if ylim:
+        ax.set_ylim(*ylim)
+    ax.grid(True, which="both", ls="-", alpha=0.3)
+
 def plot_graphs(raat_df, diretta_df):
     """Generates the 2x2 comparison plot."""
 
@@ -69,22 +86,20 @@ def plot_graphs(raat_df, diretta_df):
     t_diretta, bw_diretta = calculate_throughput(diretta_df, window_size='10ms')
 
     # Define a 30s window for the Macro View
-    macro_start = 15.0
-    macro_end = 45.0
+    macro_range = (15.0, 45.0)
 
     # --- 2. Micro View Data Preparation (Packet Zoom) ---
     # Automatically find a busy spot in the RAAT stream
-    raat_segment = raat_df[(raat_df['frame.time_relative'] >= macro_start) &
-                           (raat_df['frame.time_relative'] <= macro_end)]
+    raat_segment = raat_df[(raat_df['frame.time_relative'] >= macro_range[0]) &
+                           (raat_df['frame.time_relative'] <= macro_range[1])]
 
     if not raat_segment.empty:
         # Find the busiest packet burst and center the window around it
         micro_start = find_busiest_window_centered(raat_segment)
     else:
-        micro_start = macro_start + 10
+        micro_start = macro_range[0] + 10
 
-    micro_span = 0.004 # 4ms
-    micro_end = micro_start + micro_span
+    micro_end = micro_start + 0.004
 
     print(f"Auto-selected Micro Zoom Window (Centered): {micro_start:.4f}s to {micro_end:.4f}s")
 
@@ -101,51 +116,56 @@ def plot_graphs(raat_df, diretta_df):
 
     # --- Top Left: RAAT Macro (Throughput) ---
     axs[0, 0].plot(t_raat, bw_raat, color='#E24A33', linewidth=1)
-    axs[0, 0].set_title('RAAT Input (30s Window): The Sawtooth', fontsize=14)
-    axs[0, 0].set_ylabel('Throughput (Mbps) - Log Scale')
-    axs[0, 0].set_yscale('log')
-    axs[0, 0].set_xlim(macro_start, macro_end)
-    axs[0, 0].set_ylim(0.1, 150)
-    axs[0, 0].grid(True, which="both", ls="-", alpha=0.3)
+    configure_plot(
+        axs[0, 0],
+        'RAAT Input (30s Window): The Sawtooth',
+        'Throughput (Mbps) - Log Scale',
+        xlim=macro_range,
+        ylim=(0.1, 150)
+    )
 
     # --- Top Right: Diretta Macro (Throughput) ---
     axs[0, 1].plot(t_diretta, bw_diretta, color='#348ABD', linewidth=1)
-    axs[0, 1].set_title('Diretta Output (30s Window): The Flatline', fontsize=14)
-    axs[0, 1].set_ylabel('Throughput (Mbps) - Log Scale')
-    axs[0, 1].set_yscale('log')
-    axs[0, 1].set_xlim(macro_start, macro_end)
-    axs[0, 1].set_ylim(0.1, 150)
-    axs[0, 1].grid(True, which="both", ls="-", alpha=0.3)
+    configure_plot(
+        axs[0, 1],
+        'Diretta Output (30s Window): The Flatline',
+        'Throughput (Mbps) - Log Scale',
+        xlim=macro_range,
+        ylim=(0.1, 150)
+    )
 
     # --- Bottom Left: RAAT Micro (Packet Size) ---
     if not raat_micro.empty:
         axs[1, 0].stem(raat_micro['frame.time_relative'], raat_micro['frame.len'],
                        linefmt='#E24A33', markerfmt='o', basefmt=" ")
-    axs[1, 0].set_title('RAAT Micro-View (4ms Zoom): Packet Clumping', fontsize=14)
-    axs[1, 0].set_ylabel('Packet Size (Bytes) - Log Scale')
-    axs[1, 0].set_xlabel('Time (seconds)')
-    axs[1, 0].set_yscale('log')
-    axs[1, 0].set_xlim(micro_start, micro_end)
-    axs[1, 0].set_ylim(40, 2000)
-    axs[1, 0].grid(True, which="both", ls="-", alpha=0.3)
+    configure_plot(
+        axs[1, 0],
+        'RAAT Micro-View (4ms Zoom): Packet Clumping',
+        'Packet Size (Bytes) - Log Scale',
+        xlabel='Time (seconds)',
+        xlim=(micro_start, micro_end),
+        ylim=(40, 2000)
+    )
 
     # --- Bottom Right: Diretta Micro (Packet Size) ---
     if not diretta_micro.empty:
         axs[1, 1].stem(diretta_micro['frame.time_relative'], diretta_micro['frame.len'],
                        linefmt='#348ABD', markerfmt='o', basefmt=" ")
 
-    axs[1, 1].set_title('Diretta Micro-View (4ms Zoom): Even Spacing', fontsize=14)
-    axs[1, 1].set_ylabel('Packet Size (Bytes) - Log Scale')
-    axs[1, 1].set_xlabel('Time (seconds)')
-    axs[1, 1].set_yscale('log')
-    axs[1, 1].set_xlim(micro_start, micro_end)
-    axs[1, 1].set_ylim(40, 2000)
-    axs[1, 1].grid(True, which="both", ls="-", alpha=0.3)
+    configure_plot(
+        axs[1, 1],
+        'Diretta Micro-View (4ms Zoom): Even Spacing',
+        'Packet Size (Bytes) - Log Scale',
+        xlabel='Time (seconds)',
+        xlim=(micro_start, micro_end),
+        ylim=(40, 2000)
+    )
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
-if __name__ == "__main__":
+def main():
+    """Main execution function."""
     # Handle command line args
     raat_file = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_RAAT_CSV
     diretta_file = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_DIRETTA_CSV
@@ -158,3 +178,6 @@ if __name__ == "__main__":
 
     print("Generating plots...")
     plot_graphs(raat_df, diretta_df)
+
+if __name__ == "__main__":
+    main()
