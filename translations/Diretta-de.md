@@ -91,8 +91,8 @@ Wenn Sie sich in den USA befinden, müssen Sie mit etwa 320 $ rechnen (zuzüglic
 15. [Anhang 6: Optionales Echtzeit-Leistungstuning](#15-anhang-6-optionales-echtzeit-leistungstuning)
 16. [Anhang 7: Optionale IRQ- und Thread-Optimierungen](#16-anhang-7-optionale-irq-und-thread-optimierungen)
 17. [Anhang 8: Optionale puristische Netzwerkgeschwindigkeiten](#17-anhang-8-optionale-puristische-netzwerkgeschwindigkeiten)
-18. [Anhang 9: Optionale Jumbo-Frames-Optimierung](#18-anhang-9-optionale-jumbo-frames-optimierung)
-19. [Anhang 10: Optionale System-Updates](#19-anhang-10-optionale-system-updates)
+18. [Anhang 9: Optionale Jumbo-Frames-Optimierung](#18-anhang-9-optional-jumbo-frames-optimierung)
+19. [Anhang 10: Optionale System-Updates](#19-anhang-10-optional-system-updates)
 
 ---
 
@@ -234,7 +234,7 @@ sudo hostnamectl set-hostname diretta-host
 sudo hostnamectl set-hostname diretta-target
 ```
 
-**Fahren Sie das Gerät an dieser Stelle herunter. Wiederholen Sie die [obigen Schritte](#3-core-system-configuration-perform-on-both-devices) für den zweiten Raspberry Pi.**
+**Fahren Sie das Gerät an dieser Stelle herunter. Wiederholen Sie die [obigen Schritte](#3-kernsystem-konfiguration-auf-beiden-geräten-durchführen) für den zweiten Raspberry Pi.**
 ```bash
 sudo sync && sudo poweroff
 ```
@@ -1042,7 +1042,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 ---
 
-### 9. Final Steps & Roon Integration
+### 9. Abschließende Schritte und Roon-Integration
 
 1.  Führen Sie `menu` aus, falls Sie nach dem vorherigen Schritt zum Terminal zurückgekehrt sind, andernfalls gehen Sie zum **Main menu**.
 
@@ -1080,7 +1080,7 @@ Ihre dedizierte Diretta-Verbindung ist nun vollständig für eine makellose, iso
 
 ---
 
-## 10. Appendix 1: Optional Argon ONE Fan Control
+## 10. Anhang 1: Optionale Lüftersteuerung für Argon ONE
 Wenn Sie sich für ein Argon-ONE-Gehäuse für Ihren Raspberry Pi entschieden haben, geht das Standard-Installationsskript davon aus, dass Sie ein Debian-Betriebssystem verwenden. Da AudioLinux jedoch auf Arch Linux basiert, müssen Sie stattdessen diesen Schritten folgen.
 
 Wenn Sie Argon-ONE-Gehäuse sowohl für den Diretta-Host als auch für das Target verwenden, müssen Sie diese Schritte auf beiden Computern ausführen.
@@ -1207,7 +1207,7 @@ Jetzt können Sie die Werte nach Bedarf anpassen, indem Sie den obigen Schritten
 
 ---
 
-## 11. Appendix 2: Optional IR Remote Control
+## 11. Anhang 2: Optionale IR-Fernbedienung
 
 Dieser Leitfaden enthält Anweisungen zur Installation und Konfiguration einer IR-Fernbedienung zur Steuerung von Roon. Die Einrichtung ist in zwei Teile unterteilt.
 
@@ -2294,7 +2294,7 @@ Auf der Startseite führt Sie eine Navigationsleiste am oberen Rand zu den versc
 
 ### 🔗 Hinweis zur vollen Funktionalität des Web-UI
 
-Um die vollen Funktionen des System-Control-Web-UI freizuschalten – insbesondere die Anpassung der Netzwerk-**Verbindungsgeschwindigkeit** (Link Speed) und das Umschalten auf **Super Purist** – müssen Sie auch die Hardware- und Dienstekonfigurationen ausführen, die in [**Anhang 8: Optionale puristische Netzwerkgeschwindigkeiten**](#17-hang-8-optionale-puristische-netzwerkgeschwindigkeiten) beschrieben sind. Die Weboberfläche verlässt sich direkt auf die in diesem Abschnitt eingerichteten Skripte, Flags und Dienste, um die physischen Geschwindigkeitsgrenzen Ihrer Punkt-zu-Punkt-Verbindung erfolgreich zu ändern und durchzusetzen.
+Um die vollen Funktionen des System-Control-Web-UI freizuschalten – insbesondere die Anpassung der Netzwerk-**Verbindungsgeschwindigkeit** (Link Speed) und das Umschalten auf **Super Purist** – müssen Sie auch die Hardware- und Dienstekonfigurationen ausführen, die in [**Anhang 8: Optionale puristische Netzwerkgeschwindigkeiten**](#17-anhang-8-optionale-puristische-netzwerkgeschwindigkeiten) beschrieben sind. Die Weboberfläche verlässt sich direkt auf die in diesem Abschnitt eingerichteten Skripte, Flags und Dienste, um die physischen Geschwindigkeitsgrenzen Ihrer Punkt-zu-Punkt-Verbindung erfolgreich zu ändern und durchzusetzen.
 
 > ---
 > ### ✅ Checkpoint: Überprüfen Sie Ihr Web-UI-Setup
@@ -2913,7 +2913,7 @@ Der Systemaktualisierungsprozess erfordert eine strikte Reihenfolge, um sicherzu
 5. Re-apply the `motd` fix from [**Section 5.1**](#51-pre-configure-the-diretta-host) on the **Host**.
 6. Wenden Sie den `sudoers`-Patch aus [**Abschnitt 7.2**](#72-correct-sudoers-rule-precedence) erneut auf **sowohl** dem Target als auch dem Host an.
 7. Starten Sie zuerst das Target neu, gefolgt vom Host.
-8. Once back online, re-run the "Configure Compatible Compiler Toolchain" script from [**Step 8**](#8-diretta-software-installation--configuration) on **both** the Target and the Host.
+8. Once back online, re-run the "Configure Compatible Compiler Toolchain" script from [**Step 8**](#8-installation-und-konfiguration-der-diretta-software) on **both** the Target and the Host.
 9. Führen Sie auf dem **Target** den in [**Abschnitt 8.1**](#81-on-the-diretta-target) beschriebenen Diretta-Installations-/Aktualisierungsschritt aus.
 10. Führen Sie auf dem **Host** den in [**Abschnitt 8.2**](#82-on-the-diretta-host) beschriebenen Diretta-Installations-/Aktualisierungsschritt aus.
 11. Starten Sie zuerst das Target neu, gefolgt vom Host.

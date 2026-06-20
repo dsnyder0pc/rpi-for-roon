@@ -74,25 +74,25 @@ Si vous êtes situé aux États-Unis, comptez environ 320 $ (hors taxes et frais
 - Licence Diretta Target (100 €)
 
 ## Table des matières
-1.  [Prérequis](#1-prerequisites)
-2.  [Préparation initiale de l'image](#2-initial-image-preparation)
-3.  [Configuration du système de base (À effectuer sur les deux appareils)](#3-core-system-configuration-perform-on-both-devices)
-4.  [Mises à jour du système (À effectuer sur les deux appareils)](#4-system-updates-perform-on-both-devices)
-5.  [Configuration réseau point à point](#5-point-to-point-network-configuration)
-6.  [Accès SSH pratique et sécurisé](#6-convenient--secure-ssh-access)
-7.  [Optimisations système courantes](#7-common-system-optimizations)
-8.  [Installation et configuration du logiciel Diretta](#8-diretta-software-installation--configuration)
-9.  [Étapes finales et intégration Roon](#9-final-steps--roon-integration)
-10. [Annexe 1 : Contrôle optionnel du ventilateur Argon ONE](#10-appendix-1-optional-argon-one-fan-control)
-11. [Annexe 2 : Télécommande IR optionnelle](#11-appendix-2-optional-ir-remote-control)
-12. [Annexe 3 : Mode puriste optionnel](#12-appendix-3-optional-purist-mode)
-13. [Annexe 4 : Interface Web optionnelle de contrôle du système](#13-appendix-4-optional-system-control-web-ui)
-14. [Annexe 5 : Vérifications de l'état du système](#14-appendix-5-system-health-checks)
-15. [Annexe 6 : Optimisation optionnelle des performances en temps réel](#15-appendix-6-optional-realtime-performance-tuning)
-16. [Annexe 7 : Optimisations optionnelles des IRQ et des threads](#16-appendix-7-optional-irq-and-thread-optimizations)
-17. [Annexe 8 : Vitesses réseau puristes optionnelles](#17-appendix-8-optional-purist-network-speeds)
-18. [Annexe 9 : Optimisation optionnelle des trames Jumbo](#18-appendix-9-optional-jumbo-frames-optimization)
-19. [Annexe 10 : Mises à jour système optionnelles](#19-appendix-10-optional-system-updates)
+1.  [Prérequis](#1-prérequis)
+2.  [Préparation initiale de l'image](#2-préparation-initiale-de-limage)
+3.  [Configuration du système de base (À effectuer sur les deux appareils)](#3-configuration-du-système-de-base-à-effectuer-sur-les-deux-appareils)
+4.  [Mises à jour du système (À effectuer sur les deux appareils)](#4-mises-à-jour-du-système-à-effectuer-sur-les-deux-appareils)
+5.  [Configuration réseau point à point](#5-configuration-réseau-point-à-point)
+6.  [Accès SSH pratique et sécurisé](#6-accès-ssh-pratique-et-sécurisé)
+7.  [Optimisations système courantes](#7-optimisations-système-courantes)
+8.  [Installation et configuration du logiciel Diretta](#8-installation-et-configuration-du-logiciel-diretta)
+9.  [Étapes finales et intégration Roon](#9-étapes-finales-et-intégration-roon)
+10. [Annexe 1 : Contrôle optionnel du ventilateur Argon ONE](#10-annexe-1-contrôle-optionnel-du-ventilateur-argon-one)
+11. [Annexe 2 : Télécommande IR optionnelle](#11-annexe-2-télécommande-ir-optionnelle)
+12. [Annexe 3 : Mode puriste optionnel](#12-annexe-3-mode-puriste-optionnel)
+13. [Annexe 4 : Interface Web optionnelle de contrôle du système](#13-annexe-4-interface-web-optionnelle-de-contrôle-du-système)
+14. [Annexe 5 : Vérifications de l'état du système](#14-annexe-5-system-health-checks-vérifications-de-létat-du-système)
+15. [Annexe 6 : Optimisation optionnelle des performances en temps réel](#15-annexe-6-optimisation-optionnelle-des-performances-en-temps-réel)
+16. [Annexe 7 : Optimisations optionnelles des IRQ et des threads](#16-annexe-7-optimisations-optionnelles-des-irq-et-des-threads)
+17. [Annexe 8 : Vitesses réseau puristes optionnelles](#17-annexe-8-vitesses-réseau-puristes-optionnelles)
+18. [Annexe 9 : Optimisation optionnelle des trames Jumbo](#18-annexe-9-optimisation-optionnelle-des-jumbo-frames)
+19. [Annexe 10 : Mises à jour système optionnelles](#19-annexe-10-facultatif-mises-à-jour-du-système)
 
 ---
 
@@ -185,7 +185,7 @@ Pour de meilleures performances, ce guide utilise le Raspberry Pi 5 pour le Targ
 >
 > **Vous devez effectuer le premier démarrage et la configuration de chaque appareil l'un après l'autre.**
 
-1.  Insérez la carte microSD dans le **premier** Raspberry Pi, connectez-le à votre réseau et allumez-le. **Note :** Si vous utilisez le boîtier Argon ONE, vous risquez d'entendre le bruit du ventilateur. Ne vous inquiétez pas. Une fois la configuration de Diretta terminée, des instructions sont disponibles dans l'[Annexe 1](#10-annexe-1-controle-optionnel-du-ventilateur-argon-one) pour y remédier.
+1.  Insérez la carte microSD dans le **premier** Raspberry Pi, connectez-le à votre réseau et allumez-le. **Note :** Si vous utilisez le boîtier Argon ONE, vous risquez d'entendre le bruit du ventilateur. Ne vous inquiétez pas. Une fois la configuration de Diretta terminée, des instructions sont disponibles dans l'[Annexe 1](#10-annexe-1-contrôle-optionnel-du-ventilateur-argon-one) pour y remédier.
 2.  Effectuez **toute la Section 3** pour ce premier appareil.
 3.  Une fois que le premier appareil a redémarré avec sa nouvelle configuration unique, éteignez-le.
 4.  Maintenant, allumez le **second** Raspberry Pi et répétez **toute la Section 3** pour celui-ci.
@@ -234,7 +234,7 @@ sudo hostnamectl set-hostname diretta-host
 sudo hostnamectl set-hostname diretta-target
 ```
 
-**At this point, shutdown the device. Repeat the [above steps](#3-core-system-configuration-perform-on-both-devices) for the second Raspberry Pi.**
+**At this point, shutdown the device. Repeat the [above steps](#3-configuration-du-système-de-base-à-effectuer-sur-les-deux-appareils) for the second Raspberry Pi.**
 ```bash
 sudo sync && sudo poweroff
 ```
@@ -527,7 +527,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
 
 #### 5.2. Préconfigurer le Target Diretta
 
-**Note :** Si vous n'avez pas effectué l'[étape 4](#4-system-updates-perform-on-both-devices) sur le Target Diretta, faites-le [maintenant](#4-system-updates-perform-on-both-devices), puis revenez ici.
+**Note :** Si vous n'avez pas effectué l'[étape 4](#4-mises-à-jour-du-système-à-effectuer-sur-les-deux-appareils) sur le Target Diretta, faites-le [maintenant](#4-mises-à-jour-du-système-à-effectuer-sur-les-deux-appareils), puis revenez ici.
 
 Sur le **Target Diretta**, créez le fichier `end0.network`. Cela configure son adresse IP statique et lui indique d'utiliser le Host Diretta comme passerelle pour tout le trafic Internet.
 
@@ -1074,7 +1074,7 @@ Votre liaison Diretta dédiée est maintenant entièrement configurée pour une 
 > ---
 > ### ✅ Checkpoint : Vérifiez votre système de base
 >
-> Votre système Diretta et Roon de base devrait maintenant être pleinement opérationnel. Pour vérifier tous les services et connexions, veuillez vous rendre à l'[**Annexe 5**](#14-appendix-5-system-health-checks) et exécuter la commande universelle **System Health Check** sur le Host et le Target.
+> Votre système Diretta et Roon de base devrait maintenant être pleinement opérationnel. Pour vérifier tous les services et connexions, veuillez vous rendre à l'[**Annexe 5**](#14-annexe-5-system-health-checks-vérifications-de-létat-du-système) et exécuter la commande universelle **System Health Check** sur le Host et le Target.
 >
 > ---
 
@@ -1599,14 +1599,14 @@ set-roon-zone
 Suivez les invites pour saisir le nouveau nom de votre zone Roon. Vous devrez peut-être saisir le mot de passe root pour que les modifications prennent effet.
 
 **Note : Une meilleure méthode pour configurer la zone**
-Bien que ce script fonctionne parfaitement, la méthode recommandée pour modifier la zone Roon est d'utiliser l'application web AnCaolas Link System Control, détaillée dans l'[Annexe 4](#13-appendix-4-optional-system-control-web-ui). L'interface web fournit une page dédiée pour visualiser et modifier le nom de la zone depuis votre téléphone ou votre navigateur.
+Bien que ce script fonctionne parfaitement, la méthode recommandée pour modifier la zone Roon est d'utiliser l'application web AnCaolas Link System Control, détaillée dans l'[Annexe 4](#13-annexe-4-interface-web-optionnelle-de-contrôle-du-système). L'interface web fournit une page dédiée pour visualiser et modifier le nom de la zone depuis votre téléphone ou votre navigateur.
 
 ### **Étape 9 : Profitez-en ! 📈**
 
 > ---
 > ### ✅ Checkpoint : Vérifiez la configuration de votre télécommande IR
 >
-> Le matériel et le logiciel de votre télécommande IR devraient maintenant être configurés. Pour vérifier la configuration, rendez-vous à l'[**Annexe 5**](#14-appendix-5-system-health-checks) et exécutez la commande universelle **System Health Check** sur le Host Diretta.
+> Le matériel et le logiciel de votre télécommande IR devraient maintenant être configurés. Pour vérifier la configuration, rendez-vous à l'[**Annexe 5**](#14-annexe-5-system-health-checks-vérifications-de-létat-du-système) et exécutez la commande universelle **System Health Check** sur le Host Diretta.
 >
 > ---
 
@@ -2294,12 +2294,12 @@ Depuis la page d'accueil, une barre de navigation en haut vous guidera vers les 
 
 ### 🔗 Note sur la fonctionnalité complète de l'interface Web
 
-Pour déverrouiller toutes les capacités de l'interface web de contrôle du système — en particulier les ajustements de la vitesse de liaison réseau (**Link Speed**) et le basculement vers **Super Purist** —, vous devez également effectuer les configurations matérielles et de services détaillées dans l'[**Annexe 8 : Vitesses réseau puristes optionnelles**](#17-appendix-8-optional-purist-network-speeds)[cite: 1]. L'interface web s'appuie directement sur les scripts, indicateurs et services sous-jacents établis dans cette section pour modifier et appliquer avec succès les limites de vitesse de liaison physique sur votre connexion point à point[cite: 1].
+Pour déverrouiller toutes les capacités de l'interface web de contrôle du système — en particulier les ajustements de la vitesse de liaison réseau (**Link Speed**) et le basculement vers **Super Purist** —, vous devez également effectuer les configurations matérielles et de services détaillées dans l'[**Annexe 8 : Vitesses réseau puristes optionnelles**](#17-annexe-8-vitesses-réseau-puristes-optionnelles)[cite: 1]. L'interface web s'appuie directement sur les scripts, indicateurs et services sous-jacents établis dans cette section pour modifier et appliquer avec succès les limites de vitesse de liaison physique sur votre connexion point à point[cite: 1].
 
 > ---
 > ### ✅ Checkpoint : Vérifiez la configuration de votre interface Web
 >
-> L'interface web du Mode Puriste devrait maintenant être opérationnelle. Pour vérifier tous les composants de cette fonctionnalité complexe, rendez-vous à l'[**Annexe 5**](#14-appendix-5-system-health-checks) et exécutez la commande universelle **System Health Check** sur le Host et le Target.
+> L'interface web du Mode Puriste devrait maintenant être opérationnelle. Pour vérifier tous les composants de cette fonctionnalité complexe, rendez-vous à l'[**Annexe 5**](#14-annexe-5-system-health-checks-vérifications-de-létat-du-système) et exécutez la commande universelle **System Health Check** sur le Host et le Target.
 >
 > ---
 
@@ -2543,7 +2543,7 @@ Grâce aux optimisations du noyau en temps réel, le Host Diretta peut désormai
 > ---
 > ### ✅ Checkpoint : Vérifiez votre optimisation en temps réel
 >
-> Votre optimisation avancée en temps réel devrait maintenant être terminée. Pour vérifier tous les composants de cette nouvelle configuration, veuillez retourner à l'[**Annexe 5**](#14-appendix-5-system-health-checks) et exécuter la commande universelle **System Health Check** sur le Host et le Target.
+> Votre optimisation avancée en temps réel devrait maintenant être terminée. Pour vérifier tous les composants de cette nouvelle configuration, veuillez retourner à l'[**Annexe 5**](#14-annexe-5-system-health-checks-vérifications-de-létat-du-système) et exécuter la commande universelle **System Health Check** sur le Host et le Target.
 >
 > ---
 
@@ -2682,7 +2682,7 @@ sudo systemctl enable --now limit-speed-100m.service
 >
 > ### ✅ Checkpoint : Vérifiez la configuration réseau
 >
-> Votre liaison réseau dédiée est maintenant configurée pour un fonctionnement « Puriste » à 100 Mbps. Pour vérifier que le service du Host est actif et que le Target a correctement négocié la vitesse (détectée via le fichier marqueur), veuillez retourner à l'[**Annexe 5**](#14-appendix-5-system-health-checks) et exécuter la commande universelle **System Health Check** sur le Host et le Target.
+> Votre liaison réseau dédiée est maintenant configurée pour un fonctionnement « Puriste » à 100 Mbps. Pour vérifier que le service du Host est actif et que le Target a correctement négocié la vitesse (détectée via le fichier marqueur), veuillez retourner à l'[**Annexe 5**](#14-annexe-5-system-health-checks-vérifications-de-létat-du-système) et exécuter la commande universelle **System Health Check** sur le Host et le Target.
 >
 > ---
 
@@ -2835,7 +2835,7 @@ sudo sync && sudo reboot
 >
 > ### ✅ Checkpoint : Vérifiez la configuration réseau
 >
-> Si vous avez pu activer la prise en charge des Jumbo Frames pour votre configuration, c'est le bon moment pour retourner à l'[**Annexe 5**](#14-appendix-5-system-health-checks) et exécuter la commande universelle **System Health Check** sur le Host et le Target.
+> Si vous avez pu activer la prise en charge des Jumbo Frames pour votre configuration, c'est le bon moment pour retourner à l'[**Annexe 5**](#14-annexe-5-system-health-checks-vérifications-de-létat-du-système) et exécuter la commande universelle **System Health Check** sur le Host et le Target.
 >
 > ---
 
@@ -2913,7 +2913,7 @@ Le processus de mise à jour du système nécessite une séquence stricte pour g
 5. Réappliquez le correctif `motd` de la [**Section 5.1**](#51-pre-configure-the-diretta-host) sur le **Host**.
 6. Réappliquez le correctif `sudoers` de la [**Section 7.2**](#72-correct-sudoers-rule-precedence) sur le Target **et** le Host.
 7. Redémarrez le Target en premier, puis le Host.
-8. Une fois de retour en ligne, réexécutez le script « Configure Compatible Compiler Toolchain » de l'[**Étape 8**](#8-diretta-software-installation--configuration) sur le Target **et** le Host.
+8. Une fois de retour en ligne, réexécutez le script « Configure Compatible Compiler Toolchain » de l'[**Étape 8**](#8-installation-et-configuration-du-logiciel-diretta) sur le Target **et** le Host.
 9. Sur le **Target**, exécutez l'étape d'installation/mise à jour de Diretta détaillée à la [**Section 8.1**](#81-on-the-diretta-target).
 10. Sur le **Host**, exécutez l'étape d'installation/mise à jour de Diretta détaillée à la [**Section 8.2**](#82-on-the-diretta-host).
 11. Redémarrez le Target en premier, puis le Host.
@@ -2930,7 +2930,7 @@ Le processus de mise à jour du système nécessite une séquence stricte pour g
 >    ```bash
 >    purist-mode --revert
 >    ```
-> 3. Exécutez le script universel de QA **System Health Check** de l'[**Annexe 5**](#14-appendix-5-system-health-checks) sur le Host **et** le Target.
+> 3. Exécutez le script universel de QA **System Health Check** de l'[**Annexe 5**](#14-annexe-5-system-health-checks-vérifications-de-létat-du-système) sur le Host **et** le Target.
 > 4. Vérifiez attentivement la sortie et résolvez tout problème d'affinité ou de priorité des threads isolés détecté par le script.
 >
 > ---

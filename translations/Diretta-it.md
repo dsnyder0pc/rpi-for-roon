@@ -74,25 +74,25 @@ Se vi trovate negli Stati Uniti, prevedete una spesa di circa $320 (più tasse e
 - Licenza Diretta Target (€100)
 
 ## Indice
-1.  [Prerequisiti](#1-prerequisites)
-2.  [Preparazione iniziale dell'immagine](#2-initial-image-preparation)
-3.  [Configurazione di base del sistema (Eseguire su entrambi i dispositivi)](#3-core-system-configuration-perform-on-both-devices)
-4.  [Aggiornamenti di sistema (Eseguire su entrambi i dispositivi)](#4-system-updates-perform-on-both-devices)
-5.  [Configurazione di rete Point-to-Point](#5-point-to-point-network-configuration)
-6.  [Accesso SSH comodo e sicuro](#6-convenient--secure-ssh-access)
-7.  [Ottimizzazioni di sistema comuni](#7-common-system-optimizations)
-8.  [Installazione e configurazione del software Diretta](#8-diretta-software-installation--configuration)
-9.  [Fasi finali e integrazione con Roon](#9-final-steps--roon-integration)
-10. [Appendice 1: Controllo della ventola Argon ONE opzionale](#10-appendix-1-optional-argon-one-fan-control)
-11. [Appendice 2: Telecomando IR opzionale](#11-appendix-2-optional-ir-remote-control)
-12. [Appendice 3: Purist Mode opzionale](#12-appendix-3-optional-purist-mode)
-13. [Appendice 4: Web UI di controllo del sistema opzionale](#13-appendix-4-optional-system-control-web-ui)
-14. [Appendice 5: Verifiche dello stato del sistema](#14-appendix-5-system-health-checks)
-15. [Appendice 6: Ottimizzazione delle prestazioni in tempo reale opzionale](#15-appendix-6-optional-realtime-performance-tuning)
-16. [Appendice 7: Ottimizzazioni IRQ e dei thread opzionali](#16-appendix-7-optional-irq-and-thread-optimizations)
-17. [Appendice 8: Velocità di rete Purist opzionale](#17-appendix-8-optional-purist-network-speeds)
-18. [Appendice 9: Ottimizzazione Jumbo Frames opzionale](#18-appendix-9-optional-jumbo-frames-optimization)
-19. [Appendice 10: Aggiornamenti di sistema opzionali](#19-appendix-10-optional-system-updates)
+1.  [Prerequisiti](#1-prerequisiti)
+2.  [Preparazione iniziale dell'immagine](#2-preparazione-iniziale-dellimmagine)
+3.  [Configurazione di base del sistema (Eseguire su entrambi i dispositivi)](#3-configurazione-di-base-del-sistema-eseguire-su-entrambi-i-dispositivi)
+4.  [Aggiornamenti di sistema (Eseguire su entrambi i dispositivi)](#4-aggiornamenti-di-sistema-eseguire-su-entrambi-i-dispositivi)
+5.  [Configurazione di rete Point-to-Point](#5-configurazione-di-rete-point-to-point)
+6.  [Accesso SSH comodo e sicuro](#6-accesso-ssh-comodo-e-sicuro)
+7.  [Ottimizzazioni di sistema comuni](#7-ottimizzazioni-di-sistema-comuni)
+8.  [Installazione e configurazione del software Diretta](#8-installazione-e-configurazione-del-software-diretta)
+9.  [Fasi finali e integrazione con Roon](#9-fasi-finali-e-integrazione-con-roon)
+10. [Appendice 1: Controllo della ventola Argon ONE opzionale](#10-appendice-1-controllo-della-ventola-argon-one-opzionale)
+11. [Appendice 2: Telecomando IR opzionale](#11-appendice-2-telecomando-ir-opzionale)
+12. [Appendice 3: Purist Mode opzionale](#12-appendice-3-purist-mode-opzionale)
+13. [Appendice 4: Web UI di controllo del sistema opzionale](#13-appendice-4-web-ui-di-controllo-del-sistema-opzionale)
+14. [Appendice 5: Verifiche dello stato del sistema](#14-appendice-5-verifiche-dello-stato-del-sistema)
+15. [Appendice 6: Ottimizzazione delle prestazioni in tempo reale opzionale](#15-appendice-6-ottimizzazione-delle-prestazioni-in-tempo-reale-opzionale)
+16. [Appendice 7: Ottimizzazioni IRQ e dei thread opzionali](#16-appendice-7-ottimizzazioni-irq-e-dei-thread-opzionali)
+17. [Appendice 8: Velocità di rete Purist opzionale](#17-appendice-8-velocità-di-rete-purist-opzionale)
+18. [Appendice 9: Ottimizzazione Jumbo Frames opzionale](#18-appendice-9-ottimizzazione-jumbo-frames-opzionale)
+19. [Appendice 10: Aggiornamenti di sistema opzionali](#19-appendice-10-aggiornamenti-di-sistema-opzionali)
 
 ---
 
@@ -185,7 +185,7 @@ Per ottenere le migliori prestazioni, questa guida utilizza il Raspberry Pi 5 si
 >
 > **È necessario eseguire l'avvio e la configurazione iniziale per ciascun dispositivo uno alla volta.**
 
-1.  Inserite la scheda microSD nel **primo** Raspberry Pi, collegatelo alla rete e accendetelo. **Nota:** Se state usando il case Argon ONE, potreste sentire del rumore proveniente dalla ventola. Non preoccupatevi. Una volta terminata la configurazione di Diretta, ci sono istruzioni nell'[Appendice 1](#10-appendix-1-optional-argon-one-fan-control) per gestire il rumore della ventola.
+1.  Inserite la scheda microSD nel **primo** Raspberry Pi, collegatelo alla rete e accendetelo. **Nota:** Se state usando il case Argon ONE, potreste sentire del rumore proveniente dalla ventola. Non preoccupatevi. Una volta terminata la configurazione di Diretta, ci sono istruzioni nell'[Appendice 1](#10-appendice-1-controllo-della-ventola-argon-one-opzionale) per gestire il rumore della ventola.
 2.  Completate **tutta la Sezione 3** per questo primo dispositivo.
 3.  Una volta che il primo dispositivo si è riavviato con la sua nuova configurazione univoca, spegnetelo.
 4.  Ora, accendete il **secondo** Raspberry Pi e ripetete **tutta la Sezione 3** per quest'ultimo.
@@ -234,7 +234,7 @@ sudo hostnamectl set-hostname diretta-host
 sudo hostnamectl set-hostname diretta-target
 ```
 
-**A questo punto, spegnete il dispositivo. Ripetete i [passaggi precedenti](#3-core-system-configuration-perform-on-both-devices) per il secondo Raspberry Pi.**
+**A questo punto, spegnete il dispositivo. Ripetete i [passaggi precedenti](#3-configurazione-di-base-del-sistema-eseguire-su-entrambi-i-dispositivi) per il secondo Raspberry Pi.**
 ```bash
 sudo sync && sudo poweroff
 ```
@@ -527,7 +527,7 @@ Se avete appena terminato l'aggiornamento del vostro Diretta Target, fate clic [
 
 #### 5.2. Pre-configurare il Diretta Target
 
-**Nota:** Se non avete eseguito il [passaggio 4](#4-system-updates-perform-on-both-devices) sul Diretta Target, fatelo [ora](#4-system-updates-perform-on-both-devices), quindi tornate qui.
+**Nota:** Se non avete eseguito il [passaggio 4](#4-aggiornamenti-di-sistema-eseguire-su-entrambi-i-dispositivi) sul Diretta Target, fatelo [ora](#4-aggiornamenti-di-sistema-eseguire-su-entrambi-i-dispositivi), quindi tornate qui.
 
 Sul **Diretta Target**, create il file `end0.network`. Questo configura il suo IP statico e gli indica di utilizzare il Diretta Host come gateway per tutto il traffico Internet.
 
@@ -1074,7 +1074,7 @@ Il vostro collegamento Diretta dedicato è ora completamente configurato per una
 > ---
 > ### ✅ Checkpoint: Verificare il sistema di base
 >
-> Il vostro sistema base Diretta e Roon dovrebbe ora essere completamente funzionante. Per verificare tutti i servizi e le connessioni, procedete all'[**Appendice 5**](#14-appendix-5-system-health-checks) ed eseguite il comando universale di **System Health Check** sia sull'Host che sul Target.
+> Il vostro sistema base Diretta e Roon dovrebbe ora essere completamente funzionante. Per verificare tutti i servizi e le connessioni, procedete all'[**Appendice 5**](#14-appendice-5-verifiche-dello-stato-del-sistema) ed eseguite il comando universale di **System Health Check** sia sull'Host che sul Target.
 >
 > ---
 
@@ -1599,14 +1599,14 @@ set-roon-zone
 Seguite le istruzioni per inserire il nuovo nome per la vostra Roon Zone. Potrebbe essere necessario inserire la password di root per rendere effettive le modifiche.
 
 **Nota: Un modo migliore per impostare la Zona**
-Sebbene questo script funzioni perfettamente, il metodo raccomandato per cambiare la Roon Zone consiste nell'utilizzare l'applicazione web di controllo del sistema AnCaolas Link, descritta in dettaglio nell'[Appendice 4](#13-appendix-4-optional-system-control-web-ui). La Web UI fornisce una pagina dedicata per visualizzare e modificare il nome della zona dal telefono o dal browser.
+Sebbene questo script funzioni perfettamente, il metodo raccomandato per cambiare la Roon Zone consiste nell'utilizzare l'applicazione web di controllo del sistema AnCaolas Link, descritta in dettaglio nell'[Appendice 4](#13-appendice-4-web-ui-di-controllo-del-sistema-opzionale). La Web UI fornisce una pagina dedicata per visualizzare e modificare il nome della zona dal telefono o dal browser.
 
 ### **Passaggio 9: Fatto! 📈**
 
 > ---
 > ### ✅ Checkpoint: Verificare la configurazione del telecomando IR
 >
-> L'hardware e il software del vostro telecomando IR dovrebbero ora essere configurati. Per verificare l'installazione, procedete all'[**Appendice 5**](#14-appendix-5-system-health-checks) ed eseguite il comando universale di **System Health Check** sul Diretta Host.
+> L'hardware e il software del vostro telecomando IR dovrebbero ora essere configurati. Per verificare l'installazione, procedete all'[**Appendice 5**](#14-appendice-5-verifiche-dello-stato-del-sistema) ed eseguite il comando universale di **System Health Check** sul Diretta Host.
 >
 > ---
 
@@ -2294,12 +2294,12 @@ Dalla pagina principale, una barra di navigazione in alto vi guiderà ai diversi
 
 ### 🔗 Nota sulla piena funzionalità della Web UI
 
-Per sbloccare tutte le funzionalità della Web UI di controllo del sistema — in particolare la regolazione della velocità di collegamento di rete (**Link Speed**) e l'attivazione della modalità **Super Purist** — dovete completare anche le configurazioni hardware e dei servizi dettagliate nell'[**Appendice 8: Velocità di rete Purist opzionale**](#17-appendix-8-optional-purist-network-speeds)[cite: 1]. L'interfaccia web si affida direttamente agli script, ai flag e ai servizi sottostanti stabiliti in quella sezione per modificare e imporre con successo i limiti della velocità di collegamento fisico sulla connessione point-to-point[cite: 1].
+Per sbloccare tutte le funzionalità della Web UI di controllo del sistema — in particolare la regolazione della velocità di collegamento di rete (**Link Speed**) e l'attivazione della modalità **Super Purist** — dovete completare anche le configurazioni hardware e dei servizi dettagliate nell'[**Appendice 8: Velocità di rete Purist opzionale**](#17-appendice-8-velocità-di-rete-purist-opzionale)[cite: 1]. L'interfaccia web si affida direttamente agli script, ai flag e ai servizi sottostanti stabiliti in quella sezione per modificare e imporre con successo i limiti della velocità di collegamento fisico sulla connessione point-to-point[cite: 1].
 
 > ---
 > ### ✅ Checkpoint: Verificare la configurazione della Web UI
 >
-> La Web UI per la modalità Purist dovrebbe ora essere operativa. Per verificar tutti i componenti di questa complessa funzionalità, procedete all'[**Appendice 5**](#14-appendix-5-system-health-checks) ed eseguite il comando universale di **System Health Check** sia sull'Host che sul Target.
+> La Web UI per la modalità Purist dovrebbe ora essere operativa. Per verificar tutti i componenti di questa complessa funzionalità, procedete all'[**Appendice 5**](#14-appendice-5-verifiche-dello-stato-del-sistema) ed eseguite il comando universale di **System Health Check** sia sull'Host che sul Target.
 >
 > ---
 
@@ -2543,7 +2543,7 @@ Grazie alle ottimizzazioni del kernel in tempo reale, il Diretta Host può ora g
 > ---
 > ### ✅ Checkpoint: Verificare l'ottimizzazione in tempo reale
 >
-> La vostra ottimizzazione avanzata in tempo reale dovrebbe ora essere completata. Per verificare tutti i componenti di questa nuova configurazione, tornate all'[**Appendice 5**](#14-appendix-5-system-health-checks) ed eseguite il comando universale di **System Health Check** sia sull'Host che sul Target.
+> La vostra ottimizzazione avanzata in tempo reale dovrebbe ora essere completata. Per verificare tutti i componenti di questa nuova configurazione, tornate all'[**Appendice 5**](#14-appendice-5-verifiche-dello-stato-del-sistema) ed eseguite il comando universale di **System Health Check** sia sull'Host che sul Target.
 >
 > ---
 
@@ -2682,7 +2682,7 @@ sudo systemctl enable --now limit-speed-100m.service
 >
 > ### ✅ Checkpoint: Verificare la configurazione di rete
 >
-> Il vostro collegamento di rete dedicato è ora configurato per il funzionamento "Purist" a 100 Mbps. Per verificare che il servizio sull'Host sia attivo e che il Target abbia negoziato correttamente la velocità (rilevata tramite il file marcatore), tornate all'[**Appendice 5**](#14-appendix-5-system-health-checks) ed eseguite il comando universale di **System Health Check** sia sull'Host che sul Target.
+> Il vostro collegamento di rete dedicato è ora configurato per il funzionamento "Purist" a 100 Mbps. Per verificare che il servizio sull'Host sia attivo e che il Target abbia negoziato correttamente la velocità (rilevata tramite il file marcatore), tornate all'[**Appendice 5**](#14-appendice-5-verifiche-dello-stato-del-sistema) ed eseguite il comando universale di **System Health Check** sia sull'Host che sul Target.
 >
 > ---
 
@@ -2835,7 +2835,7 @@ sudo sync && sudo reboot
 >
 > ### ✅ Checkpoint: Verificare la configurazione di rete
 >
-> Se siete stati in grado di abilitare il supporto per i Jumbo Frame per la vostra configurazione, questo è un buon momento per tornare all'[**Appendice 5**](#14-appendix-5-system-health-checks) ed eseguire il comando universale di **System Health Check** sia sull'Host che sul Target.
+> Se siete stati in grado di abilitare il supporto per i Jumbo Frame per la vostra configurazione, questo è un buon momento per tornare all'[**Appendice 5**](#14-appendice-5-verifiche-dello-stato-del-sistema) ed eseguire il comando universale di **System Health Check** sia sull'Host che sul Target.
 >
 > ---
 
@@ -2913,7 +2913,7 @@ Il processo di aggiornamento del sistema richiede una sequenza rigorosa per gara
 5. Riapplicate la correzione del `motd` descritta nella [**Sezione 5.1**](#51-pre-configure-the-diretta-host) sull'**Host**.
 6. Riapplicate la patch `sudoers` descritta nella [**Sezione 7.2**](#72-correct-sudoers-rule-precedence) su **entrambi** il Target e l'Host.
 7. Riavviate prima il Target, seguito dall'Host.
-8. Una volta tornati online, eseguite nuovamente lo script "Configurare la toolchain del compilatore compatibile" dal [**Passaggio 8**](#8-diretta-software-installation--configuration) su **entrambi** il Target e l'Host.
+8. Una volta tornati online, eseguite nuovamente lo script "Configurare la toolchain del compilatore compatibile" dal [**Passaggio 8**](#8-installazione-e-configurazione-del-software-diretta) su **entrambi** il Target e l'Host.
 9. Sul **Target**, eseguite il passaggio di installazione/aggiornamento di Diretta dettagliato nella [**Sezione 8.1**](#81-on-the-diretta-target).
 10. Sull'**Host**, eseguite il passaggio di installazione/aggiornamento di Diretta dettagliato nella [**Sezione 8.2**](#82-on-the-diretta-host).
 11. Riavviate prima il Target, seguito dall'Host.
@@ -2930,7 +2930,7 @@ Il processo di aggiornamento del sistema richiede una sequenza rigorosa per gara
 >    ```bash
 >    purist-mode --revert
 >    ```
-> 3. Eseguite lo script QA universale **System Health Check** dall'[**Appendice 5**](#14-appendix-5-system-health-checks) su **entrambi** l'Host e il Target.
+> 3. Eseguite lo script QA universale **System Health Check** dall'[**Appendice 5**](#14-appendice-5-verifiche-dello-stato-del-sistema) su **entrambi** l'Host e il Target.
 > 4. Verificate attentamente l'output e risolvete eventuali problemi isolati di affinità dei thread o di priorità rilevati dallo script.
 >
 > ---
