@@ -28,13 +28,11 @@ The **Diretta** protocol then "averages" the processing load on the Target by se
 
 You don't have to take our word for it. The Audiophile Foundation recently featured this exact project in its November 2025 newsletter, "The Muse".
 
-One of its board members, Leslie Lundin, documented her journey from skeptic to believer in an article titled [Diretta Impressions](https://audiophilefoundation.org/content.aspx?page_id=5&club_id=794405&item_id=126726&)
-
-Initially, she was underwhelmed, describing the sound in a highly-resolving system as "a bit clinical... full of information but lacking warmth, fullness, and soul". However, after a few software tweaks and testing the streamer in her own MBL-based system, her conclusion changed dramatically:
+One of its board members, Leslie Lundin, documented her journey from skeptic to believer in an article titled _Diretta Impressions_. Initially, she was underwhelmed, describing the sound in a highly-resolving system as "a bit clinical... full of information but lacking warmth, fullness, and soul". However, after a few software tweaks and testing the streamer in her own MBL-based system, her conclusion changed dramatically:
 
 > And wow again. The brightness I'd heard in Joe's setup was gone. On my system, the Diretta streamer was detailed, dimensional, and full of life... After that, Joe never got his Pis back. I bought the setup from him, and now I use it daily on my whole-house system.
 
-She also noted that despite being a "non-technical person," the setup has been "rock solid and totally hands-off".
+She also noted that despite being a "non-technical person," the setup has been "rock solid and totally hands-off". She now uses Diretta as her digital source in three different systems.
 
 ---
 
@@ -46,15 +44,11 @@ Here is what another member had to say after building the project:
 
 > The sonic improvements in my system from the Diretta are not small or subtle. The improvement and difference... are readily apparent... and the Diretta is a bargain!
 
-Read the [full review](https://audiophilefoundation.org/content.aspx?page_id=5&club_id=794405&item_id=126724&)
-
-You can read the full newsletter here: [The Muse: The Diretta Edition](https://audiophilefoundation.org/content.aspx?page_id=22&club_id=794405&module_id=548532)
-
 ### A "No-Compromise" Roon Experience
 
 For Roon users who rely on real-time features like convolution filters (e.g., for room correction or headphone EQs), there is exciting news.
 
-Previously, a sound quality gap existed between the standard Diretta drivers (used by Roon) and the elite, local-playback-only MemoryPlay DPDK solution. Recent community testing of the new **DDS (Mode 3\) drivers** (versions 0\_146\_x and newer) confirms that they have dramatically **"closed the sound quality gap."**
+Previously, a sound quality gap existed between the standard Diretta drivers (used by Roon) and the elite, local-playback-only MemoryPlay DPDK solution. Community testing of the new **DDS (Mode 3\) drivers** (versions 0\_146\_x and newer) confirms that they have dramatically **"closed the sound quality gap."**
 
 This is a game-changer. You no longer have to choose between Roon's best features and Diretta's best-in-class sound.
 
