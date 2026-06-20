@@ -89,7 +89,7 @@ Wenn Sie sich in den USA befinden, müssen Sie mit etwa 320 $ rechnen (zuzüglic
 13. [Anhang 4: Optionale Web-Oberfläche zur Systemsteuerung](#13-anhang-4-optionale-web-oberfläche-zur-systemsteuerung)
 14. [Anhang 5: System-Gesundheitschecks](#14-anhang-5-system-gesundheitschecks)
 15. [Anhang 6: Optionales Echtzeit-Leistungstuning](#15-anhang-6-optionales-echtzeit-leistungstuning)
-16. [Anhang 7: Optionale IRQ- und Thread-Optimierungen](#16-anhang-7-optionale-irq-und-thread-optimierungen)
+16. [Anhang 7: Optionale IRQ- und Thread-Optimierungen](#16-anhang-7-optionale-irq--und-thread-optimierungen)
 17. [Anhang 8: Optionale puristische Netzwerkgeschwindigkeiten](#17-anhang-8-optionale-puristische-netzwerkgeschwindigkeiten)
 18. [Anhang 9: Optionale Jumbo-Frames-Optimierung](#18-anhang-9-optional-jumbo-frames-optimierung)
 19. [Anhang 10: Optionale System-Updates](#19-anhang-10-optional-system-updates)
