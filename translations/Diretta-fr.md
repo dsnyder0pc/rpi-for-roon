@@ -197,7 +197,7 @@ Vous utiliserez le client SSH de votre ordinateur local pour vous connecter aux 
 Une fois que vous avez l'adresse IP de l'un de vos Raspberry Pi, utilisez le client SSH de votre ordinateur local pour vous connecter en suivant ce processus. Prenez note de l'exemple de commande `ssh`, car vous utiliserez des commandes similaires tout au long de ce guide.
 ```bash
 cmd=$(cat <<'EOT'
-read -rp "Enter the address of your RPi and hit [enter]: " RPi_IP_Address
+read -rp "Entrez l'adresse de votre RPi et appuyez sur [entrée] : " RPi_IP_Address
 echo 'Rappel : le mot de passe par défaut se trouve dans votre e-mail AudioLinux de Piero'
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
@@ -249,7 +249,7 @@ Chaque Raspberry Pi possède désormais son propre Machine ID, vous pouvez donc 
 
 ```bash
 cmd=$(cat <<'EOT'
-read -rp "Enter the (new) address of your RPi and hit [enter]: " RPi_IP_Address
+read -rp "Entrez la (nouvelle) adresse de votre RPi et appuyez sur [entrée] : " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 EOT
@@ -597,7 +597,7 @@ Au démarrage, ils utiliseront automatiquement les nouvelles configurations rés
 
 ```bash
 cmd=$(cat <<'EOT'
-read -rp "Enter the final address of your Diretta Host and hit [enter]: " RPi_IP_Address
+read -rp "Entrez l'adresse finale de votre Host Diretta et appuyez sur [entrée] : " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 EOT
@@ -674,7 +674,7 @@ fi
 if grep -q "Host diretta-host" "$SSH_CONFIG_FILE"; then
   echo "✅ La configuration SSH pour 'diretta-host' existe déjà. Aucune modification apportée."
 else
-  read -rp "Enter the LAN IP address of your Diretta Host and press [Enter]: " Diretta_Host_IP
+  read -rp "Entrez l'adresse IP LAN de votre Host Diretta et appuyez sur [Entrée] : " Diretta_Host_IP
 
   # Ajouter la nouvelle configuration en utilisant un heredoc pour plus de clarté
   cat <<EOT_HOSTS >> "$SSH_CONFIG_FILE"
@@ -1459,7 +1459,7 @@ bash <<'EOF'
 echo "Saisissez le nom de votre zone Roon."
 echo "IMPORTANT : Cela doit correspondre exactement au nom de la zone dans l'application Roon (sensible à la casse)."
 # Cette ligne est la correction : < /dev/tty indique à read d'utiliser le terminal
-read -rp "Enter your Roon Zone name: " MY_ROON_ZONE < /dev/tty
+read -rp "Entrez le nom de votre zone Roon : " MY_ROON_ZONE < /dev/tty
 
 # Détecter si le mappage Flirc/Keyboard est nécessaire
 if [ -f "/etc/systemd/system/ir-keymap.service" ]; then

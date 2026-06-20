@@ -197,7 +197,7 @@ Utilizzerete il client SSH sul vostro computer locale per accedere ai computer R
 Una volta ottenuto l'indirizzo IP di uno dei computer RPi, utilizzate il client SSH sul vostro computer locale per accedere utilizzando questa procedura. Prendete nota del comando `ssh` di esempio, poiché userete comandi simili a questo in tutta la guida.
 ```bash
 cmd=$(cat <<'EOT'
-read -rp "Enter the address of your RPi and hit [enter]: " RPi_IP_Address
+read -rp "Inserisci l'indirizzo del tuo RPi e premi [invio]: " RPi_IP_Address
 echo 'Promemoria: la password predefinita si trova nella tua email di AudioLinux da parte di Piero'
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
@@ -249,7 +249,7 @@ Ogni RPi ha il proprio machine ID, quindi potete accenderli ora. Se disponete di
 
 ```bash
 cmd=$(cat <<'EOT'
-read -rp "Enter the (new) address of your RPi and hit [enter]: " RPi_IP_Address
+read -rp "Inserisci il (nuovo) indirizzo del tuo RPi e premi [invio]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 EOT
@@ -597,7 +597,7 @@ Al riavvio, utilizzeranno automaticamente le nuove configurazioni di rete. **Not
 
 ```bash
 cmd=$(cat <<'EOT'
-read -rp "Enter the final address of your Diretta Host and hit [enter]: " RPi_IP_Address
+read -rp "Inserisci l'indirizzo finale del tuo Host Diretta e premi [invio]: " RPi_IP_Address
 echo '$' ssh "audiolinux@${RPi_IP_Address}"
 ssh -o StrictHostKeyChecking=accept-new "audiolinux@${RPi_IP_Address}"
 EOT
@@ -674,7 +674,7 @@ fi
 if grep -q "Host diretta-host" "$SSH_CONFIG_FILE"; then
   echo "✅ La configurazione SSH per 'diretta-host' esiste già. Nessuna modifica apportata."
 else
-  read -rp "Enter the LAN IP address of your Diretta Host and press [Enter]: " Diretta_Host_IP
+  read -rp "Inserisci l'indirizzo IP LAN del tuo Host Diretta e premi [Invio]: " Diretta_Host_IP
 
   # Aggiunge la nuova configurazione usando un heredoc per chiarezza
   cat <<EOT_HOSTS >> "$SSH_CONFIG_FILE"
@@ -1459,7 +1459,7 @@ bash <<'EOF'
 echo "Inserisci il nome della tua zona Roon."
 echo "IMPORTANTE: Questo deve corrispondere esattamente al nome della zona nell'app Roon (distinguendo tra maiuscole e minuscole)."
 # Questa riga è la correzione: < /dev/tty indica a read di utilizzare il terminale
-read -rp "Enter your Roon Zone name: " MY_ROON_ZONE < /dev/tty
+read -rp "Inserisci il nome della tua Zona Roon: " MY_ROON_ZONE < /dev/tty
 
 # Rileva se è necessaria la mappatura Flirc/Tastiera
 if [ -f "/etc/systemd/system/ir-keymap.service" ]; then

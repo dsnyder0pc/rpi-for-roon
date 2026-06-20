@@ -49,8 +49,10 @@ When modifications to [Diretta.md](file:///home/dsnyder/src/rpi-for-roon/Diretta
      - **Double Hyphens**: If a colon is surrounded by spaces (e.g., `Annexe 7 : Optimisations`), GFM replaces spaces with hyphens first and then strips the colon, leaving a double hyphen (`--`). Ensure these double hyphens are preserved (e.g., `#16-annexe-7--optimisations...`).
      - A utility script `scratch/fix_toc_links.py` is available in scratch files to automate this replacement.
 
-2. **Echo Commands & Logging Statements**
+2. **Echo, Read, & Logging Statements**
    - **Translate human-facing messages**: Logging and print statements that write messages to standard output or standard error (e.g., `echo "Welcome to the interactive timezone setup."` or `echo "Error: License cache not found" >&2`) must be translated to the target language.
+   - **Translate read prompts**: Prompt strings inside `read -p` or `read -rp` (e.g., `"Enter the address of your RPi and hit [enter]: "`) should be translated, while keeping the command structure, options, and target variable name (e.g. `RPi_IP_Address`) exactly in English.
    - **Protect shell variables & subshells**: Do not translate variables (e.g., `$timezone`, `${TOTAL_MEM}`) or subshell executions (e.g., `$(cat /etc/machine-id)`) inside quotes.
    - **Do NOT translate config writes**: Statements that write technical code or config parameters to files (e.g. `echo "net.ipv4.ip_forward=1" | sudo tee ...` or heredocs `cat <<'EOT'`) must remain 100% identical in English.
+
 
