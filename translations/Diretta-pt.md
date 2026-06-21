@@ -2728,7 +2728,7 @@ else
   false
 fi && {
   # 2. Aplicar Configuração de Rede do Sistema
-  echo "Configuring /etc/systemd/network/end0.network..."
+  echo "Configurando /etc/systemd/network/end0.network..."
   cat <<EOF | sudo tee /etc/systemd/network/end0.network
 [Match]
 Name=end0

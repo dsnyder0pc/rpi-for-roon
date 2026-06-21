@@ -1096,7 +1096,7 @@ I2C_PARAM="dtparam=i2c_arm=on"
 
 # --- Abilita l'I2C decommentando la riga se esiste ---
 if grep -q -F "#$I2C_PARAM" "$BOOT_CONFIG"; then
-  echo "Enabling I2C parameter..."
+  echo "Attivazione del parametro I2C..."
   sudo sed -i -e "s/^#\($I2C_PARAM\)/\1/" "$BOOT_CONFIG"
 fi
 ```
@@ -1940,7 +1940,7 @@ Sul **Diretta Target** creeremo un nuovo utente con permessi molto limitati. Que
         echo "Rilascio delle limitazioni. Ripristino del portafoglio completo 10/100/1000 (Standard)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x03f" >/dev/null 2>&1 < /dev/null &
     else
-        echo "Usage: $0 [10|100|1000]"
+        echo "Utilizzo: $0 [10|100|1000]"
         exit 1
     fi
     EOT
@@ -2728,7 +2728,7 @@ else
   false
 fi && {
   # 2. Applica la configurazione di rete del sistema
-  echo "Configuring /etc/systemd/network/end0.network..."
+  echo "Configurazione di /etc/systemd/network/end0.network..."
   cat <<EOF | sudo tee /etc/systemd/network/end0.network
 [Match]
 Name=end0
@@ -2787,7 +2787,7 @@ else
   false
 fi && {
   # 2. Applica la configurazione di rete del sistema
-  echo "Configuring /etc/systemd/network/end0.network..."
+  echo "Configurazione di /etc/systemd/network/end0.network..."
   cat <<EOF | sudo tee /etc/systemd/network/end0.network
 [Match]
 Name=end0
