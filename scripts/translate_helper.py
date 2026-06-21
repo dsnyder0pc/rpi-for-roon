@@ -231,7 +231,7 @@ def fix_toc_links_in_file(file_path):
     in_toc = False
     new_lines = []
     for line in lines:
-        if line.strip().startswith("## ") and ("table" in line.lower() or "índice" in line.lower() or "indice" in line.lower()):
+        if line.strip().startswith("## ") and any(keyword in line.lower() for keyword in ["table", "índice", "indice", "tabla", "inhalt", "目次"]):
             in_toc = True
         elif line.strip().startswith("## ") and in_toc:
             in_toc = False
