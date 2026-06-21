@@ -25,13 +25,13 @@ Willkommen zum definitiven Leitfaden für den Aufbau eines hochmodernen Roon-Str
 
 Roon wird fast universell als das leistungsstärkste und ansprechendste Musikverwaltungssystem gefeiert. Seine umfangreichen Metadaten und die nahtlose Benutzererfahrung sind unübertroffen. Diese funktionale Überlegenheit wurde jedoch lange von einer beständigen Kritik aus einem lautstarken Teil der audiophilen Gemeinschaft begleitet: Die Klangqualität von Roon sei kompromittiert, oft beschrieben als „flach, stumpf und leblos“ im Vergleich zu anderen Playern.
 
-Dieser „Roon-Klang“ ist kein Mythos und auch kein Fehler in Roons bit-perfekter Software. Es ist ein mögliches Symptom der leistungsstarken und ressourcenintensiven Natur von Roon. Der „schwergewichtige“ Roon Core benötigt erhebliche Rechenleistung, was wiederum elektrisches Rauschen (RFI/EMI) erzeugt. Wenn der Computer, auf dem der Roon Core läuft, in unmittelbarer Nähe Ihres empfindlichen Digital-Analog-Wandlers (DAC) steht, kann dieses Rauschen die analoge Ausgangsstufe kontaminieren, Details verdecken, die Klangbühne verkleinern und der Musik ihre Lebendigkeit rauben.
+Dieser „Roon-Klang“ ist kein Mythos und auch kein Fehler in Roons bit-perfekter Software. Es ist ein mögliches Symptom der leistungsstarken und ressourcenintensiven Natur von Roon. Der „rechenintensive“ Roon Core benötigt erhebliche Rechenleistung, was wiederum elektrisches Rauschen (RFI/EMI) erzeugt. Wenn der Computer, auf dem der Roon Core läuft, in unmittelbarer Nähe Ihres empfindlichen Digital-Analog-Wandlers (DAC) steht, kann dieses Rauschen die analoge Ausgangsstufe kontaminieren, Details verdecken, die Klangbühne verkleinern und der Musik ihre Lebendigkeit rauben.
 
 ---
 
-### Mehr als nur „Notlösungen“: Eine fundamentale Lösung
+### Mehr als nur „Symptombekämpfung“: Eine fundamentale Lösung
 
-Roon Labs selbst plädiert für eine „Zwei-Boxen“-Architektur, um dieses primäre Problem zu lösen: Die Trennung des anspruchsvollen **Roon Core** von einem leichtgewichtigen Netzwerk-**Endpunkt** (auch Streaming-Transport genannt). Dies ist der richtige erste Schritt, da die schwere Rechenlast auf eine entfernte Maschine ausgelagert und deren Rauschen von Ihrem Audio-Rack isoliert wird.
+Roon Labs selbst plädiert für eine „Zwei-Geräte-Architektur“, um dieses primäre Problem zu lösen: Die Trennung des anspruchsvollen **Roon Core** von einem leichtgewichtigen Netzwerk-**Endpunkt** (auch Streaming-Transport genannt). Dies ist der richtige erste Schritt, da die schwere Rechenlast auf eine entfernte Maschine ausgelagert und deren Rauschen von Ihrem Audio-Rack isoliert wird.
 
 Doch selbst in diesem überlegenen zweistufigen Design bleibt ein subtileres Problem bestehen. Standard-Netzwerkprotokolle, einschließlich Roons eigenem RAAT, liefern Audiodaten in intermittierenden „Bursts“ (Schüben). Dies zwingt die CPU des Endpunkts dazu, ihre Aktivität ständig hochzufahren, um diese Bursts zu verarbeiten, was zu schnellen Schwankungen in der Stromaufnahme führt. Diese Schwankungen erzeugen ihr eigenes niederfrequentes elektrisches Rauschen direkt am Endpunkt – jener Komponente, die Ihrem DAC am nächsten ist.
 
@@ -43,7 +43,7 @@ Dieser Leitfaden präsentiert eine elegantere und dramatisch effektivere Lösung
 
 ### Die Drei-Stufen-Architektur: Roon + Diretta
 
-Dieses Projekt entwickelt Roons empfohlenes Zwei-Boxen-Setup zu einem ultimativen dreistufigen System weiter, das mehrere, sich ergänzende Schichten der Isolierung bietet.
+Dieses Projekt entwickelt Roons empfohlenes Zwei-Gehäuse-Setup zu einem ultimativen dreistufigen System weiter, das mehrere, sich ergänzende Schichten der Isolierung bietet.
 
 1.  **Stufe 1: Roon Core**: Ihr leistungsstarker Roon-Server läuft auf einer dedizierten Maschine, weit entfernt von Ihrem Hörraum. Er übernimmt die schwere Rechenarbeit, und sein elektrisches Rauschen bleibt von Ihrem Audiosystem isoliert.
 2.  **Stufe 2: Diretta-Host**: Der erste Raspberry Pi in unserem Aufbau fungiert als **Diretta-Host**. Er verbindet sich mit Ihrem Hauptnetzwerk, empfängt den Audiostream vom Roon Core und sendet ihn in winzigen, präzise getakteten Segmenten weiter, wodurch die Stoßhaftigkeit des ursprünglichen Datenstroms eliminiert wird.
@@ -222,13 +222,13 @@ echo "Neue Machine-ID: $(cat /etc/machine-id)"
 
 Legen Sie für jedes Gerät einen eindeutigen Hostnamen fest, um sie leicht identifizieren zu können. **Hinweis:** Wenn dies nicht Ihr erster Aufbau nach dieser Anleitung ist und Sie bereits ein Diretta-Host/Target-Paar in Ihrem Netzwerk haben, sollten Sie für diesen neuen Diretta-Host einen anderen Namen wählen (z. B. `diretta-host2`), um diesen Teil zu vereinfachen. Dies erleichtert später den unabhängigen Zugriff auf beide Geräte.
 
-**On your FIRST device (the future Diretta Host):**
+**Auf Ihrem ERSTEN Gerät (dem zukünftigen Diretta-Host):**
 ```bash
 # Auf dem Diretta-Host
 sudo hostnamectl set-hostname diretta-host
 ```
 
-**On your SECOND device (the future Diretta Target):**
+**Auf Ihrem ZWEITEN Gerät (dem zukünftigen Diretta-Target):**
 ```bash
 # Auf dem Diretta-Target
 sudo hostnamectl set-hostname diretta-target
@@ -1218,11 +1218,11 @@ Dieser Leitfaden enthält Anweisungen zur Installation und Konfiguration einer I
 
 ---
 
-### **Part 1: IR Receiver Hardware Setup**
+### **Teil 1: Hardware-Einrichtung des IR-Empfängers**
 
-*Follow the appendix for the hardware you are using.*
+*Folgen Sie dem Anhang für die von Ihnen verwendete Hardware.*
 
-#### **Option 1: Flirc USB IR Receiver Setup**
+#### **Option 1: Einrichtung des Flirc USB-IR-Empfängers**
 
 1.  **Das Flirc-Gerät erwerben und programmieren:**
     Sie benötigen den Flirc-USB-IR-Empfänger, der auf der Website erworben werden kann: [https://flirc.tv/products/flirc-usb-receiver](https://flirc.tv/products/flirc-usb-receiver)
@@ -1873,7 +1873,7 @@ Auf dem **Diretta-Target** erstellen wir einen neuen Benutzer mit sehr eingeschr
 
     # Skript zum Umschalten des Purist-Modus
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-mode
-    # Skript zum Umschalten des Autostart-Dienstes
+    #!/bin/bash
     if [[ "$1" == "--enforce" ]]; then
         # Absolute Erzwingung: Wenn es aktiv sein soll, führen Sie das
         # Baseline-Skript erneut aus, um wiederbelebte Standardrouten zu bereinigen.
@@ -2855,20 +2855,20 @@ Bevor Sie beginnen, melden Sie sich per SSH sowohl auf dem Host als auch auf dem
 vcgencmd bootloader_version
 ```
 
-*(Achten Sie auf das Datum in der ersten Zeile der Ausgabe).* 
+*(Achten Sie auf das Datum in der ersten Zeile der Ausgabe).*
 
 **Das Update-Medium vorbereiten**
 Sie benötigen eine leere microSD-Karte, ein SD-Kartenlesegerät und die offizielle Raspberry Pi Imager-Software auf Ihrem Computer.
 
 1. Öffnen Sie den Raspberry Pi Imager. Klicken Sie auf **CHOOSE DEVICE** und wählen Sie das spezifische Raspberry Pi-Board aus, das Sie aktualisieren möchten.
 
-   ![Select Raspberry Pi 5 Device](images/01-rpi-dev.png)
+   ![Raspberry Pi 5 Gerät auswählen](images/01-rpi-dev.png)
 
 2. Klicken Sie auf **CHOOSE OS**, scrollen Sie in der Liste nach unten und wählen Sie **Misc utility images**.
 
-   ![Select Misc Utility Images](images/02-rpi-misc.png)
+   ![Misc Utility Images auswählen](images/02-rpi-misc.png)
 
-3. Wählen Sie **Bootloader**. *(Hinweis: Das Menü zeigt die in Schritt 1 ausgewählte Pi-Familie an).* 
+3. Wählen Sie **Bootloader**. *(Hinweis: Das Menü zeigt die in Schritt 1 ausgewählte Pi-Familie an).*
 
    ![Select Bootloader for Pi 5 Family](images/03-rpi-bl.png)
 

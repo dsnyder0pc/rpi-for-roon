@@ -2,7 +2,7 @@
 
 Questa guida fornisce istruzioni dettagliate passo-passo per configurare due dispositivi Raspberry Pi come Diretta Host e Diretta Target dedicati. Questa configurazione utilizza una connessione Ethernet diretta point-to-point tra i due dispositivi per ottenere il massimo isolamento di rete e prestazioni audio.
 
-Il **Diretta Host** si collegherà alla rete principale (per accedere al server musicale) e fungerà anche da gateway per il Target. Il **Diretta Target** si collergherà solo all'Host e al vostro DAC o DDC USB.
+Il **Diretta Host** si collegherà alla rete principale (per accedere al server musicale) e fungerà anche da gateway per il Target. Il **Diretta Target** si collegherà solo all'Host e al vostro DAC o DDC USB.
 
 ## Gestione delle versioni
 
@@ -29,13 +29,13 @@ Questo "Suono Roon" non è un mito, né è un difetto del software bit-perfect d
 
 ---
 
-### Andare oltre i "palliativi" verso una soluzione fondamentale
+### Andare oltre le "soluzioni tampone" verso una soluzione fondamentale
 
-La stessa Roon Labs raccomanda un'architettura "a due box" per risolvere questo problema primario: separare l'impegnativo **Roon Core** da un leggero **Endpoint** di rete (chiamato anche trasporto di streaming). Questo è il primo passo corretto, in quanto sposta l'elaborazione pesante su una macchina remota, isolando il suo rumore dal rack audio.
+La stessa Roon Labs raccomanda un'architettura "a due telai" per risolvere questo problema primario: separare l'impegnativo **Roon Core** da un leggero **Endpoint** di rete (chiamato anche trasporto di streaming). Questo è il primo passo corretto, in quanto sposta l'elaborazione pesante su una macchina remota, isolando il suo rumore dal rack audio.
 
 Tuttavia, anche in questo design superiore a due livelli, rimane un problema più sottile. I protocolli di rete standard, incluso lo stesso RAAT di Roon, trasmettono i dati audio in "burst" (raffiche) intermittenti. Questo costringe la CPU dell'endpoint a picchi costanti di attività per elaborare queste raffiche, causando rapide fluttuazioni nel consumo di corrente. Queste fluttuazioni generano a loro volta rumore elettrico a bassa frequenza proprio sull'endpoint, il componente più vicino al DAC.
 
-I produttori di audio high-end cercano di combattere i *sintomi* di questo traffico a raffiche con vari palliativi: enormi alimentatori lineari per gestire meglio i picchi di corrente, CPU a bassissimo consumo per ridurre l'intensità dei picchi e stadi di filtraggio extra per pulire il rumore risultante. Sebbene queste strategie possano aiutare, non affrontano la causa alla radice del rumore: l'elaborazione a raffiche stessa.
+I produttori di audio high-end cercano di combattere i *sintomi* di questo traffico a raffiche con varie soluzioni tampone: enormi alimentatori lineari per gestire meglio i picchi di corrente, CPU a bassissimo consumo per ridurre l'intensità dei picchi e stadi di filtraggio extra per pulire il rumore risultante. Sebbene queste strategie possano aiutare, non affrontano la causa alla radice del rumore: l'elaborazione a raffiche stessa.
 
 Questa guida presenta una soluzione più elegante e decisamente più efficace. Invece di cercare di ripulire il rumore, costruiremo un'architettura che impedisce al rumore di essere generato fin dall'inizio.
 
@@ -43,7 +43,7 @@ Questa guida presenta una soluzione più elegante e decisamente più efficace. I
 
 ### L'architettura a tre livelli: Roon + Diretta
 
-Questo progetto evolve la configurazione a due box raccomandata da Roon in un sistema definitivo a tre livelli che fornisce molteplici strati di isolamento combinati.
+Questo progetto evolve la configurazione a due telai raccomandata da Roon in un sistema definitivo a tre livelli che fornisce molteplici strati di isolamento combinati.
 
 1.  **Tier 1: Roon Core**: Il vostro potente server Roon gira su una macchina dedicata, posizionata lontano dalla stanza d'ascolto. Svolge tutto il lavoro pesante e il suo rumore elettrico viene mantenuto isolato dall'impianto audio.
 2.  **Tier 2: Diretta Host**: Il primo Raspberry Pi della nostra build funge da **Diretta Host**. Si collega alla rete principale, riceve il flusso audio dal Roon Core e poi lo trasmette in segmenti minuscoli e temporizzati con precisione, eliminando la natura a raffiche del flusso originale.

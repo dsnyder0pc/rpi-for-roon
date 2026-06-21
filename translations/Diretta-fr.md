@@ -1,6 +1,6 @@
 # Construction d'une liaison Diretta dédiée avec AudioLinux sur Raspberry Pi
 
-Ce guide fournit des instructions complètes, étape par étape, pour configurer deux appareils Raspberry Pi en tant que Host Diretta et Target Diretta dédiés. Cette configuration utilise une connexion Ethernet directe point à point entre les deux appareils pour le summum de l'isolation réseau et des performances audio.
+Ce guide fournit des instructions complètes, étape par étape, pour configurer deux appareils Raspberry Pi en tant que Host Diretta et Target Diretta dédiés. Cette configuration utilise une connexion Ethernet directe point à point entre les deux appareils pour obtenir une isolation réseau et des performances audio absolues.
 
 Le **Host Diretta** se connectera à votre réseau principal (pour accéder à votre serveur de musique) et fera également office de passerelle pour le Target. Le **Target Diretta** se connectera uniquement au Host et à votre DAC USB ou DDC.
 
@@ -31,11 +31,11 @@ Ce « son Roon » n'est pas un mythe, ni un défaut du logiciel bit-perfect de R
 
 ### Aller au-delà des « pansements » vers une solution fondamentale
 
-Roon Labs lui-même préconise une architecture à « deux boîtiers » pour résoudre ce problème principal : séparer le **Roon Core** exigeant d'un **Endpoint** réseau léger (également appelé transport réseau). C'est la première étape correcte, car elle délègue le traitement lourd à une machine distante, isolant son bruit de votre rack audio.
+Roon Labs lui-même préconise une architecture à « deux châssis » pour résoudre ce problème principal : séparer le **Roon Core** exigeant d'un **Endpoint** réseau léger (également appelé transport réseau). C'est la première étape correcte, car elle délègue le traitement lourd à une machine distante, isolant son bruit de votre rack audio.
 
 Cependant, même dans cette conception supérieure à deux niveaux, un problème plus subtil subsiste. Les protocoles réseau standard, y compris le RAAT propre à Roon, transmettent les données audio par « rafales » intermittentes. Cela force le processeur du endpoint à augmenter constamment son activité pour traiter ces rafales, provoquant des fluctuations rapides de la consommation de courant. Ces fluctuations génèrent leur propre bruit électrique à basse fréquence directement au niveau du endpoint — le composant le plus proche de votre DAC.
 
-Les fabricants d'appareils audio haut de gamme tentent de combattre les *symptômes* de ce trafic par rafales avec diverses solutions de type « pansement » : des alimentations linéaires massives pour mieux gérer les pics de courant, des processeurs ultra-basse consommation pour minimiser l'intensité des pics, et des étages de filtrage supplémentaires pour nettoyer le bruit résultant. Bien que ces stratégies puissent aider, elles ne s'attaquent pas à la cause profonde du bruit : le traitement par rafales lui-même.
+Les fabricants d'appareils audio haut de gamme tentent de combattre les *symptômes* de ce trafic par rafales avec diverses solutions de type « simples palliatifs » : des alimentations linéaires massives pour mieux gérer les pics de courant, des processeurs ultra-basse consommation pour minimiser l'intensité des pics, et des étages de filtrage supplémentaires pour nettoyer le bruit résultant. Bien que ces stratégies puissent aider, elles ne s'attaquent pas à la cause profonde du bruit : le traitement par rafales lui-même.
 
 Ce guide présente une solution plus élégante et considérablement plus efficace. Au lieu d'essayer de nettoyer le bruit, nous allons construire une architecture qui l'empêche d'être généré en premier lieu.
 
@@ -43,7 +43,7 @@ Ce guide présente une solution plus élégante et considérablement plus effica
 
 ### L'architecture à trois niveaux : Roon + Diretta
 
-Ce projet fait évoluer la configuration à deux boîtiers recommandée par Roon vers un système ultime à trois niveaux, offrant de multiples couches d'isolation cumulées.
+Ce projet fait évoluer la configuration à deux châssis recommandée par Roon vers un système ultime à trois niveaux, offrant de multiples couches d'isolation cumulées.
 
 1.  **Niveau 1 : Roon Core** : Votre puissant serveur Roon fonctionne sur une machine dédiée, placée loin de votre pièce d'écoute. Il se charge de tout le travail lourd, et son bruit électrique reste isolé de votre système audio.
 2.  **Niveau 2 : Host Diretta** : Le premier Raspberry Pi de notre configuration fait office de **Host Diretta**. Il se connecte à votre réseau principal, reçoit le flux audio du Roon Core, puis le transmet sous forme de minuscules segments cadencés avec précision, éliminant ainsi le caractère par rafales du flux d'origine.
@@ -220,21 +220,21 @@ echo "Nouvel identifiant de machine : $(cat /etc/machine-id)"
 
 #### 3.2. Définir des Hostnames uniques
 
-Définissez un hostname clair pour chaque appareil afin de l'identifier facilement. **Note :** S'il ne s'agit pas de votre première configuration avec ces instructions et que vous possédez déjà un couple Host/Target Diretta sur votre réseau, envisagez de choisir un nom différent pour ce nouveau Host Diretta, comme `diretta-host2`, juste für diese part. Cela facilitera l'accès indépendant aux deux appareils plus tard.
+Définissez un hostname clair pour chaque appareil afin de l'identifier facilement. **Note :** S'il ne s'agit pas de votre première configuration avec ces instructions et que vous possédez déjà un couple Host/Target Diretta sur votre réseau, envisagez de choisir un nom différent pour ce nouveau Host Diretta, comme `diretta-host2`, juste pour cette etape. Cela facilitera l'accès indépendant aux deux appareils plus tard.
 
-**On your FIRST device (the future Diretta Host):**
+**Sur votre PREMIER appareil (le futur Host Diretta):**
 ```bash
 # Sur le Host Diretta
 sudo hostnamectl set-hostname diretta-host
 ```
 
-**On your SECOND device (the future Diretta Target):**
+**Sur votre SECOND appareil (le futur Target Diretta):**
 ```bash
 # Sur le Target Diretta
 sudo hostnamectl set-hostname diretta-target
 ```
 
-**At this point, shutdown the device. Repeat the [above steps](#3-configuration-du-système-de-base-à-effectuer-sur-les-deux-appareils) for the second Raspberry Pi.**
+**À ce stade, éteignez l'appareil. Répétez les [étapes ci-dessus](#3-configuration-du-système-de-base-à-effectuer-sur-les-deux-appareils) pour le second Raspberry Pi.**
 ```bash
 sudo sync && sudo poweroff
 ```
@@ -408,7 +408,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     EOT
     ```
 
-    **Wichtig:** Remove the old en.network file if present:
+    **Important:** Supprimez l'ancien fichier en.network si present:
     ```bash
     # Supprimer l'ancien fichier réseau générique pour éviter les conflits.
     sudo rm -fv /etc/systemd/network/{en,enp,auto,eth}.network
