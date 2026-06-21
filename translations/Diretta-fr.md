@@ -12,7 +12,7 @@ Mon objectif est de maintenir ce guide compatible avec le lien de téléchargeme
 Ces instructions ont été testées pour la dernière fois avec **AudioLinux V5** (Image : `audiolinux_pi4-pi5_520`, Version du menu : `536`).
 
 **Note concernant les mises à jour :**
-Comme AudioLinux is basé sur Arch (une rolling release), une nouvelle installation téléchargera toujours les logiciels les plus récents. Une fois que votre système fonctionne à merveille, vous avez deux choix :
+Comme AudioLinux est basé sur Arch (une rolling release), une nouvelle installation téléchargera toujours les logiciels les plus récents. Une fois que votre système fonctionne à merveille, vous avez deux choix :
 
 1.  **Mettre à jour fréquemment :** Engagez-vous à effectuer des mises à jour au moins une fois par mois afin de corriger les petites pannes au fur et à mesure.
 2.  **Figer le système (Recommandé) :** Si le son est excellent, n'y touchez plus. Créez une image de sauvegarde et profitez de la musique !
@@ -54,7 +54,7 @@ Ce projet fait évoluer la configuration à deux châssis recommandée par Roon 
 La supériorité de cette conception provient de deux composants logiciels clés fonctionnant sur les appareils Raspberry Pi :
 
 * **AudioLinux** : Il s'agit d'un système d'exploitation en temps réel conçu spécifiquement pour un usage audiophile. Contrairement à un système d'exploitation généraliste, il est optimisé pour minimiser les latences du processeur et le « jitter » du système, offrant une base stable et silencieuse pour notre endpoint.
-* **Diretta** : Ce protocole révolutionnaire est la recette secrète qui résout le problème à la racine. Il reconnaît que les fluctuations de la charge de traitement du endpoint génèrent un bruit électrique à basse fréquence qui peut contourner le filtrage interne d'un DAC (défini par son taux de rejet de l'alimentation, ou PSRR) et dégrader subtilement ses performances analogiques. Pour lutter contre cela, Diretta utilise son modèle « Host-Target », où the Host envoie des données dans un flux continu et synchronisé de petits paquets régulièrement espacés. Cela permet de « lisser » la charge de traitement sur le Target, de stabiliser sa consommation de courant et de minimiser la génération de ce bruit électrique pernicieux.
+* **Diretta** : Ce protocole révolutionnaire est la recette secrète qui résout le problème à la racine. Il reconnaît que les fluctuations de la charge de traitement du endpoint génèrent un bruit électrique à basse fréquence qui peut contourner le filtrage interne d'un DAC (défini par son taux de rejet de l'alimentation, ou PSRR) et dégrader subtilement ses performances analogiques. Pour lutter contre cela, Diretta utilise son modèle « Host-Target », où le Host envoie des données dans un flux continu et synchronisé de petits paquets régulièrement espacés. Cela permet de « lisser » la charge de traitement sur le Target, de stabiliser sa consommation de courant et de minimiser la génération de ce bruit électrique pernicieux.
 
 La combinaison de l'isolation galvanique physique de la liaison Ethernet point à point et de l'élimination du bruit de traitement par le protocole Diretta crée un chemin de signal profondément propre vers votre DAC — capable de surclasser des solutions coûtant plusieurs milliers d'euros.
 
@@ -220,7 +220,7 @@ echo "Nouvel identifiant de machine : $(cat /etc/machine-id)"
 
 #### 3.2. Définir des Hostnames uniques
 
-Définissez un hostname clair pour chaque appareil afin de l'identifier facilement. **Note :** S'il ne s'agit pas de votre première configuration avec ces instructions et que vous possédez déjà un couple Host/Target Diretta sur votre réseau, envisagez de choisir un nom différent pour ce nouveau Host Diretta, comme `diretta-host2`, juste pour cette etape. Cela facilitera l'accès indépendant aux deux appareils plus tard.
+Définissez un hostname clair pour chaque appareil afin de l'identifier facilement. **Note :** S'il ne s'agit pas de votre première configuration avec ces instructions et que vous possédez déjà un couple Host/Target Diretta sur votre réseau, envisagez de choisir un nom différent pour ce nouveau Host Diretta, comme `diretta-host2`, juste pour cette étape. Cela facilitera l'accès indépendant aux deux appareils plus tard.
 
 **Sur votre PREMIER appareil (le futur Host Diretta):**
 ```bash
@@ -361,7 +361,7 @@ sudo sync && sudo reboot
 
 Dans cette section, nous allons créer les fichiers de configuration réseau qui activeront la liaison privée dédiée. Pour éviter d'avoir besoin d'un clavier et d'un écran physiques (accès console), nous effectuerons ces étapes pendant que les deux appareils sont encore connectés à votre réseau local principal et accessibles via SSH.
 
-If you just finished updating your Diretta Target, click [here](https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md#52-pre-configure-the-diretta-target) to jump to the point-to-point network configuration steps for the Target.
+Si vous venez de terminer la mise à jour de votre Target Diretta, cliquez [ici](https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md#52-pre-configure-the-diretta-target) pour passer directement aux étapes de configuration réseau point à point pour le Target.
 
 ---
 > #### **Note concernant la configuration réseau : Pourquoi pas un simple pont (bridge) ?**
@@ -520,7 +520,7 @@ If you just finished updating your Diretta Target, click [here](https://github.c
     rm update_motd.sh
     ```
 
-    Enfin, power-off the Host:
+    Enfin, éteignez le Host :
     ```bash
     sudo sync && sudo poweroff
     ```
@@ -851,7 +851,7 @@ EOT
 ```
 
 #### 7.4. Créer le script de réparation
-Le comportement par défaut d'Arch Linux is de laisser le système de fichiers /boot dans un état incorrect si l'ordinateur n'est pas arrêté proprement. C'est généralement sans danger, mais j'ai constaté que cela peut créer une condition de concurrence lors du démarrage de notre réseau privé. De plus, les utilisateurs ont tendance à débrancher ces appareils sans les éteindre au préalable. Pour se prémunir de ces problèmes, nous allons ajouter un script de contournement qui maintient propre le système de fichiers /boot (qui n'est modifié que lors des mises à jour logicielles).
+Le comportement par défaut d'Arch Linux est de laisser le système de fichiers /boot dans un état incorrect si l'ordinateur n'est pas arrêté proprement. C'est généralement sans danger, mais j'ai constaté que cela peut créer une condition de concurrence lors du démarrage de notre réseau privé. De plus, les utilisateurs ont tendance à débrancher ces appareils sans les éteindre au préalable. Pour se prémunir de ces problèmes, nous allons ajouter un script de contournement qui maintient propre le système de fichiers /boot (qui n'est modifié que lors des mises à jour logicielles).
 
 Ce script peut être exécuté en toute sécurité, à la fois automatiquement au démarrage et manuellement sur un système en cours d'exécution.
 ```bash
@@ -1900,7 +1900,7 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
     # Créer le script pour redémarrer le service Diretta
     cat <<'EOT' | sudo tee /usr/local/bin/pm-restart-target
     #!/bin/bash
-    # Redémare le service Diretta ALSA Target.
+    # Redémarre le service Diretta ALSA Target.
     # Ce script est destiné à être appelé via sudo par l'utilisateur purist-app.
     /usr/bin/systemctl restart diretta_alsa_target.service
     EOT
@@ -1922,7 +1922,7 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
     fi
     EOT
 
-    # Créer script to set the link speed
+    # Créer le script pour définir la vitesse de la liaison
     cat <<'EOT' | sudo tee /usr/local/bin/pm-set-link
     #!/bin/bash
     # Script de profil pour appliquer les limites physiques de la liaison du Target
@@ -2567,7 +2567,7 @@ Bien que cela soit contre-intuitif, réduire la vitesse de la liaison de 1 Gbps 
 
 > **Note :** Vous pourriez voir des avertissements de mémoire tampon basse (« buffer low ») dans les journaux du Target (le `LatencyBuffer` tombant à 1). Il s'agit d'un comportement normal dû à l'augmentation de la latence de sérialisation de la liaison plus lente, et cela ne provoque pas de coupures audio perceptibles.
 
-### Step 1: Configure Host and Target (Disable EEE)
+### Étape 1 : Configurer le Host et le Target (désactiver l'EEE)
 
 L'Energy Efficient Ethernet (EEE) peut provoquer une instabilité de la liaison sur certaines combinaisons matérielles. Nous allons créer un service pour le désactiver explicitement sur le Host **et** le Target afin de garantir un comportement cohérent.
 

@@ -15,7 +15,7 @@ Diese Anweisungen wurden zuletzt mit **AudioLinux V5** getestet (Image: `audioli
 Da AudioLinux auf Arch (einem Rolling Release) basiert, zieht eine Neuinstallation immer die absolut neueste Software. Sobald Ihr System wunschgemäß läuft, haben Sie zwei Möglichkeiten:
 
 1.  **Regelmäßig aktualisieren:** Verpflichten Sie sich, mindestens monatlich Updates durchzuführen, um kleine Fehler direkt nach ihrem Auftreten zu beheben.
-2.  **Einfrieren (Empfohlen):** Wenn es großartig klingt, ändern Sie nichts mehr. Erstellen Sie ein Backup-Image und genießen Sie die Musik!
+2.  **Einfrieren (Empfohlen):** Wenn es großartig klingt, rühren Sie es nicht mehr an. Erstellen Sie ein Backup-Image und genießen Sie die Musik!
 
 ## Eine Einführung in die Referenz-Roon-Architektur
 
@@ -35,7 +35,7 @@ Roon Labs selbst plädiert für eine „Zwei-Geräte-Architektur“, um dieses p
 
 Doch selbst in diesem überlegenen zweistufigen Design bleibt ein subtileres Problem bestehen. Standard-Netzwerkprotokolle, einschließlich Roons eigenem RAAT, liefern Audiodaten in intermittierenden „Bursts“ (Schüben). Dies zwingt die CPU des Endpunkts dazu, ihre Aktivität ständig hochzufahren, um diese Bursts zu verarbeiten, was zu schnellen Schwankungen in der Stromaufnahme führt. Diese Schwankungen erzeugen ihr eigenes niederfrequentes elektrisches Rauschen direkt am Endpunkt – jener Komponente, die Ihrem DAC am nächsten ist.
 
-High-End-Audiohersteller versuchen, die *Symptome* dieses stoßweisen Datenverkehrs mit verschiedenen „Notlösungen“ zu bekämpfen: massive lineare Netzteile, um die Stromspitzen besser zu bewältigen, Ultra-Low-Power-CPUs, um die Intensität der Spitzen zu minimieren, und zusätzliche Filterstufen, um das resultierende Rauschen zu bereinigen. Während diese Strategien helfen können, gehen sie nicht die Ursache des Rauschens an: die stoßweise Verarbeitung selbst.
+High-End-Audiohersteller versuchen, die *Symptome* dieses stoßweisen Datenverkehrs mit verschiedenen „Pflaster-Lösungen“ zu bekämpfen: massive lineare Netzteile, um die Stromspitzen besser zu bewältigen, Ultra-Low-Power-CPUs, um die Intensität der Spitzen zu minimieren, und zusätzliche Filterstufen, um das resultierende Rauschen zu bereinigen. Während diese Strategien helfen können, gehen sie nicht die Ursache des Rauschens an: die stoßweise Verarbeitung selbst.
 
 Dieser Leitfaden präsentiert eine elegantere und dramatisch effektivere Lösung. Anstatt zu versuchen, das Rauschen nachträglich zu bereinigen, bauen wir eine Architektur, die verhindert, dass das Rauschen überhaupt erst entsteht.
 
@@ -361,7 +361,7 @@ sudo sync && sudo reboot
 
 In diesem Abschnitt erstellen wir die Netzwerkkonfigurationsdateien, die die dedizierte private Verbindung aktivieren. Um eine physische Tastatur und einen Monitor (Konsolenzugriff) zu vermeiden, führen wir diese Schritte aus, während beide Geräte noch mit Ihrem Haupt-LAN verbunden und über SSH erreichbar sind.
 
-Wenn Sie die Aktualisierung Ihres Diretta-Targets gerade abgeschlossen haben, klicken Sie [hier](https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md#52-pre-configure-the-diretta-target) zu jump to the point-to-point network configuration steps for the Target.
+Wenn Sie die Aktualisierung Ihres Diretta-Targets gerade abgeschlossen haben, klicken Sie [hier](https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md#52-pre-configure-the-diretta-target), um zu den Schritten für die Punkt-zu-Punkt-Netzwerkkonfiguration des Targets zu springen.
 
 ---
 > #### **Ein Hinweis zur Netzwerkkonfiguration: Warum keine einfache Bridge?**
@@ -1085,10 +1085,10 @@ Wenn Sie sich für ein Argon-ONE-Gehäuse für Ihren Raspberry Pi entschieden ha
 
 Wenn Sie Argon-ONE-Gehäuse sowohl für den Diretta-Host als auch für das Target verwenden, müssen Sie diese Schritte auf beiden Computern ausführen.
 
-### Step 1: Skip the `argon1.sh` script in the manual
+### Schritt 1: Das `argon1.sh`-Skript aus dem Handbuch überspringen
 Im Handbuch steht, dass Sie das Skript `argon1.sh` von download.argon40.com herunterladen und an `bash` übergeben sollen. Dies funktioniert unter AudioLinux nicht, da das Skript ein Debian-basiertes Betriebssystem voraussetzt. Überspringen Sie diesen Schritt und folgen Sie stattdessen den unten stehenden Schritten.
 
-### Step 2: Configure your system:
+### Schritt 2: System konfigurieren:
 Diese Befehle aktivieren die I2C-Schnittstelle und fügen das spezifische `dtoverlay` für das Argon-ONE-Gehäuse hinzu. Das Skript versucht zunächst, den Parameter `i2c_arm` zu entkommentieren, falls er auskommentiert ist, und fügt dann das `argonone`-Overlay hinzu, falls es fehlt. Dies verhindert Fehler und doppelte Einträge.
 ```bash
 BOOT_CONFIG="/boot/config.txt"
@@ -1101,19 +1101,19 @@ if grep -q -F "#$I2C_PARAM" "$BOOT_CONFIG"; then
 fi
 ```
 
-### Step 3: Configure `udev` permissions
+### Schritt 3: `udev`-Berechtigungen konfigurieren
 ```bash
 cat <<'EOT' | sudo tee /etc/udev/rules.d/99-i2c.rules
 KERNEL=="i2c-[0-9]*", MODE="0666"
 EOT
 ```
 
-### Step 4: Install the Argon One Package
+### Schritt 4: Das „Argon One“-Paket installieren
 ```bash
 yay -S argonone-c-git
 ```
 
-**Note:** If the above command fails with compiler errors, you can try this manual procedure to fix and install the package:
+**Hinweis:** Wenn der obige Befehl mit Kompilierungsfehlern fehlschlägt, können Sie dieses manuelle Verfahren ausprobieren, um das Paket zu reparieren und zu installieren:
 ```bash
 # Das Paket-Repository klonen
 git clone https://aur.archlinux.org/argonone-c-git.git
@@ -1133,7 +1133,7 @@ cd ..
 rm -rf argonone-c-git
 ```
 
-### Step 5: Switch Argon ONE case from hardware to software control
+### Schritt 5: Argon-ONE-Gehäuse von Hardware- auf Softwaresteuerung umstellen
 ```bash
 sudo pacman -S --noconfirm --needed i2c-tools libgpiod
 ```
@@ -1152,7 +1152,7 @@ After=multi-user.target
 EOT
 ```
 
-### Step 6: Enable the Service
+### Schritt 6: Den Dienst aktivieren
 ```bash
 # Den systemd-Manager neu laden, um die neue Konfiguration zu lesen
 sudo systemctl daemon-reload
@@ -1161,7 +1161,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable argononed.service
 ```
 
-### Step 7: Reboot
+### Schritt 7: Neustart
 Starten Sie schließlich Ihren Raspberry Pi neu, damit alle Änderungen wirksam werden (zuerst das Target, dann der Host):
 ```bash
 sudo sync && sudo reboot
@@ -1169,13 +1169,13 @@ sudo sync && sudo reboot
 
 Nun wird der Lüfter durch den Daemon gesteuert und der Einschaltknopf ist voll funktionsfähig.
 
-### Step 8: Verify the service
+### Schritt 8: Den Dienst überprüfen
 ```bash
 systemctl status argononed.service
 journalctl -u argononed.service -b
 ```
 
-### Step 9: Review Fan Mode and Settings:
+### Schritt 9: Lüftermodus und Einstellungen überprüfen:
 Führen Sie den folgenden Befehl aus, um die aktuellen Konfigurationswerte anzuzeigen:
 ```bash
 sudo argonone-cli --decode
@@ -1211,10 +1211,10 @@ Jetzt können Sie die Werte nach Bedarf anpassen, indem Sie den obigen Schritten
 
 Dieser Leitfaden enthält Anweisungen zur Installation und Konfiguration einer IR-Fernbedienung zur Steuerung von Roon. Die Einrichtung ist in zwei Teile unterteilt.
 
-  * **Part 1** covers the hardware-specific setup. You will choose **one** of the two appendices depending on whether you are using the Flirc USB receiver or the Argon One case's built-in receiver.
-  * **Part 2** covers the software setup for the `roon-ir-remote` control script, which is identical for both hardware options.
+  * **Teil 1** behandelt die hardwarespezifische Einrichtung. Sie wählen **einen** der beiden Abschnitte, je nachdem, ob Sie den Flirc-USB-Empfänger oder den eingebauten Empfänger des Argon-One-Gehäuses verwenden.
+  * **Teil 2** behandelt die Software-Einrichtung für das Steuerungsskript `roon-ir-remote`, die für beide Hardware-Optionen identisch ist.
 
-**Note:** You will _only_ perform these steps on the Diretta Host. Das Target sollte nicht zur Weiterleitung von IR-Fernbedienungsbefehlen an den Roon Server verwendet werden.
+**Hinweis:** Führen Sie diese Schritte _nur_ auf dem Diretta-Host aus .Das Target sollte nicht zur Weiterleitung von IR-Fernbedienungsbefehlen an den Roon Server verwendet werden.
 
 ---
 
@@ -1284,7 +1284,7 @@ Dieser Leitfaden enthält Anweisungen zur Installation und Konfiguration einer I
     sudo ir-keytable -t
     ```
 
-    Press each button you want to use and note its scancode from the `MSC_SCAN` event output (e.g., `value ca`). Press `Ctrl+C` when done.
+    Drücken Sie jede Taste, die Sie verwenden möchten, und notieren Sie sich den Scancode aus der Ausgabe des `MSC_SCAN`-Ereignisses (z. B. `value ca`). Drücken Sie `Ctrl+C`, wenn Sie fertig sind.
 
 4.  **Die Keymap-Datei erstellen:**
     Diese Datei ordnet die Scancodes Standard-Tastennamen zu.
@@ -2141,7 +2141,7 @@ Nun führen wir auf dem **Diretta-Host** alle Schritte zur Installation und Konf
 
 7.  **Avahi und Python-Abhängigkeiten auf dem Diretta-Host installieren:**
 
-    **Note:** OPTIONAL – Wenn Sie mehr als einen Diretta-Host in Ihrem Netzwerk haben, stellen Sie bitte sicher, dass diese eindeutige Namen besitzen. Sie können einen Befehl wie den folgenden verwenden, um diesen umzubenennen, bevor Sie fortfahren:
+    **Hinweis:** OPTIONAL – Wenn Sie mehr als einen Diretta-Host in Ihrem Netzwerk haben, stellen Sie bitte sicher, dass diese eindeutige Namen besitzen. Sie können einen Befehl wie den folgenden verwenden, um diesen umzubenennen, bevor Sie fortfahren:
 
     ```bash
     # Optional den Diretta-Host umbenennen, falls dies Ihr zweiter Aufbau im selben Netzwerk ist
@@ -2477,7 +2477,7 @@ sudo sync && sudo reboot
 
 ## 16. Anhang 7: Optionale IRQ- und Thread-Optimierungen
 
-### Part 1: USB-Pfad-Isolierung auf dem Diretta-Target
+### Teil 1: USB-Pfad-Isolierung auf dem Diretta-Target
 Standardmäßig können USB-Interrupts selbst bei isolierten CPU-Kernen immer noch mit den Ressourcen auf den „unruhigen“ Systemkernen (0 und 1) konkurrieren. Dieses Skript identifiziert dynamisch den spezifischen USB-Controller, an den Ihr DAC angeschlossen ist, und heftet (pinnt) dessen Hardware-Interrupts an Ihre isolierten Audiokerne (2 und 3). Beim Raspberry Pi 5 werden die USB-Controller vom RP1-Chip verwaltet, wodurch wir Hardware-Interrupts an bestimmte Kerne leiten können.
 
 **Hinweis:** Diese Optimierung ist beim Raspberry Pi 4 aufgrund hardwareseitig blockierter Interrupts nicht anwendbar.
@@ -2908,12 +2908,12 @@ Der Systemaktualisierungsprozess erfordert eine strikte Reihenfolge, um sicherzu
 1. Starten Sie das AudioLinux-Konfigurationstool, indem Sie `menu` an der Eingabeaufforderung eingeben.
 2. Navigieren Sie zum Menü **Install/Update menu** und wählen Sie **UPDATE System**.
 3. Wählen Sie im selben Menü **Install/Update menu** die Option **UPDATE menu**.
-   *(Hinweis: Sie müssen die E-Mail-Adresse eingeben, die für Ihren AudioLinux-Kauf verwendet wurde, sowie den spezifischen Benutzernamen und das Passwort, die Piero für den Download des AudioLinux-Images bereitgestellt hat).* 
+   *(Hinweis: Sie müssen die E-Mail-Adresse eingeben, die für Ihren AudioLinux-Kauf verwendet wurde, sowie den spezifischen Benutzernamen und das Passwort, die Piero für den Download des AudioLinux-Images bereitgestellt hat).*
 4. Wählen Sie **SELECT/UPDATE kernel**. Wählen Sie die genaue Kernelversion, die zuvor in [**Schritt 4**](#44-run-system-and-menu-updates) empfohlen wurde.
-5. Re-apply the `motd` fix from [**Section 5.1**](#51-pre-configure-the-diretta-host) on the **Host**.
+5. Wenden Sie den `motd`-Fix aus [**Abschnitt 5.1**](#51-pre-configure-the-diretta-host) erneut auf dem **Host** an.
 6. Wenden Sie den `sudoers`-Patch aus [**Abschnitt 7.2**](#72-correct-sudoers-rule-precedence) erneut auf **sowohl** dem Target als auch dem Host an.
 7. Starten Sie zuerst das Target neu, gefolgt vom Host.
-8. Once back online, re-run the "Configure Compatible Compiler Toolchain" script from [**Step 8**](#8-installation-und-konfiguration-der-diretta-software) on **both** the Target and the Host.
+8. Sobald das System wieder online ist, führen Sie das Skript „Configure Compatible Compiler Toolchain“ aus [**Schritt 8**](#8-installation-und-konfiguration-der-diretta-software) sowohl auf dem Target als auch auf dem Host erneut aus.
 9. Führen Sie auf dem **Target** den in [**Abschnitt 8.1**](#81-on-the-diretta-target) beschriebenen Diretta-Installations-/Aktualisierungsschritt aus.
 10. Führen Sie auf dem **Host** den in [**Abschnitt 8.2**](#82-on-the-diretta-host) beschriebenen Diretta-Installations-/Aktualisierungsschritt aus.
 11. Starten Sie zuerst das Target neu, gefolgt vom Host.
