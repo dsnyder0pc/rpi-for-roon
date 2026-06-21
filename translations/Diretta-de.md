@@ -1096,7 +1096,7 @@ I2C_PARAM="dtparam=i2c_arm=on"
 
 # --- I2C aktivieren, indem die Zeile entkommentiert wird, falls sie existiert ---
 if grep -q -F "#$I2C_PARAM" "$BOOT_CONFIG"; then
-  echo "Enabling I2C parameter..."
+  echo "I2C-Parameter wird aktiviert..."
   sudo sed -i -e "s/^#\($I2C_PARAM\)/\1/" "$BOOT_CONFIG"
 fi
 ```
@@ -1940,7 +1940,7 @@ Auf dem **Diretta-Target** erstellen wir einen neuen Benutzer mit sehr eingeschr
         echo "Begrenzungen werden aufgehoben. Volles 10/100/1000-Portfolio wird wiederhergestellt (Standard)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x03f" >/dev/null 2>&1 < /dev/null &
     else
-        echo "Usage: $0 [10|100|1000]"
+        echo "Verwendung: $0 [10|100|1000]"
         exit 1
     fi
     EOT
@@ -2728,7 +2728,7 @@ else
   false
 fi && {
   # 2. System-Netzwerkkonfiguration anwenden
-  echo "Configuring /etc/systemd/network/end0.network..."
+  echo "/etc/systemd/network/end0.network wird konfiguriert..."
   cat <<EOF | sudo tee /etc/systemd/network/end0.network
 [Match]
 Name=end0
@@ -2787,7 +2787,7 @@ else
   false
 fi && {
   # 2. System-Netzwerkkonfiguration anwenden
-  echo "Configuring /etc/systemd/network/end0.network..."
+  echo "/etc/systemd/network/end0.network wird konfiguriert..."
   cat <<EOF | sudo tee /etc/systemd/network/end0.network
 [Match]
 Name=end0

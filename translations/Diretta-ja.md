@@ -1096,7 +1096,7 @@ I2C_PARAM="dtparam=i2c_arm=on"
 
 # --- 設定が存在する場合にコメントアウトを解除してI2Cを有効化する ---
 if grep -q -F "#$I2C_PARAM" "$BOOT_CONFIG"; then
-  echo "Enabling I2C parameter..."
+  echo "I2Cパラメーターを有効にしています..."
   sudo sed -i -e "s/^#\($I2C_PARAM\)/\1/" "$BOOT_CONFIG"
 fi
 ```
@@ -1940,7 +1940,7 @@ source ~/.bashrc
         echo "制限を解除しています。すべての10/100/1000ポートフォリオを復元しています (Standard)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x03f" >/dev/null 2>&1 < /dev/null &
     else
-        echo "Usage: $0 [10|100|1000]"
+        echo "使用法: $0 [10|100|1000]"
         exit 1
     fi
     EOT
@@ -2728,7 +2728,7 @@ else
   false
 fi && {
   # 2. システムネットワーク構成の適用
-  echo "Configuring /etc/systemd/network/end0.network..."
+  echo "/etc/systemd/network/end0.network を設定しています..."
   cat <<EOF | sudo tee /etc/systemd/network/end0.network
 [Match]
 Name=end0
@@ -2787,7 +2787,7 @@ else
   false
 fi && {
   # 2. システムネットワーク構成の適用
-  echo "Configuring /etc/systemd/network/end0.network..."
+  echo "/etc/systemd/network/end0.network を設定しています..."
   cat <<EOF | sudo tee /etc/systemd/network/end0.network
 [Match]
 Name=end0
