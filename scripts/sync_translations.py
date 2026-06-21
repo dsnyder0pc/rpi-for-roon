@@ -175,12 +175,12 @@ def verify_echo_match(src, dst):
     """Check if the echo commands are structurally identical, allowing only string arguments to differ."""
     if not check_variables_match(src, dst):
         return False
-    # Normalize double-quoted and single-quoted strings that do not contain nested quotes
-    src_norm = re.sub(r'echo\s+("[^"]*"|\'[^\']*\')', 'echo <STR>', src)
-    dst_norm = re.sub(r'echo\s+("[^"]*"|\'[^\']*\')', 'echo <STR>', dst)
+    # Normalize double-quoted and single-quoted strings that do not contain nested quotes, allowing optional flags like -e or -n
+    src_norm = re.sub(r'echo\s+((?:-\S+\s+)*)("[^"]*"|\'[^\']*\')', r'echo \1<STR>', src)
+    dst_norm = re.sub(r'echo\s+((?:-\S+\s+)*)("[^"]*"|\'[^\']*\')', r'echo \1<STR>', dst)
     # Perform a second pass for nested contexts (e.g. inside aliases)
-    src_norm = re.sub(r'echo\s+("[^"]*"|\'[^\']*\')', 'echo <STR>', src_norm)
-    dst_norm = re.sub(r'echo\s+("[^"]*"|\'[^\']*\')', 'echo <STR>', dst_norm)
+    src_norm = re.sub(r'echo\s+((?:-\S+\s+)*)("[^"]*"|\'[^\']*\')', r'echo \1<STR>', src_norm)
+    dst_norm = re.sub(r'echo\s+((?:-\S+\s+)*)("[^"]*"|\'[^\']*\')', r'echo \1<STR>', dst_norm)
     return src_norm.strip() == dst_norm.strip()
 
 def verify_read_match(src, dst):
@@ -242,6 +242,7 @@ def verify_translation(src_lines, dst_lines):
         
     errors = 0
     in_code_block = False
+    is_bash_block = True
     
     for i in range(len(src_lines)):
         src = src_lines[i]
@@ -253,26 +254,32 @@ def verify_translation(src_lines, dst_lines):
             if errors > 5: break
             
         if src.strip().startswith("```"):
-            in_code_block = not in_code_block
             if not dst.strip().startswith("```") or src.strip() != dst.strip():
                 print(f"  [Error] Line {i+1}: Code block tag mismatch. SRC={repr(src)}, DST={repr(dst)}")
                 errors += 1
                 if errors > 5: break
+            if not in_code_block:
+                in_code_block = True
+                tag = src.strip()[3:].strip().lower()
+                is_bash_block = ("bash" in tag) or ("sh" in tag) or (tag == "")
+            else:
+                in_code_block = False
                 
-        if in_code_block and not src.strip().startswith("```"):
-            is_src_comment = src.strip().startswith("#")
-            is_dst_comment = dst.strip().startswith("#")
-            if is_src_comment != is_dst_comment:
-                print(f"  [Error] Line {i+1}: Code block comment status mismatch.")
-                errors += 1
-                if errors > 5: break
-                
-            if not is_src_comment:
-                if not verify_codeblock_line(src, dst):
-                    print(f"  [Error] Line {i+1}: Code block command mismatch. SRC={repr(src)}, DST={repr(dst)}")
+        elif in_code_block:
+            if is_bash_block:
+                is_src_comment = src.strip().startswith("#")
+                is_dst_comment = dst.strip().startswith("#")
+                if is_src_comment != is_dst_comment:
+                    print(f"  [Error] Line {i+1}: Code block comment status mismatch.")
                     errors += 1
                     if errors > 5: break
                     
+                if not is_src_comment:
+                    if not verify_codeblock_line(src, dst):
+                        print(f"  [Error] Line {i+1}: Code block command mismatch. SRC={repr(src)}, DST={repr(dst)}")
+                        errors += 1
+                        if errors > 5: break
+                        
         src_space = len(src) - len(src.lstrip())
         dst_space = len(dst) - len(dst.lstrip())
         if src_space != dst_space:
