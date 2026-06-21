@@ -212,10 +212,10 @@ O `machine-id` é um identificador exclusivo para a instalação do SO. Ele **de
 
 ```bash
 echo ""
-echo "Old Machine ID: $(cat /etc/machine-id)"
+echo "ID de máquina antigo: $(cat /etc/machine-id)"
 sudo rm /etc/machine-id
 sudo systemd-machine-id-setup
-echo "New Machine ID: $(cat /etc/machine-id)"
+echo "Novo ID de máquina: $(cat /etc/machine-id)"
 ```
 
 #### 3.2. Configurar Hostnames Exclusivos
@@ -1507,7 +1507,7 @@ cat <<EOD > roon-ir-remote/app_info.json
 EOD
 
 echo ""
-echo "✅ Configuration file 'roon-ir-remote/app_info.json' created successfully."
+echo "✅ Arquivo de configuração 'roon-ir-remote/app_info.json' criado com sucesso."
 
 # --- End of Script ---
 EOF
@@ -1671,11 +1671,11 @@ Se você decidiu que prefere o som com o Modo Purista ativado, torne-o o padrão
 
 ```bash
 echo ""
-echo "- Disabling Purist Mode to ensure a clean state"
+echo "- Desativando o Modo Purista para garantir um estado limpo"
 purist-mode --revert
 
 echo ""
-echo "- Creating the Service to Revert to Standard Mode on Every Boot"
+echo "- Criando o Serviço para Reverter ao Modo Padrão em Cada Inicialização"
 cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-revert-on-boot.service
 [Unit]
 Description=Revert Purist Mode on Boot to Ensure Standard Operation
@@ -1692,7 +1692,7 @@ WantedBy=multi-user.target
 EOT
 
 echo ""
-echo "- Creating the Delayed Auto-Activation Service"
+echo "- Criando o Serviço de Ativação Automática com Atraso"
 cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
 [Unit]
 Description=Activate Purist Mode 60 seconds after boot
@@ -1708,7 +1708,7 @@ WantedBy=multi-user.target
 EOT
 
 echo ""
-echo "- Enabling the new services"
+echo "- Habilitando os novos serviços"
 sudo systemctl daemon-reload
 sudo systemctl enable purist-mode-revert-on-boot.service
 sudo systemctl enable purist-mode-auto.service
@@ -1735,31 +1735,31 @@ menu_wrapper() {
     was_active=true
   fi
 
-  # If Purist Mode was active, temporarily revert it for the menu.
+  # Se o Modo Purista estava ativo, revertê-lo temporariamente para o menu.
   if [ "$was_active" = true ]; then
-    echo "Checking credentials to manage Purist Mode..."
+    echo "Verificando credenciais para gerenciar o Modo Purista..."
     sudo -v
 
-    echo "Temporarily disabling Purist Mode to run menu..."
-    purist-mode --revert > /dev/null 2>&1 # Revert quietly
+    echo "Desativando temporariamente o Modo Purista para executar o menu..."
+    purist-mode --revert > /dev/null 2>&1 # Reverter silenciosamente
   fi
 
-  # Call the original menu command
+  # Chamar o comando de menu original
   /usr/bin/menu
 
-  # If Purist Mode was active before, re-enable it now.
+  # Se o Modo Purista estava ativo antes, reativá-lo agora.
   if [ "$was_active" = true ]; then
-    echo "Re-activating Purist Mode..."
-    purist-mode > /dev/null 2>&1 # Activate quietly
-    echo "Purist Mode is active again."
+    echo "Reativando o Modo Purista..."
+    purist-mode > /dev/null 2>&1 # Ativar silenciosamente
+    echo "O Modo Purista está ativo novamente."
   fi
 }
 
-# Alias the 'menu' command to our new wrapper function
+# Criar um alias do comando 'menu' para a nossa nova função wrapper
 alias menu='menu_wrapper'
-# Aliases to manage the automatic Purist Mode service
-alias purist-mode-auto-enable='echo "Enabling Purist Mode on boot..."; purist-mode; sudo systemctl enable purist-mode-auto.service'
-alias purist-mode-auto-disable='echo "Disabling Purist Mode on boot..."; purist-mode --revert; sudo systemctl disable --now purist-mode-auto.service'
+# Aliases para gerenciar o serviço automático do Modo Purista
+alias purist-mode-auto-enable='echo "Habilitando o Modo Purista na inicialização..."; purist-mode; sudo systemctl enable purist-mode-auto.service'
+alias purist-mode-auto-disable='echo "Desabilitando o Modo Purista na inicialização..."; purist-mode --revert; sudo systemctl disable --now purist-mode-auto.service'
 EOT
 fi
 
@@ -1909,15 +1909,15 @@ No **Diretta Target**, criaremos um novo usuário com permissões muito limitada
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-license-url
     #!/bin/bash
 
-    # This script's only job is to read the cache file created at boot.
+    # A única função deste script é ler o arquivo de cache criado na inicialização.
     readonly CACHE_FILE="/tmp/diretta_license_url.cache"
 
     if [ -s "$CACHE_FILE" ]; then
-        # If the cache exists and has content, display it.
+        # Se o cache existir e tiver conteúdo, exibi-lo.
         cat "$CACHE_FILE"
     else
-        # If not, print a helpful error to stderr and exit.
-        echo "Error: License cache not found or is empty." >&2
+        # Se não, imprimir um erro útil no stderr e sair.
+        echo "Erro: Cache de licença não encontrado ou está vazio." >&2
         exit 1
     fi
     EOT
@@ -1925,22 +1925,22 @@ No **Diretta Target**, criaremos um novo usuário com permissões muito limitada
     # Create script to set the link speed
     cat <<'EOT' | sudo tee /usr/local/bin/pm-set-link
     #!/bin/bash
-    # Profile script to enforce Target physical link boundaries
-    # Refactored using explicit advertisement masks to prevent hardware deadlocks
+    # Script de perfil para impor os limites físicos de link do Target
+    # Refatorado usando máscaras de publicidade explícitas para evitar deadlocks de hardware
 
     SPEED="$1"
 
     if [ "$SPEED" = "10" ]; then
-        echo "Scheduling 10Mbps clamp (Super Purist)..."
+        echo "Agendando limitação de 10 Mbps (Super Purista)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x002" >/dev/null 2>&1 < /dev/null &
     elif [ "$SPEED" = "100" ]; then
-        echo "Scheduling 100Mbps clamp (Purist)..."
+        echo "Agendando limitação de 100 Mbps (Purista)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x008" >/dev/null 2>&1 < /dev/null &
     elif [ "$SPEED" = "1000" ]; then
-        echo "Releasing clamps. Restoring full 10/100/1000 portfolio (Standard)..."
+        echo "Liberando limitações. Restaurando o portfólio completo 10/100/1000 (Padrão)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x03f" >/dev/null 2>&1 < /dev/null &
     else
-        echo "Usage: $0 [10|100|1000]"
+        echo "Uso: $0 [10|100|1000]"
         exit 1
     fi
     EOT
@@ -2613,40 +2613,40 @@ Criaremos um serviço no **Host** que o força a anunciar 10 Mbps ou 100 Mbps Fu
 ```bash
 cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
 #!/bin/bash
-# Set link speed based on the Super Purist web UI flag using safe advertisement masks
+# Definir a velocidade do link com base no indicador Super Purista da interface web, usando máscaras de publicidade seguras
 FLAG_FILE="/home/audiolinux/purist-mode-webui/super_purist.flag"
 INTERFACE="end0"
 
-# CRITICAL: Wait up to 60 seconds for the physical interface to initialize carrier link layer
-echo "Synchronizing with physical link layer..."
+# CRÍTICO: Aguardar até 60 segundos para a interface física inicializar a camada de link do portador
+echo "Sincronizando com a camada de link físico..."
 for i in {1..60}; do
     if [ -f /sys/class/net/$INTERFACE/carrier ] && [ "$(cat /sys/class/net/$INTERFACE/carrier 2>/dev/null)" "==" "1" ]; then
-        echo "Physical link layer detected after $i seconds."
+        echo "Camada de link físico detectada após $i segundos."
         break
     fi
     sleep 1
 done
 
-# Apply the advertisement mask based on flag state
+# Aplicar a máscara de publicidade com base no estado do indicador
 if [ -f "$FLAG_FILE" ]; then
-    echo "Super Purist flag detected. Advertising 10 Mbps Full Duplex..."
+    echo "Indicador Super Purista detectado. Anunciando 10 Mbps Full Duplex..."
     /usr/bin/ethtool -s $INTERFACE advertise 0x002
 else
-    echo "Standard/Purist mode. Advertising up to 100 Mbps Full Duplex..."
+    echo "Modo Padrão/Purista. Anunciando até 100 Mbps Full Duplex..."
     /usr/bin/ethtool -s $INTERFACE advertise 0x00a
 fi
 
-# Platform-specific negotiation handling
+# Tratamento de negociação específico por plataforma
 if grep -q "Raspberry Pi 4" /proc/device-tree/model 2>/dev/null; then
-    echo "Raspberry Pi 4 detected. Triggering mandatory hardware renegotiation pulse..."
+    echo "Raspberry Pi 4 detectado. Disparando pulso obrigatório de renegociação de hardware..."
     /usr/bin/ethtool -r $INTERFACE
 elif grep -q "Raspberry Pi 5" /proc/device-tree/model 2>/dev/null; then
-    echo "Raspberry Pi 5 detected. Internal phylib automatic pulse relied upon; skipping manual reset."
+    echo "Raspberry Pi 5 detectado. Pulso automático interno do phylib utilizado; ignorando reset manual."
 else
     /usr/bin/ethtool -r $INTERFACE || true
 fi
 
-echo "Link speed policy successfully finalized."
+echo "Política de velocidade do link finalizada com sucesso."
 EOT
 sudo chmod +x /usr/local/bin/set-link-speed.sh
 

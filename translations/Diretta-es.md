@@ -1909,15 +1909,15 @@ En el **Diretta Target**, crearemos un nuevo usuario con permisos muy limitados.
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-license-url
     #!/bin/bash
 
-    # This script's only job is to read the cache file created at boot.
+    # La única función de este script es leer el archivo de caché creado en el arranque.
     readonly CACHE_FILE="/tmp/diretta_license_url.cache"
 
     if [ -s "$CACHE_FILE" ]; then
-        # If the cache exists and has content, display it.
+        # Si la caché existe y tiene contenido, mostrarlo.
         cat "$CACHE_FILE"
     else
-        # If not, print a helpful error to stderr and exit.
-        echo "Error: License cache not found or is empty." >&2
+        # Si no, imprimir un error útil en stderr y salir.
+        echo "Error: La caché de la licencia no se encontró o está vacía." >&2
         exit 1
     fi
     EOT
@@ -1925,22 +1925,22 @@ En el **Diretta Target**, crearemos un nuevo usuario con permisos muy limitados.
     # Crear script para establecer la velocidad del enlace
     cat <<'EOT' | sudo tee /usr/local/bin/pm-set-link
     #!/bin/bash
-    # Profile script to enforce Target physical link boundaries
-    # Refactored using explicit advertisement masks to prevent hardware deadlocks
+    # Script de perfil para hacer cumplir los límites de enlace físico del Target
+    # Refactorizado usando máscaras de publicidad explícitas para evitar bloqueos de hardware
 
     SPEED="$1"
 
     if [ "$SPEED" = "10" ]; then
-        echo "Scheduling 10Mbps clamp (Super Purist)..."
+        echo "Programando limitación de 10 Mbps (Super Purista)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x002" >/dev/null 2>&1 < /dev/null &
     elif [ "$SPEED" = "100" ]; then
-        echo "Scheduling 100Mbps clamp (Purist)..."
+        echo "Programando limitación de 100 Mbps (Purista)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x008" >/dev/null 2>&1 < /dev/null &
     elif [ "$SPEED" = "1000" ]; then
-        echo "Releasing clamps. Restoring full 10/100/1000 portfolio (Standard)..."
+        echo "Liberando limitaciones. Restaurando el portafolio completo 10/100/1000 (Estándar)..."
         /usr/bin/sh -c "sleep 1 && sudo /usr/bin/ethtool -s end0 advertise 0x03f" >/dev/null 2>&1 < /dev/null &
     else
-        echo "Usage: $0 [10|100|1000]"
+        echo "Uso: $0 [10|100|1000]"
         exit 1
     fi
     EOT
@@ -2613,40 +2613,40 @@ Crearemos un servicio en el **Host** que lo obligue a anunciar ya sea 10 Mbps o 
 ```bash
 cat <<'EOT' | sudo tee /usr/local/bin/set-link-speed.sh
 #!/bin/bash
-# Set link speed based on the Super Purist web UI flag using safe advertisement masks
+# Establecer la velocidad del enlace según el indicador Super Purista de la interfaz web, usando máscaras de publicidad seguras
 FLAG_FILE="/home/audiolinux/purist-mode-webui/super_purist.flag"
 INTERFACE="end0"
 
-# CRITICAL: Wait up to 60 seconds for the physical interface to initialize carrier link layer
-echo "Synchronizing with physical link layer..."
+# CRÍTICO: Esperar hasta 60 segundos para que la interfaz física inicialice la capa de enlace del portador
+echo "Sincronizando con la capa de enlace físico..."
 for i in {1..60}; do
     if [ -f /sys/class/net/$INTERFACE/carrier ] && [ "$(cat /sys/class/net/$INTERFACE/carrier 2>/dev/null)" "==" "1" ]; then
-        echo "Physical link layer detected after $i seconds."
+        echo "Capa de enlace físico detectada tras $i segundos."
         break
     fi
     sleep 1
 done
 
-# Apply the advertisement mask based on flag state
+# Aplicar la máscara de publicidad según el estado del indicador
 if [ -f "$FLAG_FILE" ]; then
-    echo "Super Purist flag detected. Advertising 10 Mbps Full Duplex..."
+    echo "Indicador Super Purista detectado. Anunciando 10 Mbps Full Duplex..."
     /usr/bin/ethtool -s $INTERFACE advertise 0x002
 else
-    echo "Standard/Purist mode. Advertising up to 100 Mbps Full Duplex..."
+    echo "Modo Estándar/Purista. Anunciando hasta 100 Mbps Full Duplex..."
     /usr/bin/ethtool -s $INTERFACE advertise 0x00a
 fi
 
-# Platform-specific negotiation handling
+# Gestión de negociación específica por plataforma
 if grep -q "Raspberry Pi 4" /proc/device-tree/model 2>/dev/null; then
-    echo "Raspberry Pi 4 detected. Triggering mandatory hardware renegotiation pulse..."
+    echo "Raspberry Pi 4 detectado. Iniciando pulso obligatorio de renegociación de hardware..."
     /usr/bin/ethtool -r $INTERFACE
 elif grep -q "Raspberry Pi 5" /proc/device-tree/model 2>/dev/null; then
-    echo "Raspberry Pi 5 detected. Internal phylib automatic pulse relied upon; skipping manual reset."
+    echo "Raspberry Pi 5 detectado. Se utiliza el pulso automático interno de phylib; omitiendo reinicio manual."
 else
     /usr/bin/ethtool -r $INTERFACE || true
 fi
 
-echo "Link speed policy successfully finalized."
+echo "Política de velocidad del enlace finalizada correctamente."
 EOT
 sudo chmod +x /usr/local/bin/set-link-speed.sh
 
@@ -2666,7 +2666,7 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOT
 
-echo "Enable and start the service:"
+echo "Habilitar e iniciar el servicio:"
 sudo systemctl daemon-reload
 sudo systemctl enable --now limit-speed-100m.service
 ```
@@ -2718,12 +2718,12 @@ Conéctese por SSH al Target (`diretta-target`) y pegue el siguiente bloque.
 echo "Probando la capacidad del enlace..."
 if ping -c 1 -w 1 -M "do" -s 8972 host &>/dev/null; then
   NEW_MTU=9000
-  echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
+  echo "ÉXITO: Tramas Jumbo completas (MTU 9000) admitidas."
 elif ping -c 1 -w 1 -M "do" -s 2004 host &>/dev/null; then
   NEW_MTU=2032
-  echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
+  echo "ÉXITO: Tramas Jumbo pequeñas (MTU 2032) admitidas."
 else
-  echo "FAIL: Link cannot support Jumbo Frames. Reverting to safe defaults."
+  echo "FALLO: El enlace no admite tramas Jumbo. Revirtiendo a los valores predeterminados seguros."
   sudo ip link set end0 mtu 1500
   false
 fi && {
@@ -2758,7 +2758,7 @@ EOF
     echo "EtherMTU=2032" | sudo tee -a $CONF
   fi
   sudo systemctl restart diretta_alsa_target
-  echo "DONE: Target optimization complete."
+  echo "LISTO: Optimización del Target completada."
 }
 
 ```
@@ -2777,12 +2777,12 @@ sleep 2
 
 if ping -c 1 -w 1 -M "do" -s 8972 target &>/dev/null; then
   NEW_MTU=9000
-  echo "SUCCESS: Full Jumbo Frames (9000 MTU) supported."
+  echo "ÉXITO: Tramas Jumbo completas (MTU 9000) admitidas."
 elif ping -c 1 -w 1 -M "do" -s 2004 target &>/dev/null; then
   NEW_MTU=2032
-  echo "SUCCESS: Baby Jumbo Frames (2032 MTU) supported."
+  echo "ÉXITO: Tramas Jumbo pequeñas (MTU 2032) admitidas."
 else
-  echo "FAIL: Link cannot support Jumbo Frames. Reverting to safe defaults."
+  echo "FALLO: El enlace no admite tramas Jumbo. Revirtiendo a los valores predeterminados seguros."
   sudo ip link set end0 mtu 1500
   false
 fi && {
@@ -2809,17 +2809,17 @@ EOF
 
   # Optimización condicional de CycleTime e InfoCycle
   if [ "$NEW_MTU" -eq 9000 ]; then
-    echo "Optimization: Full Jumbo Frames detected. Relaxing CycleTime to 1000us."
+    echo "Optimización: Tramas Jumbo completas detectadas. Relajando CycleTime a 1000us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=1000/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=100000/' /opt/diretta-alsa/setting.inf
   else
-    echo "Optimization: Baby Jumbo Frames detected. Setting CycleTime to 700us."
+    echo "Optimización: Tramas Jumbo pequeñas detectadas. Estableciendo CycleTime a 700us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=70000/' /opt/diretta-alsa/setting.inf
   fi
 
   sudo systemctl restart diretta_alsa
-  echo "DONE: Host optimization complete."
+  echo "LISTO: Optimización del Host completada."
 }
 ```
 
