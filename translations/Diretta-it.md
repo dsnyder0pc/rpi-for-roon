@@ -93,6 +93,7 @@ Se vi trovate negli Stati Uniti, prevedete una spesa di circa $320 (più tasse e
 17. [Appendice 8: Velocità di rete Purist opzionale](#17-appendice-8-velocità-di-rete-purist-opzionale)
 18. [Appendice 9: Ottimizzazione Jumbo Frames opzionale](#18-appendice-9-ottimizzazione-jumbo-frames-opzionale)
 19. [Appendice 10: Aggiornamenti di sistema opzionali](#19-appendice-10-aggiornamenti-di-sistema-opzionali)
+20. [Appendice 11: Integrazione UPnP opzionale](#20-appendice-11-integrazione-upnp-opzionale)
 
 ---
 
@@ -2955,3 +2956,103 @@ sudo sync && sudo reboot
 ```
 
 ---
+
+## 20. Appendice 11: Integrazione UPnP opzionale
+
+**Obiettivo:** Abilitare le funzionalità di rendering multimediale UPnP/DLNA sul Diretta Host utilizzando MPD (Music Player Daemon) e UPMPDCLI, consentendo la compatibilità con punti di controllo e lettori a monte come Audirvāna, mconnect o BubbleUPnP.
+
+Questa configurazione consente al Diretta Host di ricevere flussi di rete UPnP standard e instradarli in modo pulito nel livello del driver ALSA di Diretta sincronizzato per la trasmissione attraverso il collegamento punto a punto al Target.
+
+> ---
+> ### ⚠️ Nota sulla topologia: Eseguire solo sul Host
+>
+> Tutti i passaggi di installazione e configurazione dettagliati in questa appendice devono essere eseguiti esclusivamente sul **Diretta Host**. Il Diretta Target rimane un endpoint di protocollo minimalista e non richiede regolazioni per la riproduzione UPnP.
+> ---
+
+### Passaggio 1: Installare e abilitare MPD e UPMPDCLI
+
+1. Stabilire una connessione SSH e accedere al **Diretta Host**.
+2. Avviare lo strumento di configurazione AudioLinux eseguendo:
+   ```bash
+   menu
+   ```
+3. Navigare nel menu **INSTALL/UPDATE**.
+4. Selezionare **INSTALL/UPDATE MPD** e attendere il completamento dello script di installazione.
+5. Tornare alla schermata di aggiornamento e selezionare **INSTALL/UPDATE UPMPDCLI**, consentendo il completamento della configurazione.
+6. Tornare al **Menu principale**, selezionare il **Menu audio** e immettere **SHOW audio service**.
+7. Confermare che sia **mpd** che **upmpdcli** siano attivi. Se uno dei servizi manca dal gruppo abilitato, selezionare rispettivamente **MPD enable/disable** o **UPMPDCLI enable/disable** per attivarli.
+8. Uscire dal sistema di menu per tornare alla shell del terminale.
+
+### Passaggio 2: Configurare l'uscita audio di MPD
+
+Per indirizzare il flusso audio decodificato da MPD nella pipeline di trasporto di Diretta, aggiungere i parametri di uscita ALSA personalizzati in fondo al file di configurazione di MPD:
+
+```bash
+cat <<'EOT' | sudo tee -a /etc/mpd.conf
+
+# === Custom Diretta ALSA Audio Output ===
+audio_output {
+    type "alsa"
+    name "DIRETTA"
+    device "hw:0,0"
+    auto_resample "no"
+    auto_format "no"
+    dop "yes"
+}
+EOT
+```
+
+### Passaggio 3: Configurare il renderer UPMPDCLI e i parametri di rete
+
+Aggiornare i parametri di configurazione di UPMPDCLI per definire la corretta configurazione dell'interfaccia di rete a monte e assegnare un identificativo descrittivo per il rilevamento da parte delle applicazioni di controllo:
+
+```bash
+# 1. Dynamically discover the active LAN uplink interface
+UPNP_IFACE=$(ip route show default | awk '{print $5}')
+
+# 2. Verify an interface was found before making changes
+if [ -n "$UPNP_IFACE" ]; then
+    echo "Found active UPnP uplink interface: $UPNP_IFACE"
+    if ! grep -q "# === Custom UPnP Network & Renderer Parameters ===" /etc/upmpdcli.conf; then
+        echo "Applying custom UPnP configuration..."
+        cat <<EOT | sudo tee -a /etc/upmpdcli.conf
+
+# === Custom UPnP Network & Renderer Parameters ===
+
+# Network interface(s) to use for UPnP (Dynamically Discovered)
+upnpiface = ${UPNP_IFACE}
+
+# Media Renderer parameters
+# "Friendly Name" for the Media Renderer.
+friendlyname = UpMpd-%h
+
+# Specific friendly name for the UPnP/AV Media Renderer.
+avfriendlyname = DIRETTA
+EOT
+    else
+        echo "Configuration already exists in /etc/upmpdcli.conf. Updating interface name if changed..."
+        sudo sed -i "s/^upnpiface = .*/upnpiface = ${UPNP_IFACE}/" /etc/upmpdcli.conf
+    fi
+else
+    echo "ERROR: Could not programmatically determine the uplink interface." >&2
+fi
+```
+
+### Passaggio 4: Riavviare i servizi
+
+Eseguire un ricaricamento di systemd e riavviare entrambi i daemon in background per forzare il sistema a inizializzare le sostituzioni di configurazione:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart mpd
+sudo systemctl restart upmpdcli
+```
+
+> ---
+> ### ✅ Punto di controllo: Verificare il funzionamento di UPnP
+>
+> Aprire la piattaforma di controllo UPnP/DLNA scelta su un dispositivo remoto connesso alla rete. Il sistema dovrebbe rilevare l'endpoint, mostrando **DIRETTA** como zona di riproduzione attiva e selezionabile.
+>
+> Se si dispone di UPnP installato e abilitato, questo è un buon momento per tornare all'[**Appendice 5**](#14-appendice-5-verifiche-dello-stato-del-sistema) e eseguire il comando universale di **Verifica dello Stato del Sistema** sia sull'Host che sul Target.
+>
+> ---

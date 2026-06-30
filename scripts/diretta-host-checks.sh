@@ -209,6 +209,19 @@ run_appendix9_checks() {
         check "CycleTime is optimized" "false"
     fi
 }
+run_appendix11_checks() {
+    header "Appendix 11" "Optional UPnP Integration"
+    check "'mpd' package is installed" "pacman -Q mpd"
+    check "'upmpdcli' package is installed" "pacman -Q upmpdcli"
+    check "'mpd' service is enabled" "systemctl is-enabled mpd.service"
+    check "'mpd' service is active" "systemctl is-active mpd.service"
+    check "'upmpdcli' service is enabled" "systemctl is-enabled upmpdcli.service"
+    check "'upmpdcli' service is active" "systemctl is-active upmpdcli.service"
+    check "MPD ALSA output device is configured for Diretta ('hw:0,0')" "grep -q 'device \"hw:0,0\"' /etc/mpd.conf"
+    check "UPMPDCLI avfriendlyname is set to 'DIRETTA'" "grep -q '^avfriendlyname = DIRETTA' /etc/upmpdcli.conf"
+    check "UPMPDCLI friendlyname is configured" "grep -q '^friendlyname = ' /etc/upmpdcli.conf"
+    check "UPMPDCLI network interface is configured" "grep -q '^upnpiface = ' /etc/upmpdcli.conf"
+}
 
 # --- Main Script ---
 if [ "$EUID" -ne 0 ]; then echo -e "${C_RED}Please run this script with sudo or as root.${C_RESET}"; exit 1; fi
@@ -318,6 +331,7 @@ check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.
 check_optional_section "grep -q '^CpuSend=[0-9]' /opt/diretta-alsa/setting.inf 2>/dev/null" "run_appendix7_checks" "Appendix 7 (Diretta Tuning)"
 check_optional_section "systemctl is-enabled limit-speed-100m.service" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 check_optional_section "grep -q '^FlexCycle=enable' /opt/diretta-alsa/setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
+check_optional_section "systemctl is-enabled upmpdcli.service 2>/dev/null" "run_appendix11_checks" "Appendix 11 (UPnP Integration)"
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}"
 

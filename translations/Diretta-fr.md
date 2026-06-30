@@ -91,8 +91,9 @@ Si vous êtes situé aux États-Unis, comptez environ 320 $ (hors taxes et frais
 15. [Annexe 6 : Optimisation optionnelle des performances en temps réel](#15-annexe-6--optimisation-optionnelle-des-performances-en-temps-réel)
 16. [Annexe 7 : Optimisations optionnelles des IRQ et des threads](#16-annexe-7--optimisations-optionnelles-des-irq-et-des-threads)
 17. [Annexe 8 : Vitesses réseau puristes optionnelles](#17-annexe-8--vitesses-réseau-puristes-optionnelles)
-18. [Annexe 9 : Optimisation optionnelle des trames Jumbo](#18-annexe-9--optimisation-optionnelle-des-jumbo-frames)
-19. [Annexe 10 : Mises à jour système optionnelles](#19-annexe-10--facultatif--mises-à-jour-du-système)
+18. [Annexe 9 : Optimisation optionnelle des Jumbo Frames](#18-annexe-9--optimisation-optionnelle-des-jumbo-frames)
+19. [Annexe 10 : Mises à jour système optionnelles](#19-annexe-10--mises-à-jour-système-optionnelles)
+20. [Annexe 11 : Intégration UPnP facultative](#20-annexe-11--intégration-upnp-facultative)
 
 ---
 
@@ -2839,7 +2840,7 @@ sudo sync && sudo reboot
 >
 > ---
 
-## 19. Annexe 10 : Facultatif : Mises à jour du système
+## 19. Annexe 10 : Mises à jour système optionnelles
 Cette section fournit des conseils sur l'application des mises à jour au matériel Raspberry Pi, au système d'exploitation AudioLinux et à la pile logicielle Diretta.
 
 #### **Partie 1 :** Mettre à jour le chargeur de démarrage (bootloader) du Raspberry Pi (facultatif)
@@ -2955,3 +2956,103 @@ sudo sync && sudo reboot
 ```
 
 ---
+
+## 20. Annexe 11 : Intégration UPnP facultative
+
+**Objectif :** Activer les capacités de rendu multimédia UPnP/DLNA sur le Host Diretta à l'aide de MPD (Music Player Daemon) et UPMPDCLI, permettant la compatibilité avec les points de contrôle et les lecteurs en amont tels qu'Audirvāna, mconnect ou BubbleUPnP.
+
+Cette configuration permet au Host Diretta de recevoir des flux réseau UPnP standard et de les acheminer proprement vers la couche pilote ALSA Diretta synchronisée pour une transmission via la liaison point à point vers le Target.
+
+> ---
+> ### ⚠️ Note sur la topologie : À effectuer sur le Host uniquement
+>
+> Toutes les étapes d'installation et de configuration détaillées dans cette annexe doivent être exécutées exclusivement sur le **Host Diretta**. Le Target Diretta reste un point de terminaison de protocole minimaliste et ne nécessite aucun ajustement pour la lecture UPnP.
+> ---
+
+### Étape 1 : Installer et activer MPD et UPMPDCLI
+
+1. Établissez une connexion SSH et connectez-vous au **Host Diretta**.
+2. Lancez l'outil de configuration d'AudioLinux en exécutant :
+   ```bash
+   menu
+   ```
+3. Accédez au menu **INSTALL/UPDATE**.
+4. Sélectionnez **INSTALL/UPDATE MPD** et laissez le script d'installation se terminer.
+5. Revenez à l'écran de mise à jour et sélectionnez **INSTALL/UPDATE UPMPDCLI**, puis laissez la configuration se terminer.
+6. Revenez au **menu principal**, sélectionnez le menu **Audio**, puis saisissez **SHOW audio service**.
+7. Confirmez que **mpd** et **upmpdcli** sont tous deux actifs. Si l'un des services est manquant dans le groupe activé, sélectionnez respectivement **MPD enable/disable** ou **UPMPDCLI enable/disable** pour l'activer.
+8. Quittez le système de menus pour revenir au shell du terminal.
+
+### Étape 2 : Configurer la sortie audio de MPD
+
+Pour diriger le flux audio décodé de MPD vers le pipeline de transport Diretta, ajoutez les paramètres de sortie ALSA personnalisés au bas du fichier de configuration MPD :
+
+```bash
+cat <<'EOT' | sudo tee -a /etc/mpd.conf
+
+# === Custom Diretta ALSA Audio Output ===
+audio_output {
+    type "alsa"
+    name "DIRETTA"
+    device "hw:0,0"
+    auto_resample "no"
+    auto_format "no"
+    dop "yes"
+}
+EOT
+```
+
+### Étape 3 : Configurer le moteur de rendu UPMPDCLI et les paramètres réseau
+
+Mettez à jour les paramètres de configuration d'UPMPDCLI pour définir la configuration correcte de l'interface réseau en amont et attribuer un identifiant convivial pour la découverte par vos applications de contrôle :
+
+```bash
+# 1. Dynamically discover the active LAN uplink interface
+UPNP_IFACE=$(ip route show default | awk '{print $5}')
+
+# 2. Verify an interface was found before making changes
+if [ -n "$UPNP_IFACE" ]; then
+    echo "Found active UPnP uplink interface: $UPNP_IFACE"
+    if ! grep -q "# === Custom UPnP Network & Renderer Parameters ===" /etc/upmpdcli.conf; then
+        echo "Applying custom UPnP configuration..."
+        cat <<EOT | sudo tee -a /etc/upmpdcli.conf
+
+# === Custom UPnP Network & Renderer Parameters ===
+
+# Network interface(s) to use for UPnP (Dynamically Discovered)
+upnpiface = ${UPNP_IFACE}
+
+# Media Renderer parameters
+# "Friendly Name" for the Media Renderer.
+friendlyname = UpMpd-%h
+
+# Specific friendly name for the UPnP/AV Media Renderer.
+avfriendlyname = DIRETTA
+EOT
+    else
+        echo "Configuration already exists in /etc/upmpdcli.conf. Updating interface name if changed..."
+        sudo sed -i "s/^upnpiface = .*/upnpiface = ${UPNP_IFACE}/" /etc/upmpdcli.conf
+    fi
+else
+    echo "ERROR: Could not programmatically determine the uplink interface." >&2
+fi
+```
+
+### Étape 4 : Redémarrer les services
+
+Exécutez une recharge systemd et redémarrez les deux démons d'arrière-plan pour forcer le système à initialiser vos surcharges de configuration :
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart mpd
+sudo systemctl restart upmpdcli
+```
+
+> ---
+> ### ✅ Point de contrôle : Vérifier le fonctionnement d'UPnP
+>
+> Ouvrez la plateforme de contrôle UPnP/DLNA de votre choix sur un appareil distant connecté au réseau. Votre système devrait découvrir le point de terminaison, affichant **DIRETTA** comme zone de lecture active et sélectionnable.
+>
+> Si vous avez installé et activé UPnP, c'est le bon moment pour revenir à l'[**Annexe 5**](#14-annexe-5--system-health-checks-vérifications-de-létat-du-système) et exécuter la commande universelle **System Health Check** sur le Host et le Target.
+>
+> ---

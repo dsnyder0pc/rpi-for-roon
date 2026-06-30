@@ -91,8 +91,9 @@ Wenn Sie sich in den USA befinden, müssen Sie mit etwa 320 $ rechnen (zuzüglic
 15. [Anhang 6: Optionales Echtzeit-Leistungstuning](#15-anhang-6-optionales-echtzeit-leistungstuning)
 16. [Anhang 7: Optionale IRQ- und Thread-Optimierungen](#16-anhang-7-optionale-irq--und-thread-optimierungen)
 17. [Anhang 8: Optionale puristische Netzwerkgeschwindigkeiten](#17-anhang-8-optionale-puristische-netzwerkgeschwindigkeiten)
-18. [Anhang 9: Optionale Jumbo-Frames-Optimierung](#18-anhang-9-optional-jumbo-frames-optimierung)
-19. [Anhang 10: Optionale System-Updates](#19-anhang-10-optional-system-updates)
+18. [Anhang 9: Optionale Jumbo-Frames-Optimierung](#18-anhang-9-optionale-jumbo-frames-optimierung)
+19. [Anhang 10: Optionale System-Updates](#19-anhang-10-optionale-system-updates)
+20. [Anhang 11: Optionale UPnP-Integration](#20-anhang-11-optionale-upnp-integration)
 
 ---
 
@@ -2686,7 +2687,7 @@ sudo systemctl enable --now limit-speed-100m.service
 >
 > ---
 
-## 18. Anhang 9: Optional: Jumbo-Frames-Optimierung
+## 18. Anhang 9: Optionale Jumbo-Frames-Optimierung
 Dieser Abschnitt optimiert den Transport für hohe Bandbreiteneffizienz.
 
 #### **Schritt 1:** Schnittstellen vorbereiten
@@ -2839,7 +2840,7 @@ sudo sync && sudo reboot
 >
 > ---
 
-## 19. Anhang 10: Optional: System-Updates
+## 19. Anhang 10: Optionale System-Updates
 Dieser Abschnitt bietet Anleitungen zum Anwenden von Updates auf die Raspberry Pi-Hardware, das AudioLinux-Betriebssystem und den Diretta-Software-Stack.
 
 #### **Teil 1:** Aktualisierung des Raspberry Pi-Bootloaders (Optional)
@@ -2955,3 +2956,103 @@ sudo sync && sudo reboot
 ```
 
 ---
+
+## 20. Anhang 11: Optionale UPnP-Integration
+
+**Ziel:** Aktivieren Sie die UPnP/DLNA-Media-Renderer-Funktionen auf dem Diretta-Host mithilfe von MPD (Music Player Daemon) und UPMPDCLI, um die Kompatibilität mit vorgeschalteten Kontrollpunkten und Playern wie Audirvāna, mconnect oder BubbleUPnP zu ermöglichen.
+
+Diese Konfiguration ermöglicht es dem Diretta-Host, Standard-UPnP-Netzwerk-Streams zu empfangen und sie sauber in die synchronisierte Diretta-ALSA-Treiberschicht für die Übertragung über die Point-to-Point-Verbindung zum Target zu leiten.
+
+> ---
+> ### ⚠️ Topologie-Hinweis: Nur auf dem Host ausführen
+>
+> Alle in diesem Anhang beschriebenen Installations- und Konfigurationsschritte müssen ausschließlich auf dem **Diretta-Host** ausgeführt werden. Das Diretta-Target bleibt ein minimalistischer Protokoll-Endpunkt und erfordert keine Anpassungen für die UPnP-Wiedergabe.
+> ---
+
+### Schritt 1: MPD und UPMPDCLI installieren und aktivieren
+
+1. Stellen Sie eine SSH-Verbindung her und melden Sie sich auf dem **Diretta-Host** an.
+2. Starten Sie das AudioLinux-Konfigurationswerkzeug durch Ausführen von:
+   ```bash
+   menu
+   ```
+3. Navigieren Sie zum **INSTALL/UPDATE-Menü**.
+4. Wählen Sie **INSTALL/UPDATE MPD** und lassen Sie das Installationsskript abschließen.
+5. Kehren Sie zum Update-Bildschirm zurück, wählen Sie **INSTALL/UPDATE UPMPDCLI** und lassen Sie die Einrichtung abschließen.
+6. Kehren Sie zum **Hauptmenü** zurück, wählen Sie das **Audio-Menü** und rufen Sie **SHOW audio service** auf.
+7. Bestätigen Sie, dass sowohl **mpd** als auch **upmpdcli** aktiv sind. Wenn ein Dienst in der aktivierten Gruppe fehlt, wählen Sie **MPD enable/disable** bzw. **UPMPDCLI enable/disable**, um sie zu aktivieren.
+8. Verlassen Sie das Menüsystem, um zur Terminal-Shell zurückzukehren.
+
+### Schritt 2: MPD-Audioausgabe konfigurieren
+
+Um den decodierten Audiostream von MPD in die Diretta-Transportpipeline zu leiten, hängen Sie die benutzerdefinierten ALSA-Ausgabeparameter unten an die MPD-Konfigurationsdatei an:
+
+```bash
+cat <<'EOT' | sudo tee -a /etc/mpd.conf
+
+# === Custom Diretta ALSA Audio Output ===
+audio_output {
+    type "alsa"
+    name "DIRETTA"
+    device "hw:0,0"
+    auto_resample "no"
+    auto_format "no"
+    dop "yes"
+}
+EOT
+```
+
+### Schritt 3: UPMPDCLI-Renderer und Netzwerkparameter konfigurieren
+
+Aktualisieren Sie die UPMPDCLI-Konfigurationsparameter, um die korrekte Upstream-Netzwerkschnittstelle zu definieren und eine benutzerfreundliche Kennung für die Erkennung durch Ihre Steuerungsanwendungen zuzuweisen:
+
+```bash
+# 1. Die aktive LAN-Uplink-Schnittstelle dynamisch ermitteln
+UPNP_IFACE=$(ip route show default | awk '{print $5}')
+
+# 2. Vor dem Vornehmen von Änderungen überprüfen, ob eine Schnittstelle gefunden wurde
+if [ -n "$UPNP_IFACE" ]; then
+    echo "Found active UPnP uplink interface: $UPNP_IFACE"
+    if ! grep -q "# === Custom UPnP Network & Renderer Parameters ===" /etc/upmpdcli.conf; then
+        echo "Applying custom UPnP configuration..."
+        cat <<EOT | sudo tee -a /etc/upmpdcli.conf
+
+# === Custom UPnP Network & Renderer Parameters ===
+
+# Network interface(s) to use for UPnP (Dynamically Discovered)
+upnpiface = ${UPNP_IFACE}
+
+# Media Renderer parameters
+# "Friendly Name" for the Media Renderer.
+friendlyname = UpMpd-%h
+
+# Specific friendly name for the UPnP/AV Media Renderer.
+avfriendlyname = DIRETTA
+EOT
+    else
+        echo "Configuration already exists in /etc/upmpdcli.conf. Updating interface name if changed..."
+        sudo sed -i "s/^upnpiface = .*/upnpiface = ${UPNP_IFACE}/" /etc/upmpdcli.conf
+    fi
+else
+    echo "ERROR: Could not programmatically determine the uplink interface." >&2
+fi
+```
+
+### Schritt 4: Dienste neu starten
+
+Führen Sie einen Systemd-Reload durch und starten Sie beide Hintergrund-Daemons neu, um das System zur Initialisierung Ihrer Konfigurations-Überschreibungen zu zwingen:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart mpd
+sudo systemctl restart upmpdcli
+```
+
+> ---
+> ### ✅ Kontrollpunkt: UPnP-Betrieb überprüfen
+>
+> Öffnen Sie die von Ihnen gewählte UPnP/DLNA-Steuerungsplattform auf einem mit dem Netzwerk verbundenen Remote-Gerät. Ihr System sollte den Endpunkt erkennen und **DIRETTA** als aktive, auswählbare Wiedergabezone anzeigen.
+>
+> Wenn Sie UPnP installiert und aktiviert haben, ist jetzt ein guter Zeitpunkt, zu [**Anhang 5**](#14-anhang-5-system-gesundheitschecks) zurückzukehren und den universellen Befehl **System-Gesundheitscheck** sowohl auf dem Host als auch auf dem Target auszuführen.
+>
+> ---
