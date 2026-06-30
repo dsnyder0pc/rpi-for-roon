@@ -151,7 +151,11 @@ run_appendix7_checks() {
     check "Diretta 'CpuOther' pinned to Core 3" "grep -q '^CpuOther=3' $CONFIG"
     check "Diretta 'CPUFLOW' optimization enabled" "grep -q '^CPUFLOW=3' $CONFIG"
     check "Diretta 'ScanOnlineStop' is enabled" "grep -q '^ScanOnlineStop=enable' $CONFIG"
-    check "ThredMode bitmask activates Critical Priority and Core Pinning" "perl -F= -ane 'if(/^ThredMode=/){\$f=1; exit((int(\$F[1])&0x11)==0x11?0:1)} END{exit 1 if !\$f}' $CONFIG"
+    if is_kernel_6_18_or_newer; then
+        check "ThredMode bitmask activates Core Pinning (without Critical Priority to prevent deadlock)" "perl -F= -ane 'if(/^ThredMode=/){\$f=1; exit((int(\$F[1])&0x11)==0x10?0:1)} END{exit 1 if !\$f}' $CONFIG"
+    else
+        check "ThredMode bitmask activates Core Pinning" "perl -F= -ane 'if(/^ThredMode=/){\$f=1; exit((int(\$F[1])&0x10)==0x10?0:1)} END{exit 1 if !\$f}' $CONFIG"
+    fi
 }
 run_appendix8_checks() {
     header "Appendix 8" "Optional: Purist 100Mbps Network Mode"

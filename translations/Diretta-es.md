@@ -2511,7 +2511,7 @@ Con las optimizaciones del kernel en tiempo real aplicadas, el Diretta Host ahor
     ScanOnlineStop=enable
     ScanInterval=
     TargetProfileLimitTime=200
-    ThredMode=17
+    ThredMode=16
     InfoCycle=51400
     FlexCycle=disable
     CycleTime=514
