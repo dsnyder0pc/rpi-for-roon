@@ -152,7 +152,7 @@ run_appendix7_checks() {
     check "Diretta 'CPUFLOW' optimization enabled" "grep -q '^CPUFLOW=3' $CONFIG"
     check "Diretta 'ScanOnlineStop' is enabled" "grep -q '^ScanOnlineStop=enable' $CONFIG"
     if is_kernel_6_18_or_newer; then
-        check "ThredMode bitmask activates Core Pinning (without Critical Priority to prevent deadlock)" "perl -F= -ane 'if(/^ThredMode=/){\$f=1; exit((int(\$F[1])&0x11)==0x10?0:1)} END{exit 1 if !\$f}' $CONFIG"
+        check "ThredMode bitmask activates Core Pinning (no Critical Priority)" "perl -F= -ane 'if(/^ThredMode=/){\$f=1; exit((int(\$F[1])&0x11)==0x10?0:1)} END{exit 1 if !\$f}' $CONFIG"
     else
         check "ThredMode bitmask activates Core Pinning" "perl -F= -ane 'if(/^ThredMode=/){\$f=1; exit((int(\$F[1])&0x10)==0x10?0:1)} END{exit 1 if !\$f}' $CONFIG"
     fi
