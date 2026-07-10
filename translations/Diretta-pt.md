@@ -138,6 +138,8 @@ Uma lista completa de materiais é fornecida abaixo. Embora outras partes possam
 **Opcional, mas útil para solução de problemas:**
 * 1 x [Cabo Micro-HDMI para HDMI Padrão (A/M), 2m, Branco](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Teclado Oficial do Raspberry Pi - Vermelho/Branco](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
+* 1 x [Mouse Oficial do Raspberry Pi - Vermelho/Branco](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)
+* 1 x [Monitor Raspberry Pi - Vermelho/Branco](https://www.pishop.us/product/raspberry-pi-monitor-red-white/)
 
 **Upgrades Opcionais:**
 * 2 x [Gabinete Argon ONE V3 Raspberry Pi 5](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (em vez dos gabinetes Flirc)

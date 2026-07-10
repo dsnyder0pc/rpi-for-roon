@@ -138,6 +138,8 @@ Roon Labs自身も、この主要な問題を解決するために「2筐体」�
 **トラブルシューティングに役立つオプションの機器:**
 * 1 x [Micro-HDMI - 標準HDMI (A/M) 2mケーブル（白）](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Raspberry Pi公式キーボード（赤/白）](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
+* 1 x [Raspberry Pi公式マウス（赤/白）](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)
+* 1 x [Raspberry Piモニター（赤/白）](https://www.pishop.us/product/raspberry-pi-monitor-red-white/)
 
 **オプションのアップグレードパーツ:**
 * 2 x [Argon ONE V3 Raspberry Pi 5ケース](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (Flircケースの代替品として)

@@ -138,6 +138,8 @@ Une liste complète des composants est fournie ci-dessous. Bien que d'autres pi�
 **Optionnel, mais utile pour le dépannage :**
 * 1 x [Câble Micro-HDMI vers HDMI standard (A/M), 2m, Blanc](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Clavier officiel Raspberry Pi - Rouge/Blanc](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
+* 1 x [Souris officielle Raspberry Pi - Rouge/Blanc](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)
+* 1 x [Moniteur Raspberry Pi - Rouge/Blanc](https://www.pishop.us/product/raspberry-pi-monitor-red-white/)
 
 **Mises à niveau optionnelles :**
 * 2 x [Boîtier Argon ONE V3 Raspberry Pi 5](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (au lieu des boîtiers Flirc)

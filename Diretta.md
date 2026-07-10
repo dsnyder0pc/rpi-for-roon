@@ -138,6 +138,8 @@ A complete bill of materials is provided below. While other parts can be substit
 **Optional, but helpful for troubleshooting:**
 * 1 x [Micro-HDMI to Standard HDMI (A/M), 2m Cable, White](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Raspberry Pi Official Keyboard - Red/White](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
+* 1 x [Raspberry Pi Official Mouse - Red/White](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)
+* 1 x [Raspberry Pi Monitor - Red/White](https://www.pishop.us/product/raspberry-pi-monitor-red-white/)
 
 **Optional Upgrades:**
 * 2 x [Argon ONE V3 Raspberry Pi 5 Case](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (instead of the Flirc cases)

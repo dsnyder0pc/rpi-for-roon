@@ -138,6 +138,8 @@ A continuación se proporciona una lista completa de materiales. Aunque se puede
 **Opcional, pero útil para la resolución de problemas:**
 * 1 x [Cable de Micro-HDMI a HDMI estándar (A/M) de 2m, Blanco](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Teclado oficial de Raspberry Pi - Rojo/Blanco](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
+* 1 x [Ratón oficial de Raspberry Pi - Rojo/Blanco](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)
+* 1 x [Monitor Raspberry Pi - Rojo/Blanco](https://www.pishop.us/product/raspberry-pi-monitor-red-white/)
 
 **Mejoras opcionales:**
 * 2 x [Carcasa Argon ONE V3 Raspberry Pi 5](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (en lugar de las carcasas Flirc)

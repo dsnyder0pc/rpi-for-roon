@@ -138,6 +138,8 @@ Eine vollständige Stückliste finden Sie unten. Obwohl andere Teile ersetzt wer
 **Optional, aber hilfreich bei der Fehlersuche:**
 * 1 x [Micro-HDMI auf Standard HDMI (A/M), 2m Kabel, Weiß](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Offizielle Raspberry Pi Tastatur - Rot/Weiß](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
+* 1 x [Offizielle Raspberry Pi Maus - Rot/Weiß](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)
+* 1 x [Raspberry Pi Monitor - Rot/Weiß](https://www.pishop.us/product/raspberry-pi-monitor-red-white/)
 
 **Optionale Upgrades:**
 * 2 x [Argon ONE V3 Raspberry Pi 5 Gehäuse](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (anstelle der Flirc-Gehäuse)
