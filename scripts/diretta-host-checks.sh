@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.23.4
+# Diretta Host QA Check Script v1.23.5
 # (Hardware gating for IR remote + exact awk PID parsing)
 #
 
@@ -129,16 +129,18 @@ run_appendix6_checks() {
         check "Diretta service is running" "false"
     fi
 
-    # Check RoonBridge Isolation
-    RPID=$(systemctl show --property MainPID --value roonbridge.service 2>/dev/null)
-    if [[ -n "$RPID" && "$RPID" -ne 0 ]]; then
-        check "RoonBridge (PID $RPID) is NOT on isolated cores (2 or 3)" "taskset -cp $RPID | awk -F': ' '\$2 ~ /[23]/ {exit 1}'"
-        if taskset -cp "$RPID" 2>/dev/null | awk -F': ' '{print $2}' | grep -q '[23]'; then
-             ACTUAL=$(taskset -cp "$RPID" 2>/dev/null | awk -F': ' '{print $2}')
-             echo -e "      ${C_YELLOW}-> Diagnostic: Actual affinity is: ${ACTUAL:-unknown}${C_RESET}"
+    # Check RoonBridge Isolation (only if installed)
+    if pacman -Q roonbridge &>/dev/null; then
+        RPID=$(systemctl show --property MainPID --value roonbridge.service 2>/dev/null)
+        if [[ -n "$RPID" && "$RPID" -ne 0 ]]; then
+            check "RoonBridge (PID $RPID) is NOT on isolated cores (2 or 3)" "taskset -cp $RPID | awk -F': ' '\$2 ~ /[23]/ {exit 1}'"
+            if taskset -cp "$RPID" 2>/dev/null | awk -F': ' '{print $2}' | grep -q '[23]'; then
+                 ACTUAL=$(taskset -cp "$RPID" 2>/dev/null | awk -F': ' '{print $2}')
+                 echo -e "      ${C_YELLOW}-> Diagnostic: Actual affinity is: ${ACTUAL:-unknown}${C_RESET}"
+            fi
+        else
+            check "RoonBridge service is running" "false"
         fi
-    else
-        check "RoonBridge service is running" "false"
     fi
 
     check "Network IRQs (end0) are pinned to cores 2-3 (affinity 'c')" "(for irq in \$(grep 'end0' /proc/interrupts | awk '{print \$1}' | tr -d :); do grep -q 'c$' /proc/irq/\$irq/smp_affinity || exit 1; done)"
@@ -209,8 +211,14 @@ run_appendix9_checks() {
         check "CycleTime is optimized" "false"
     fi
 }
-run_appendix11_checks() {
-    header "Appendix 11" "Optional UPnP Integration"
+run_step9_checks() {
+    header "Step 9" "Optional: Roon Integration"
+    check "'roonbridge' is installed" "pacman -Q roonbridge"
+    check "'roonbridge' service is enabled" "systemctl is-enabled roonbridge.service"
+    check "'roonbridge' service is active" "systemctl is-active roonbridge.service"
+}
+run_step10_checks() {
+    header "Step 10" "Optional: UPnP Integration"
     check "'mpd' package is installed" "pacman -Q mpd"
     check "'upmpdcli' package is installed" "pacman -Q upmpdcli"
     check "'mpd' service is enabled" "systemctl is-enabled mpd.service"
@@ -318,12 +326,9 @@ check "pacman.conf ignores 'lld'" "grep -Pq '^IgnorePkg\s*=\s*.*(lld|lld[0-9]+)'
 check "pacman.conf ignores 'diretta-alsa-daemon'" "grep -Pq '^IgnorePkg\s*=\s*.*diretta-alsa-daemon' /etc/pacman.conf"
 check "pacman.conf ignores 'diretta-alsa-dkms'" "grep -Pq '^IgnorePkg\s*=\s*.*diretta-alsa-dkms' /etc/pacman.conf"
 
-header "Section 9" "Roon Integration"
-check "'roonbridge' is installed" "pacman -Q roonbridge"
-check "'roonbridge' service is enabled" "systemctl is-enabled roonbridge.service"
-check "'roonbridge' service is active" "systemctl is-active roonbridge.service"
-
-# --- Optional Appendix Checks ---
+# --- Optional Step & Appendix Checks ---
+check_optional_section "pacman -Q roonbridge" "run_step9_checks" "Step 9 (Roon Integration)"
+check_optional_section "systemctl is-enabled upmpdcli.service 2>/dev/null" "run_step10_checks" "Step 10 (UPnP Integration)"
 check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Appendix 1 (Argon ONE Fan)"
 check_optional_section "[ -d /home/audiolinux/roon-ir-remote ]" "run_appendix2_checks" "Appendix 2 (IR Remote)"
 check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix4_checks" "Appendix 4 (Web UI)"
@@ -331,7 +336,6 @@ check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.
 check_optional_section "grep -q '^CpuSend=[0-9]' /opt/diretta-alsa/setting.inf 2>/dev/null" "run_appendix7_checks" "Appendix 7 (Diretta Tuning)"
 check_optional_section "systemctl is-enabled limit-speed-100m.service" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 check_optional_section "grep -q '^FlexCycle=enable' /opt/diretta-alsa/setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
-check_optional_section "systemctl is-enabled upmpdcli.service 2>/dev/null" "run_appendix11_checks" "Appendix 11 (UPnP Integration)"
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}"
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.23.4
+# Diretta Target QA Check Script v1.23.5
 # (Exact awk PID parsing for isolated core checks)
 #
 
