@@ -79,21 +79,21 @@ Se você estiver localizado nos EUA, espere pagar cerca de $320 (mais impostos e
 3.  [Configuração Central do Sistema (Executar em Ambos os Dispositivos)](#3-configura%C3%A7%C3%A3o-central-do-sistema-executar-em-ambos-os-dispositivos)
 4.  [Atualizações do Sistema (Executar em Ambos os Dispositivos)](#4-atualiza%C3%A7%C3%B5es-do-sistema-executar-em-ambos-os-dispositivos)
 5.  [Configuração de Rede Ponto a Ponto](#5-configura%C3%A7%C3%A3o-de-rede-ponto-a-ponto)
-6.  [Acesso SSH Conveniente e Seguro](#6-acesso-ssh-conveniente-e-seguro)
+6.  [Convenient & Secure SSH Access](#6-convenient-secure-ssh-access)
 7.  [Otimizações Comuns do Sistema](#7-otimiza%C3%A7%C3%B5es-comuns-do-sistema)
-8.  [Instalação e Configuração do Software Diretta](#8-instala%C3%A7%C3%A3o-e-configura%C3%A7%C3%A3o-do-software-diretta)
-9.  [Etapas Finais e Integração com o Roon](#9-etapas-finais-e-integra%C3%A7%C3%A3o-com-o-roon)
-10. [Apêndice 1: Controle de Ventoinha Argon ONE Opcional](#10-ap%C3%AAndice-1-controle-de-ventoinha-argon-one-opcional)
-11. [Apêndice 2: Controle Remoto IR Opcional](#11-ap%C3%AAndice-2-controle-remoto-ir-opcional)
-12. [Apêndice 3: Modo Purista Opcional](#12-ap%C3%AAndice-3-modo-purista-opcional)
-13. [Apêndice 4: Interface Web Opcional de Controle do Sistema](#13-ap%C3%AAndice-4-interface-web-opcional-de-controle-do-sistema)
-14. [Apêndice 5: Verificações de Saúde do Sistema](#14-ap%C3%AAndice-5-verifica%C3%A7%C3%B5es-de-sa%C3%BAde-do-sistema)
-15. [Apêndice 6: Ajuste Opcional de Desempenho em Tempo Real](#15-ap%C3%AAndice-6-ajuste-opcional-de-desempenho-em-tempo-real)
-16. [Apêndice 7: Otimizações Opcionais de IRQ e Threads](#16-ap%C3%AAndice-7-otimiza%C3%A7%C3%B5es-opcionais-de-irq-e-threads)
-17. [Apêndice 8: Velocidades Opcionais de Rede Purista](#17-ap%C3%AAndice-8-velocidades-opcionais-de-rede-purista)
-18. [Apêndice 9: Otimização de Jumbo Frames Opcional](#18-ap%C3%AAndice-9-otimiza%C3%A7%C3%A3o-de-jumbo-frames-opcional)
-19. [Apêndice 10: Atualizações do Sistema Opcionais](#19-ap%C3%AAndice-10-atualiza%C3%A7%C3%B5es-do-sistema-opcionais)
-20. [Apêndice 11: Integração UPnP opcional](#20-apendice-11-integracao-opcional-de-upnp)
+8.  [Diretta Software Installation & Configuration](#8-diretta-software-installation-configuration)
+9.  [Roon Integration Option](#9-roon-integration-option)
+10. [UPnP Integration Option](#10-upnp-integration-option)
+A. [Appendix 1: Optional Argon ONE Fan Control](#a-appendix-1-optional-argon-one-fan-control)
+B. [Appendix 2: Optional IR Remote Control](#b-appendix-2-optional-ir-remote-control)
+C. [Appendix 3: Optional Purist Mode](#c-appendix-3-optional-purist-mode)
+D. [Appendix 4: Optional System Control Web UI](#d-appendix-4-optional-system-control-web-ui)
+E. [Appendix 5: System Health Checks](#e-appendix-5-system-health-checks)
+F. [Appendix 6: Optional Realtime Performance Tuning](#f-appendix-6-optional-realtime-performance-tuning)
+G. [Appendix 7: Optional IRQ and Thread Optimizations](#g-appendix-7-optional-irq-and-thread-optimizations)
+H. [Appendix 8: Optional Purist Network Speeds](#h-appendix-8-optional-purist-network-speeds)
+I. [Appendix 9: Optional Jumbo Frames Optimization](#i-appendix-9-optional-jumbo-frames-optimization)
+J. [Appendix 10: Optional System Updates](#j-appendix-10-optional-system-updates)
 
 ---
 
@@ -119,9 +119,9 @@ Aqui está um link para uma série de vídeos curtos que demonstram este process
 
 ---
 
-### 1. Pré-requisitos
+## 1. Prerequisites
 
-#### Hardware
+### Hardware
 
 Uma lista completa de materiais é fornecida abaixo. Embora outras partes possam ser substituídas, o uso desses componentes específicos aumenta as chances de uma montagem bem-sucedida.
 
@@ -161,7 +161,7 @@ Uma lista completa de materiais é fornecida abaixo. Embora outras partes possam
 * Um leitor de cartão SD ou microSD
 * Uma TV ou tela HDMI e teclado USB (opcional, mas útil para solução de problemas)
 
-#### Custos de Software e Licenciamento
+### Software & Licensing Costs
 
 * **AudioLinux:** Uma licença "Ilimitada" é recomendada para entusiastas, atualmente custa **$158** (preços sujeitos a alterações). No entanto, não há problema em começar com uma assinatura de um ano, atualmente **$79**. Ambas as opções permitem a instalação em múltiplos dispositivos no mesmo local.
 * **Diretta Target:** É necessária uma licença para reprodução em alta resolução (superior a 48 kHz PCM) através do dispositivo Diretta Target e atualmente custa **€100**.
@@ -171,14 +171,14 @@ Uma lista completa de materiais é fornecida abaixo. Embora outras partes possam
 
 ---
 
-### 2. Preparação Inicial da Imagem
+## 2. Initial Image Preparation
 
 1.  **Comprar e Baixar:** Obtenha a imagem do AudioLinux no [site oficial](https://www.audio-linux.com/). Você receberá um link para baixar um arquivo `.img.gz` ou `.img.xz` por e-mail, normalmente dentro de 24 horas após a compra.
 2.  **Gravar a Imagem:** Use o [Raspberry Pi Imager](https://www.raspberrypi.com/software/)) para gravar a imagem baixada do AudioLinux em **ambos** os cartões microSD.
 
 ---
 
-### 3. Configuração Central do Sistema (Executar em Ambos os Dispositivos)
+## 3. Core System Configuration (Perform on Both Devices)
 
 Após a gravação, você deve configurar cada Raspberry Pi individualmente para evitar conflitos de rede.
 
@@ -188,7 +188,7 @@ Para obter o melhor desempenho, este guia usa o Raspberry Pi 5 tanto para o Dire
 >
 > **Você deve realizar a inicialização e a configuração inicial de cada dispositivo, um de cada vez.**
 
-1.  Insira o cartão microSD no **primeiro** Raspberry Pi, conecte-o à sua rede e ligue-o. **Nota:** Se você estiver usando o gabinete Argon ONE, poderá ouvir ruído da ventoinha. Não se preocupe. Depois de concluir a configuração do Diretta, há instruções no [Apêndice 1](#10-ap%C3%AAndice-1-controle-de-ventoinha-argon-one-opcional) para lidar com o ruído da ventoinha.
+1.  Insert the microSD card into the **first** Raspberry Pi, connect it to your network, and power it on. **Note:** If you're using the Argon ONE case, you may hear audible noise from the fan. Don't worry. Once you've finished with Diretta setup, there are instructions in [Appendix 1](#a-appendix-1-optional-argon-one-fan-control) for addressing the fan noise.
 2.  Conclua **toda a Seção 3** para este primeiro dispositivo.
 3.  Assim que o primeiro dispositivo for reiniciado com sua nova configuração exclusiva, desligue-o.
 4.  Agora, ligue o **segundo** Raspberry Pi e repita **toda a Seção 3** para ele.
@@ -209,7 +209,7 @@ EOT
 bash -c "$cmd"
 ```
 
-#### 3.1. Regenerar o Machine ID
+### 3.1. Regenerate the Machine ID
 
 O `machine-id` é um identificador exclusivo para a instalação do SO. Ele **deve** ser diferente para cada dispositivo.
 
@@ -221,7 +221,7 @@ sudo systemd-machine-id-setup
 echo "Novo ID de máquina: $(cat /etc/machine-id)"
 ```
 
-#### 3.2. Configurar Hostnames Exclusivos
+### 3.2. Set Unique Hostnames
 
 Defina um hostname claro para cada dispositivo para identificá-los facilmente. **Nota:** Se esta não for a sua primeira montagem usando estas instruções e você já tiver um par Diretta Host/Target em sua rede, considere selecionar um nome diferente para este novo Diretta Host, como `diretta-host2`, apenas para esta parte. Fazer isso facilitará o acesso aos dois de forma independente mais tarde.
 
@@ -244,7 +244,7 @@ sudo sync && sudo poweroff
 
 ---
 
-### 4. Atualizações do Sistema (Executar em Ambos os Dispositivos)
+## 4. System Updates (Perform on Both Devices)
 
 Para as etapas desta seção, geralmente é mais eficiente (e menos confuso) concluir toda a Seção 4 no Host Diretta e depois repetir toda a seção no Target Diretta.
 
@@ -260,7 +260,7 @@ EOT
 bash -c "$cmd"
 ```
 
-#### 4.1. Instalar o "Chrony" para atualizar o relógio do sistema
+### 4.1. Install "Chrony" to update the system clock
 
 O relógio do sistema precisa estar preciso antes de podermos instalar as atualizações. O Raspberry Pi não tem bateria NVRAM, por isso o relógio deve ser configurado cada vez que ele inicializa. Isso normalmente é feito conectando-se a um serviço de rede. Este script garantirá que o relógio seja configurado e permaneça correto durante a operação do computador.
 
@@ -271,7 +271,7 @@ sleep 5
 chronyc sources
 ```
 
-#### 4.2. Configurar o seu Fuso Horário
+### 4.2. Set your Timezone
 
 ```bash
 cmd=$(cat <<'EOT'
@@ -320,13 +320,13 @@ EOT
 bash -c "$cmd"
 ```
 
-#### 4.3. Instalar DNS Utils
+### 4.3. Install DNS Utils
 Instale o pacote `dnsutils` para que a atualização do **menu** tenha acesso ao comando `dig`:
 ```bash
 sudo pacman -S --noconfirm --needed dnsutils
 ```
 
-#### 4.4. Executar Atualizações do Sistema e do Menu
+### 4.4. Run System and Menu Updates
 
 Use o sistema de menus do AudioLinux para realizar todas as atualizações. Tenha em mãos o e-mail do Piero com seu usuário e senha de download da imagem. Você precisará deles para a atualização do menu. Ele solicitará seu **usuário de atualização de menu**, o que é um pouco confuso. Ele está solicitando o nome de usuário e a senha que você usou para baixar a imagem de instalação do AudioLinux.
 
@@ -352,7 +352,7 @@ Use o sistema de menus do AudioLinux para realizar todas as atualizações. Tenh
 4.  Após a conclusão da atualização do sistema, selecione **Update menu** na mesma tela para obter a versão mais recente dos scripts do AudioLinux. *Nota:* Você precisará do endereço de e-mail que usou para comprar o AudioLinux e de seu nome de usuário e senha de download.
 5.  Saia do sistema de menus para voltar ao terminal.
 
-#### 4.5. Reiniciar
+### 4.5. Reboot
 Reinicie para carregar o kernel e outras atualizações:
 ```bash
 sudo sync && sudo reboot
@@ -360,14 +360,14 @@ sudo sync && sudo reboot
 
 ---
 
-### 5. Configuração de Rede Ponto a Ponto
+## 5. Point-to-Point Network Configuration
 
 Nesta seção, criaremos os arquivos de configuração de rede que ativarão o link privado dedicado. Para evitar a necessidade de um teclado e monitor físicos (acesso ao console), realizaremos essas etapas enquanto ambos os dispositivos ainda estão conectados à sua LAN principal e acessíveis via SSH.
 
 Se você acabou de atualizar o seu Diretta Target, clique [aqui](https://github.com/dsnyder0pc/rpi-for-roon/blob/main/Diretta.md#52-pre-configure-the-diretta-target) para pular para as etapas de configuração de rede ponto a ponto para o Target.
 
 ---
-> #### **Uma Nota sobre Configuração de Rede: Por que não uma Bridge Simples?**
+> ### **A Note on Network Configuration: Why Not a Simple Bridge?**
 >
 > Usuários familiarizados com o AudioLinux podem se perguntar por que este guia usa scripts específicos para configurar um link ponto a ponto roteado com NAT em vez de usar a opção de bridge de rede mais simples disponível no sistema de `menu`. Esta é uma escolha de arquitetura deliberada feita para alcançar o mais alto nível possível de isolamento de rede.
 >
@@ -377,7 +377,7 @@ Se você acabou de atualizar o seu Diretta Target, clique [aqui](https://github.
 > Embora uma bridge seja funcionalmente mais simples de configurar, o método roteado fornece uma base teoricamente superior para o desempenho de áudio ao maximizar o isolamento.
 ---
 
-#### 5.1. Pré-configurar o Host Diretta
+### 5.1. Pre-configure the Diretta Host
 
 1.  **Criar Arquivos de Rede:**
     Crie os dois arquivos a seguir no **Host Diretta**. O arquivo `end0.network` define o IP estático para o futuro link ponto a ponto. O arquivo `usb-uplink.network` garante que o adaptador Ethernet USB continue a obter um IP da sua LAN principal.
@@ -528,7 +528,7 @@ Se você acabou de atualizar o seu Diretta Target, clique [aqui](https://github.
     sudo sync && sudo poweroff
     ```
 
-#### 5.2. Pré-configurar o Target Diretta
+### 5.2. Pre-configure the Diretta Target
 
 **Nota:** Se você não realizou a [etapa 4](#4-atualiza%C3%A7%C3%B5es-do-sistema-executar-em-ambos-os-dispositivos) no Target Diretta, faça isso [agora](#4-atualiza%C3%A7%C3%B5es-do-sistema-executar-em-ambos-os-dispositivos) e depois retorne aqui.
 
@@ -582,7 +582,7 @@ fi
 >   * **Host Diretta** → `[ Dedicated Ethernet Cable ]` → **Target Diretta** *(Isolado via link ponto a ponto e a pilha de protocolos)*
 > ---
 
-#### 5.3. A Mudança de Conexão Física
+### 5.3. The Physical Connection Change
 
 > **Aviso:** Verifique novamente o conteúdo dos arquivos que você acabou de criar. Um erro de digitação pode tornar um dispositivo inacessível após a reinicialização, exigindo uma sessão de console ou a regravação do cartão SD para corrigir.
 
@@ -631,9 +631,9 @@ ping -c 3 one.one.one.one
 
 ---
 
-### 6. Acesso SSH Conveniente e Seguro
+## 6. Convenient & Secure SSH Access
 
-#### 6.1. O Requisito ProxyJump
+### 6.1. The `ProxyJump` Requirement
 
 Agora que a rede está configurada, o **Diretta Target** está em uma rede isolada (`172.20.0.0/24`) e não pode ser acessado diretamente da sua LAN principal. A única maneira de acessá-lo é dar um "salto" (jump) através do **Host Diretta**.
 
@@ -732,7 +732,7 @@ ssh -o StrictHostKeyChecking=accept-new diretta-target
 
 **Nota:** Você pode usar `ssh host` e `ssh target` de forma abreviada.
 
-#### 6.2. Recomendado: Autenticação Segura com Chaves SSH
+### 6.2. Recommended: Secure Authentication with SSH Keys
 
 Embora você possa usar senhas, o método mais seguro e conveniente é a autenticação por chave pública. Nossa configuração SSH automatiza a maior parte do processo. Após uma configuração única, você poderá fazer login no Host e no Target com segurança, sem digitar uma senha.
 
@@ -788,11 +788,11 @@ Você pode acessar ambos os dispositivos via SSH (`ssh diretta-host`, `ssh diret
 
 ---
 
-### 7. Otimizações Comuns do Sistema
+## 7. Common System Optimizations
 
 Por favor, execute estas etapas em _ambos_ os computadores Host e Target Diretta. Se você fizer uma atualização de `menu` posteriormente, terá que executar novamente a correção do `sudoers`.
 
-#### 7.1. Corrigir o Estado "Degraded" do Systemd
+### 7.1. Fix Systemd "Degraded" State
 
 Em uma instalação limpa do AudioLinux, o status do sistema é frequentemente relatado como `degraded` (degradado). Isso geralmente é causado por uma inconsistência inofensiva entre os arquivos de grupo do sistema (`/etc/group` e `/etc/gshadow`). O comando a seguir sincroniza com segurança esses arquivos, o que resolve a falha do `shadow.service` e garante um estado limpo do sistema.
 
@@ -800,7 +800,7 @@ Em uma instalação limpa do AudioLinux, o status do sistema é frequentemente r
 sudo grpconv
 ```
 
-#### 7.2. Corrigir a Precedência da Regra do `sudoers`
+### 7.2. Correct `sudoers` Rule Precedence
 
 Uma regra padrão no arquivo principal `/etc/sudoers` às vezes pode substituir regras mais específicas necessárias para a interface web e outros recursos. Isso pode fazer com que comandos que deveriam ser sem senha solicitem incorretamente uma senha.
 
@@ -839,7 +839,7 @@ fi
 rm -f "$TEMP_SUDOERS"
 ```
 
-#### 7.3. Otimizar o Tempo de Inicialização
+### 7.3. Optimize Boot Time
 Para evitar um longo atraso de inicialização enquanto o sistema aguarda por uma conexão de rede, desativaremos o serviço "wait-online".
 ```bash
 # Desativar o serviço de espera de rede para evitar longos atrasos de inicialização
@@ -853,7 +853,7 @@ ExecStartPre=/bin/sh -c "while [ -z \"$(ip route show default)\" ]; do sleep 0.5
 EOT
 ```
 
-#### 7.4. Criar o Script de Reparo
+### 7.4. Create the Repair Script
 O comportamento padrão do Arch Linux é deixar o sistema de arquivos `/boot` em um estado sujo se o computador não for desligado corretamente. Isso geralmente é seguro, mas descobri que pode criar uma condição de corrida ao subir nossa rede privada. Além disso, os usuários costumam desconectar esses dispositivos da tomada sem desligá-los primeiro. Para proteger contra esses problemas, adicionaremos um script de contorno que mantém limpo o sistema de arquivos `/boot` (que só é alterado durante as atualizações de software).
 
 Este script é seguro para ser executado tanto automaticamente na inicialização quanto manualmente em um sistema ativo.
@@ -863,7 +863,7 @@ sudo install -m 0755 check-and-repair-boot.sh /usr/local/sbin/
 rm check-and-repair-boot.sh
 ```
 
-#### 7.5. Criar o Arquivo de Serviço do `systemd` e Habilitar o Serviço
+### 7.5. Create the `systemd` Service File and enable the service
 ```bash
 cat <<'EOT' | sudo tee /etc/systemd/system/boot-repair.service
 [Unit]
@@ -886,7 +886,7 @@ sleep 5
 journalctl -b -u boot-repair.service
 ```
 
-#### 7.6. Minimizar E/S de Disco
+### 7.6. Minimize Disk I/O
 Altere `#Storage=auto` para `Storage=volatile` em `/etc/systemd/journald.conf`
 ```bash
 sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
@@ -894,9 +894,9 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 ---
 
-### 8. Instalação e Configuração do Software Diretta
+## 8. Diretta Software Installation & Configuration
 
-#### 8.1. No Target Diretta
+### 8.1. On the Diretta Target
 
 1.  Conecte seu DAC USB a uma das portas pretas USB 2.0 no **Target Diretta** e certifique-se de que o DAC esteja ligado.
 2.  Acesse o Target via SSH: `ssh diretta-target`.
@@ -952,7 +952,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
         ```
     * Escolha **8) Exit**. Siga as instruções para voltar ao terminal
 
-#### 8.2. No Host Diretta
+### 8.2. On the Diretta Host
 
 1.  Acesse o Host via SSH: `ssh diretta-host`.
 
@@ -1042,10 +1042,18 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
     RestartSec=5
     EOT
     ```
+> ---
+> ### ✅ Checkpoint: Verify Your Core System
+>
+> Your core Diretta and Roon system should now be fully functional. To verify all services and connections, please proceed to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
+>
+> ---
 
 ---
 
-### 9. Etapas Finais e Integração com o Roon
+## 9. Roon Integration Option
+
+**Objective:** If you are a Roon Subscriber, this section is for you. You'll follow these steps to install Roon Bridge, enable your new Diretta Zone, and play music from Roon.
 
 1.  Execute `menu` se você tiver saído para o terminal após a etapa anterior, caso contrário, vá para o **Main menu**.
 
@@ -1074,16 +1082,116 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 Seu link Diretta dedicado agora está totalmente configurado para uma reprodução de áudio pura e isolada.
 **Nota:** A zona "Limited" para teste do Diretta Target desaparecerá do Roon após seis minutos de reprodução de música em alta resolução. Isso é normal. Nesse ponto, você precisará adquirir uma licença para o Diretta Target. O custo atualmente é de €100 e a ativação pode levar até 48 horas para ser concluída. Você receberá dois e-mails da equipe do Diretta. O primeiro é o seu recibo; o segundo, a sua notificação de ativação. Assim que receber o e-mail de ativação, reinicie o computador Target para aplicar a ativação.
 
+---
+
+## 10. UPnP Integration Option
+
+**Objective:** Enable UPnP/DLNA media rendering capabilities on the Diretta Host using MPD (Music Player Daemon) and UPMPDCLI, allowing compatibility with upstream control points and players such as Audirvāna, JRiver Media Center, mconnect, or BubbleUPnP.
+
+This configuration permits the Diretta Host to receive standard UPnP network streams and route them cleanly into the synchronized Diretta ALSA driver layer for transmission across the point-to-point link to the Target.
+
 > ---
-> ### ✅ Ponto de Controle: Verificar seu Sistema Central
+> ### ⚠️ Topology Note: Perform on the Host Only
 >
-> Seu sistema core Diretta e Roon deve estar totalmente funcional agora. Para verificar todos os serviços e conexões, por favor, prossiga para o [**Apêndice 5**](#14-ap%C3%AAndice-5-verifica%C3%A7%C3%B5es-de-sa%C3%BAde-do-sistema) e execute o comando universal de **Verificação de Saúde do Sistema** em ambos o Host e o Target.
+> All installation and configuration steps detailed in this section must be executed exclusively on the **Diretta Host**. The Diretta Target remains a minimalist protocol endpoint and requires no adjustments for UPnP playback.
+> ---
+
+### Step 1: Install and Enable MPD and UPMPDCLI
+
+1. Establish an SSH connection and log into the **Diretta Host**.
+2. Launch the AudioLinux configuration tool by running:
+   ```bash
+   menu
+   ```
+3. Navigate to the **INSTALL/UPDATE menu**.
+4. Select **INSTALL/UPDATE MPD** and let the installation script complete.
+5. Return to the update screen and select **INSTALL/UPDATE UPMPDCLI**, allowing the setup to finish.
+6. Exit back to the **Main menu**, select the **Audio menu**, and enter **SHOW audio service**.
+7. Confirm that both **mpd** and **upmpdcli** are active. If either service is missing from the enabled group, select **MPD enable/disable** or **UPMPDCLI enable/disable** respectively to activate them.
+8. Exit the menu system to return to the terminal shell.
+
+### Step 2: Configure MPD Audio Output
+
+To direct the decoded audio stream from MPD into the Diretta transport pipeline, append the custom ALSA output parameters to the bottom of the MPD configuration file:
+
+```bash
+if grep -q 'Custom Diretta ALSA Audio Output' /etc/mpd.conf; then
+  echo "Diretta ALSA Audio Output already configured"
+else
+  cat <<'EOT' | sudo tee -a /etc/mpd.conf
+
+# === Custom Diretta ALSA Audio Output ===
+audio_output {
+    type "alsa"
+    name "Diretta"
+    device "hw:0,0"
+    auto_resample "no"
+    auto_format "no"
+    dop "yes"
+}
+EOT
+
+fi
+```
+
+### Step 3: Configure UPMPDCLI Renderer and Network Parameters
+
+Update the UPMPDCLI configuration parameters to define the correct upstream network interface configuration and assign a friendly identifier for discovery by your control applications:
+
+```bash
+# 1. Dynamically discover the active LAN uplink interface (guaranteeing a single interface name)
+UPNP_IFACE=$(ip route show default | awk '{print $5}' | head -n 1)
+
+# 2. Verify an interface was found before making changes
+if [ -n "$UPNP_IFACE" ]; then
+    echo "Found active UPnP uplink interface: $UPNP_IFACE"
+    if ! grep -q "# === Custom UPnP Network & Renderer Parameters ===" /etc/upmpdcli.conf; then
+        echo "Applying custom UPnP configuration..."
+        cat <<EOT | sudo tee -a /etc/upmpdcli.conf
+
+# === Custom UPnP Network & Renderer Parameters ===
+
+# Network interface(s) to use for UPnP (Dynamically Discovered)
+upnpiface = ${UPNP_IFACE}
+
+# Media Renderer parameters
+# "Friendly Name" for the Media Renderer.
+friendlyname = UpMpd-%h
+
+# Specific friendly name for the UPnP/AV Media Renderer.
+avfriendlyname = Diretta
+EOT
+    else
+        echo "Configuration already exists in /etc/upmpdcli.conf. Updating interface name if changed..."
+        sudo sed -i "s/^upnpiface[[:space:]]*=[[:space:]]*.*/upnpiface = ${UPNP_IFACE}/" /etc/upmpdcli.conf
+    fi
+else
+    echo "ERROR: Could not programmatically determine the uplink interface." >&2
+fi
+```
+
+### Step 4: Restart Services
+
+Execute a systemd reload and restart both background daemons to force the system to initialize your configuration overrides:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart mpd
+sudo systemctl restart upmpdcli
+```
+
+> ---
+> ### ✅ Checkpoint: Verify UPnP Operation
+>
+> Open your chosen UPnP/DLNA controller platform on a network-connected remote device. Your system should discover the endpoint, displaying **DIRETTA** as an active, selectable playback zone.
+>
+> If you have UPnP installed and enabled, now is a good time to return to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
 ---
 
-## 10. Apêndice 1: Controle de Ventoinha Argon ONE Opcional
+## A. Appendix 1: Optional Argon ONE Fan Control
 Se você decidiu usar um gabinete Argon ONE para o seu Raspberry Pi, o script do instalador padrão assume que você está executando um SO Debian. No entanto, o Audiolinux é baseado no Arch Linux, então você terá que seguir estas etapas.
 
 Se você estiver usando gabinetes Argon ONE tanto para o Host quanto para o Target Diretta, precisará executar estas etapas em ambos os computadores.
@@ -1210,7 +1318,7 @@ Agora, sinta-se à vontade para ajustar os valores conforme necessário, seguind
 
 ---
 
-## 11. Apêndice 2: Controle Remoto IR Opcional
+## B. Appendix 2: Optional IR Remote Control
 
 Este guia fornece instruções para instalar e configurar um controle remoto IR para controlar o Roon. A configuração é dividida em duas partes.
 
@@ -1602,14 +1710,14 @@ set-roon-zone
 Siga as instruções para inserir o novo nome para sua Zona do Roon. Pode ser necessário digitar a senha do root para que as alterações entrem em vigor.
 
 **Nota: Uma Maneira Melhor de Configurar a Zona**
-Embora este script funcione perfeitamente, o método recomendado para alterar a Zona do Roon é usar o aplicativo web AnCaolas Link System Control, detalhado no [Apêndice 4](#13-ap%C3%AAndice-4-interface-web-opcional-de-controle-do-sistema). A interface web fornece uma página dedicada para visualizar e editar o nome da zona a partir do seu telefone ou navegador.
+While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, detailed in [Appendix 4](#d-appendix-4-optional-system-control-web-ui). The web UI provides a dedicated page for viewing and editing the zone name from your phone or browser.
 
 ### **Passo 9: Aproveite! 📈**
 
 > ---
 > ### ✅ Ponto de Controle: Verificar sua Configuração de Controle Remoto IR
 >
-> O hardware e o software do seu Controle Remoto IR devem estar configurados agora. Para verificar a configuração, prossiga para o [**Apêndice 5**](#14-ap%C3%AAndice-5-verifica%C3%A7%C3%B5es-de-sa%C3%BAde-do-sistema) e execute o comando de **Verificação de Saúde do Sistema** universal no Host Diretta.
+> Your IR Remote hardware and software should now be configured. To verify the setup, proceed to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on the Diretta Host.
 >
 > ---
 
@@ -1617,7 +1725,7 @@ Seu controle remoto IR agora deve controlar o Roon. Aproveite!
 
 ---
 
-## 12. Apêndice 3: Modo Purista Opcional
+## C. Appendix 3: Optional Purist Mode
 Existe uma atividade mínima de rede e de segundo plano no computador Diretta Target que não esteja relacionada à reprodução de música usando o protocolo Diretta. No entanto, alguns usuários preferem tomar medidas extras para reduzir a possibilidade de tal atividade. Já estamos no limite extremo do desempenho de áudio, então por que não?
 
 ---
@@ -1819,7 +1927,7 @@ Você tem controle interativo total sobre o sistema a qualquer momento.
 
 ---
 
-## 13. Apêndice 4: Interface Web Opcional de Controle do Sistema
+## D. Appendix 4: Optional System Control Web UI
 
 Este apêndice fornece instruções para instalar um aplicativo simples baseado na web no Host Diretta. Este aplicativo fornece uma interface fácil de usar, acessível a partir de um telefone ou tablet, para gerenciar os principais recursos do seu sistema Diretta, incluindo o Modo Purista no Target e as configurações de integração do Controle Remoto IR do Roon no Host.
 
@@ -2297,16 +2405,16 @@ A partir da página principal, uma barra de navegação no topo o guará para os
 
 ### 🔗 Nota sobre a Funcionalidade Completa da Interface Web
 
-Para desbloquear os recursos completos da Interface Web de Controle do Sistema — especificamente os ajustes de **Velocidade de Link** de rede e a alternância do modo **Super Purista** — você também deve concluir as configurações de hardware e serviço detalhadas no [**Apêndice 8: Velocidades Opcionais de Rede Purista**](#17-ap%C3%AAndice-8-velocidades-opcionais-de-rede-purista). A interface web depende diretamente dos scripts, flags e serviços subjacentes estabelecidos nessa seção para modificar e impor com sucesso os limites físicos de velocidade de link em sua conexão ponto a ponto.
+To unlock the full capabilities of the System Control Web UI—specifically the network **Link Speed** adjustments and the **Super Purist** toggle—you must also complete the hardware and service configurations detailed in [**Appendix 8: Optional Purist Network Speeds**](#h-appendix-8-optional-purist-network-speeds)[cite: 1]. The web interface relies directly on the underlying scripts, flags, and services established in that section to successfully modify and enforce physical link speed boundaries on your point-to-point connection[cite: 1].
 
 > ---
 > ### ✅ Ponto de Controle: Verificar sua Configuração da Interface Web
 >
-> A Interface Web do Modo Purista deve estar operacional agora. Para verificar todos os componentes deste recurso complexo, prossiga para o [**Apêndice 5**](#14-ap%C3%AAndice-5-verifica%C3%A7%C3%B5es-de-sa%C3%BAde-do-sistema) e execute o comando de **Verificação de Saúde do Sistema** universal no Host e no Target.
+> The Purist Mode Web UI should now be operational. To verify all components of this complex feature, proceed to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
-## 14. Apêndice 5: Verificações de Saúde do Sistema
+## E. Appendix 5: System Health Checks
 
 Depois de concluir as seções principais deste guia, é uma boa ideia executar uma rápida verificação de garantia de qualidade (QA) para verificar se tudo está configurado corretamente.
 
@@ -2322,7 +2430,7 @@ curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/script
 
 ---
 
-## 15. Apêndice 6: Ajuste Opcional de Desempenho em Tempo Real
+## F. Appendix 6: Optional Realtime Performance Tuning
 
 As etapas a seguir são opcionais, mas recomendadas para usuários que buscam extrair o máximo desempenho absoluto de sua configuração Diretta. A estratégia, baseada nos conselhos do autor do AudioLinux, Piero, é criar o ambiente mais estável e eletricamente silencioso possível nos dispositivos Host e Target.
 
@@ -2478,7 +2586,7 @@ sudo systemctl disable rtapp.timer
 sudo sync && sudo reboot
 ```
 
-## 16. Apêndice 7: Otimizações Opcionais de IRQ e Threads
+## G. Appendix 7: Optional IRQ and Thread Optimizations
 
 ### Parte 1: Isolamento do Caminho USB do Target Diretta
 Por padrão, mesmo quando os núcleos da CPU estão isolados, as interrupções USB ainda podem competir por recursos nos núcleos de sistema "ruidosos" (0 e 1). Este script identifica dinamicamente o controlador USB específico ao qual seu DAC está conectado e fixa suas interrupções de hardware aos núcleos de áudio isolados (2 e 3). No Raspberry Pi 5, os controladores USB são gerenciados pelo chip RP1, o que nos permite direcionar as interrupções de hardware para núcleos específicos.
@@ -2546,11 +2654,11 @@ Com as otimizações de kernel em tempo real implementadas, o Host Diretta agora
 > ---
 > ### ✅ Ponto de Controle: Verificar seu Ajuste em Tempo Real
 >
-> Seu ajuste avançado em tempo real deve estar concluído agora. Para verificar todos os componentes desta nova configuração, por favor, retorne ao [**Apêndice 5**](#14-ap%C3%AAndice-5-verifica%C3%A7%C3%B5es-de-sa%C3%BAde-do-sistema) e execute o comando de **Verificação de Saúde do Sistema** universal no Host e no Target.
+> Your advanced realtime tuning should now be complete. To verify all components of this new configuration, please return to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
-## 17. Apêndice 8: Velocidades Opcionais de Rede Purista
+## H. Appendix 8: Optional Purist Network Speeds
 
 **Objetivo:** Reduzir o ruído elétrico e melhorar a precisão do agendador do SO limitando a velocidade do link de rede dedicado e desativando explicitamente a Energy Efficient Ethernet (EEE).
 
@@ -2685,11 +2793,11 @@ sudo systemctl enable --now limit-speed-100m.service
 >
 > ### ✅ Ponto de Controle: Verificar a Configuração de Rede
 >
-> Seu link de rede dedicado está agora configurado para a operação "Purista" de 100 Mbps. Para verificar se o serviço do Host está ativo e se o Target negociou corretamente a velocidade (detectado por meio do arquivo marcador), por favor, retorne ao [**Apêndice 5**](#14-ap%C3%AAndice-5-verifica%C3%A7%C3%B5es-de-sa%C3%BAde-do-sistema) e execute o comando de **Verificação de Saúde do Sistema** universal no Host e no Target.
+> Your dedicated network link is now configured for "Purist" 100Mbps operation. To verify that the Host service is active and the Target has correctly negotiated the speed (detected via the marker file), please return to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
-## 18. Apêndice 9: Otimização de Jumbo Frames Opcional
+## I. Appendix 9: Optional Jumbo Frames Optimization
 Esta seção otimiza o transporte para eficiência de alta largura de banda.
 
 #### **Passo 1:** Preparar as Interfaces
@@ -2838,11 +2946,11 @@ sudo sync && sudo reboot
 >
 > ### ✅ Ponto de Controle: Verificar a Configuração de Rede
 >
-> Se você conseguiu habilitar o suporte a Jumbo frames para a sua configuração, agora é um bom momento para retornar ao [**Apêndice 5**](#14-ap%C3%AAndice-5-verifica%C3%A7%C3%B5es-de-sa%C3%BAde-do-sistema) e executar o comando de **Verificação de Saúde do Sistema** universal no Host e no Target.
+> If you were able to enable Jumbo frames support for your configuration, now is a good time to return to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
-## 19. Apêndice 10: Atualizações do Sistema Opcionais
+## J. Appendix 10: Optional System Updates
 Esta seção fornece orientações sobre como aplicar atualizações ao hardware do Raspberry Pi, ao sistema operacional AudioLinux e à pilha de software do Diretta.
 
 #### **Parte 1:** Atualizar o Bootloader do Raspberry Pi (Opcional)
@@ -2916,7 +3024,7 @@ O processo de atualização do sistema requer uma sequência estrita para garant
 5. Reaplique a correção do `motd` da [**Seção 5.1**](#51-pr%C3%A9-configurar-o-host-diretta) no **Host**.
 6. Reaplique o patch do `sudoers` da [**Seção 7.2**](#72-corrigir-a-preced%C3%AAncia-da-regra-do-sudoers) em **ambos** o Target e o Host.
 7. Reinicie primeiro o Target, seguido pelo Host.
-8. Assim que estiver online novamente, execute novamente o script "Configurar Toolchain de Compilador Compatível" do [**Passo 8**](#8-instala%C3%A7%C3%A3o-e-configura%C3%A7%C3%A3o-do-software-diretta) em **ambos** o Target e o Host.
+8. Once back online, re-run the "Configure Compatible Compiler Toolchain" script from [**Step 8**](#8-diretta-software-installation-configuration) on **both** the Target and the Host.
 9. No **Target**, execute a etapa de Instalação/Atualização do Diretta detalhada na [**Seção 8.1**](#81-no-target-diretta).
 10. No **Host**, execute a etapa de Instalação/Atualização do Diretta detalhada na [**Seção 8.2**](#82-no-host-diretta).
 11. Reinicie primeiro o Target, seguido pelo Host.
@@ -2933,7 +3041,7 @@ O processo de atualização do sistema requer uma sequência estrita para garant
 >    ```bash
 >    purist-mode --revert
 >    ```
-> 3. Execute o script de QA universal de **Verificação de Saúde do Sistema** do [**Apêndice 5**](#14-ap%C3%AAndice-5-verifica%C3%A7%C3%B5es-de-sa%C3%BAde-do-sistema) em **ambos** o Host e o Target.
+> 3. Run the universal **System Health Check** QA script from [**Appendix 5**](#e-appendix-5-system-health-checks) on **both** the Host and the Target.
 > 4. Verifique cuidadosamente a saída e resolva quaisquer problemas isolados de afinidade de thread ou prioridade detectados pelo script.
 >
 > ---
@@ -2956,105 +3064,3 @@ else
 fi
 sudo sync && sudo reboot
 ```
-
----
-
-## 20. Apêndice 11: Integração UPnP opcional
-
-**Objetivo:** Habilitar recursos de renderização de mídia UPnP/DLNA no Diretta Host usando MPD (Music Player Daemon) e UPMPDCLI, permitindo compatibilidade com pontos de controle e reprodutores a montante, como Audirvāna, mconnect ou BubbleUPnP.
-
-Esta configuração permite que o Diretta Host receba fluxos de rede UPnP padrão e os envie de forma limpa para a camada do driver ALSA da Diretta sincronizada para transmissão através do link ponto a ponto para o Target.
-
-> ---
-> ### ⚠️ Nota de topologia: Executar apenas no Host
->
-> Todas as etapas de instalação e configuração detalhadas neste apêndice devem ser executadas exclusivamente no **Diretta Host**. O Diretta Target continua sendo um endpoint de protocolo minimalista e não requer ajustes para reprodução UPnP.
-> ---
-
-### Passo 1: Instalar e habilitar MPD e UPMPDCLI
-
-1. Estabeleça uma conexão SSH e faça login no **Diretta Host**.
-2. Inicie a ferramenta de configuração do AudioLinux executando:
-   ```bash
-   menu
-   ```
-3. Navegue até o menu **INSTALL/UPDATE**.
-4. Selecione **INSTALL/UPDATE MPD** e permita a conclusão do script de instalação.
-5. Retorne à tela de atualização e selecione **INSTALL/UPDATE UPMPDCLI**, permitindo que a configuração termine.
-6. Retorne ao **Menu principal**, selecione o menu **Audio** e digite **SHOW audio service**.
-7. Confirme se **mpd** e **upmpdcli** estão ativos. Se algum serviço estiver ausente do grupo habilitado, selecione **MPD enable/disable** ou **UPMPDCLI enable/disable** respectivamente para ativá-los.
-8. Saia do sistema de menus para retornar ao shell do terminal.
-
-### Passo 2: Configurar a saída de áudio do MPD
-
-Para direcionar o fluxo de áudio decodificado do MPD para a tubulação de transporte da Diretta, adicione os parâmetros de saída ALSA personalizados ao final do arquivo de configuração do MPD:
-
-```bash
-cat <<'EOT' | sudo tee -a /etc/mpd.conf
-
-# === Custom Diretta ALSA Audio Output ===
-audio_output {
-    type "alsa"
-    name "DIRETTA"
-    device "hw:0,0"
-    auto_resample "no"
-    auto_format "no"
-    dop "yes"
-}
-EOT
-```
-
-### Passo 3: Configurar o renderizador UPMPDCLI e os parâmetros de rede
-
-Atualize os parâmetros de configuração do UPMPDCLI para definir a configuração correta da interface de rede a montante e atribuir um identificador amigável para descoberta por seus aplicativos de controle:
-
-```bash
-# 1. Dynamically discover the active LAN uplink interface
-UPNP_IFACE=$(ip route show default | awk '{print $5}')
-
-# 2. Verify an interface was found before making changes
-if [ -n "$UPNP_IFACE" ]; then
-    echo "Found active UPnP uplink interface: $UPNP_IFACE"
-    if ! grep -q "# === Custom UPnP Network & Renderer Parameters ===" /etc/upmpdcli.conf; then
-        echo "Applying custom UPnP configuration..."
-        cat <<EOT | sudo tee -a /etc/upmpdcli.conf
-
-# === Custom UPnP Network & Renderer Parameters ===
-
-# Network interface(s) to use for UPnP (Dynamically Discovered)
-upnpiface = ${UPNP_IFACE}
-
-# Media Renderer parameters
-# "Friendly Name" for the Media Renderer.
-friendlyname = UpMpd-%h
-
-# Specific friendly name for the UPnP/AV Media Renderer.
-avfriendlyname = DIRETTA
-EOT
-    else
-        echo "Configuration already exists in /etc/upmpdcli.conf. Updating interface name if changed..."
-        sudo sed -i "s/^upnpiface = .*/upnpiface = ${UPNP_IFACE}/" /etc/upmpdcli.conf
-    fi
-else
-    echo "ERROR: Could not programmatically determine the uplink interface." >&2
-fi
-```
-
-### Passo 4: Reiniciar serviços
-
-Execute uma recarga do systemd e reinicie ambos os daemons em segundo plano para forçar o sistema a inicializar suas substituições de configuração:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart mpd
-sudo systemctl restart upmpdcli
-```
-
-> ---
-> ### ✅ Ponto de controle: Verificar o funcionamento do UPnP
->
-> Abra a plataforma de controle UPnP/DLNA escolhida em um dispositivo remoto conectado à rede. Seu sistema deve descobrir o endpoint, exibindo **DIRETTA** como uma zona de reprodução ativa e selecionável.
->
-> Se você tiver o UPnP instalado e habilitado, agora é um bom momento para retornar ao [**Apêndice 5**](#14-ap%C3%A9ndice-5-verifica%C3%A7%C3%B5es-de-sa%C3%BAde-do-sistema) e executar o comando universal de **Verificação de Saúde do Sistema** tanto no Host quanto no Target.
->
-> ---
