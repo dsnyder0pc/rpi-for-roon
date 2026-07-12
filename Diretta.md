@@ -2615,7 +2615,10 @@ By default, even when CPU cores are isolated, USB interrupts may still compete f
 **Note:** This optimization is not applicable to the Raspberry Pi 4 due to hardware-locked interrupts.
 
 1.  Ensure your DAC is powered on and connected to the Target.
-2.  Start music playback to the Diretta Target. This ensures the script can detect active interrupt traffic.
+2.  Start music playback to the Diretta Target. This ensures the script can detect active interrupt traffic. If you don't have anything handy, you can run this command on the Host:
+    ```bash
+    aplay /usr/share/sounds/alsa/Noise.wav
+    ```
 3.  Run the following command on the Diretta Target:
     ```bash
     curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/usb-isolation.sh | sudo bash
