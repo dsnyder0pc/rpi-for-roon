@@ -1093,7 +1093,7 @@ This configuration permits the Diretta Host to receive standard UPnP network str
 > ---
 > ### ⚠️ Topology Note: Perform on the Host Only
 >
-> All installation and configuration steps detailed in this appendix must be executed exclusively on the **Diretta Host**. The Diretta Target remains a minimalist protocol endpoint and requires no adjustments for UPnP playback.
+> All installation and configuration steps detailed in this section must be executed exclusively on the **Diretta Host**. The Diretta Target remains a minimalist protocol endpoint and requires no adjustments for UPnP playback.
 > ---
 
 ### Step 1: Install and Enable MPD and UPMPDCLI
@@ -1139,8 +1139,8 @@ fi
 Update the UPMPDCLI configuration parameters to define the correct upstream network interface configuration and assign a friendly identifier for discovery by your control applications:
 
 ```bash
-# 1. Dynamically discover the active LAN uplink interface
-UPNP_IFACE=$(ip route show default | awk '{print $5}')
+# 1. Dynamically discover the active LAN uplink interface (guaranteeing a single interface name)
+UPNP_IFACE=$(ip route show default | awk '{print $5}' | head -n 1)
 
 # 2. Verify an interface was found before making changes
 if [ -n "$UPNP_IFACE" ]; then
@@ -1163,7 +1163,7 @@ avfriendlyname = Diretta
 EOT
     else
         echo "Configuration already exists in /etc/upmpdcli.conf. Updating interface name if changed..."
-        sudo sed -i "s/^upnpiface = .*/upnpiface = ${UPNP_IFACE}/" /etc/upmpdcli.conf
+        sudo sed -i "s/^upnpiface[[:space:]]*=[[:space:]]*.*/upnpiface = ${UPNP_IFACE}/" /etc/upmpdcli.conf
     fi
 else
     echo "ERROR: Could not programmatically determine the uplink interface." >&2
@@ -1710,7 +1710,7 @@ set-roon-zone
 Follow the prompts to enter the new name for your Roon Zone. You may have to enter the root password to make the changes take effect.
 
 **Note: A Better Way to Set the Zone**
-While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, detailed in [Appendix 4](#13-appendix-4-optional-system-control-web-ui). The web UI provides a dedicated page for viewing and editing the zone name from your phone or browser.
+While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, detailed in [Appendix 4](#d-appendix-4-optional-system-control-web-ui). The web UI provides a dedicated page for viewing and editing the zone name from your phone or browser.
 
 ### **Step 9: Profit! 📈**
 
