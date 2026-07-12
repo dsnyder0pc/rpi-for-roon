@@ -2974,7 +2974,7 @@ sudo sync && sudo reboot
 >
 > ---
 
-## J. Appendix 10: Optional System Updates
+## 23. Appendix 10: Optional System Updates
 This section provides guidance on applying updates to the Raspberry Pi hardware, AudioLinux operating system, and the Diretta software stack.
 
 #### **Part 1:** Update the Raspberry Pi Bootloader (Optional)
