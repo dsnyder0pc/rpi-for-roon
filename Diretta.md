@@ -84,16 +84,19 @@ If you are located in the US, expect to pay around $320 (plus tax and shipping) 
 8.  [Diretta Software Installation & Configuration](#8-diretta-software-installation--configuration)
 9.  [Roon Integration Option](#9-roon-integration-option)
 10. [UPnP Integration Option](#10-upnp-integration-option)
-A. [Appendix 1: Optional Argon ONE Fan Control](#a-appendix-1-optional-argon-one-fan-control)
-B. [Appendix 2: Optional IR Remote Control](#b-appendix-2-optional-ir-remote-control)
-C. [Appendix 3: Optional Purist Mode](#c-appendix-3-optional-purist-mode)
-D. [Appendix 4: Optional System Control Web UI](#d-appendix-4-optional-system-control-web-ui)
-E. [Appendix 5: System Health Checks](#e-appendix-5-system-health-checks)
-F. [Appendix 6: Optional Realtime Performance Tuning](#f-appendix-6-optional-realtime-performance-tuning)
-G. [Appendix 7: Optional IRQ and Thread Optimizations](#g-appendix-7-optional-irq-and-thread-optimizations)
-H. [Appendix 8: Optional Purist Network Speeds](#h-appendix-8-optional-purist-network-speeds)
-I. [Appendix 9: Optional Jumbo Frames Optimization](#i-appendix-9-optional-jumbo-frames-optimization)
-J. [Appendix 10: Optional System Updates](#j-appendix-10-optional-system-updates)
+11. [NAA Integration Option](#11-naa-integration-option)
+12. [LMS Integration Option](#12-lms-integration-option)
+13. [AES67 Integration Option](#13-aes67-integration-option)
+14. [Appendix 1: Optional Argon ONE Fan Control](#14-appendix-1-optional-argon-one-fan-control)
+15. [Appendix 2: Optional IR Remote Control](#15-appendix-2-optional-ir-remote-control)
+16. [Appendix 3: Optional Purist Mode](#16-appendix-3-optional-purist-mode)
+17. [Appendix 4: Optional System Control Web UI](#17-appendix-4-optional-system-control-web-ui)
+18. [Appendix 5: System Health Checks](#18-appendix-5-system-health-checks)
+19. [Appendix 6: Optional Realtime Performance Tuning](#19-appendix-6-optional-realtime-performance-tuning)
+20. [Appendix 7: Optional IRQ and Thread Optimizations](#20-appendix-7-optional-irq-and-thread-optimizations)
+21. [Appendix 8: Optional Purist Network Speeds](#21-appendix-8-optional-purist-network-speeds)
+22. [Appendix 9: Optional Jumbo Frames Optimization](#22-appendix-9-optional-jumbo-frames-optimization)
+23. [Appendix 10: Optional System Updates](#23-appendix-10-optional-system-updates)
 
 ---
 
@@ -188,7 +191,7 @@ For the best performance, this guide uses the Raspberry Pi 5 for both the Dirett
 >
 > **You must perform the initial boot and configuration for each device one at a time.**
 
-1.  Insert the microSD card into the **first** Raspberry Pi, connect it to your network, and power it on. **Note:** If you're using the Argon ONE case, you may hear audible noise from the fan. Don't worry. Once you've finished with Diretta setup, there are instructions in [Appendix 1](#a-appendix-1-optional-argon-one-fan-control) for addressing the fan noise.
+1.  Insert the microSD card into the **first** Raspberry Pi, connect it to your network, and power it on. **Note:** If you're using the Argon ONE case, you may hear audible noise from the fan. Don't worry. Once you've finished with Diretta setup, there are instructions in [Appendix 1](#14-appendix-1-optional-argon-one-fan-control) for addressing the fan noise.
 2.  Complete **all of Section 3** for this first device.
 3.  Once the first device has rebooted with its new unique configuration, power it down.
 4.  Now, power on the **second** Raspberry Pi and repeat **all of Section 3** for it.
@@ -1045,7 +1048,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 > ---
 > ### ✅ Checkpoint: Verify Your Core System
 >
-> Your core Diretta and Roon system should now be fully functional. To verify all services and connections, please proceed to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
+> Your core Diretta and Roon system should now be fully functional. To verify all services and connections, please proceed to [**Appendix 5**](#18-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
@@ -1185,13 +1188,13 @@ sudo systemctl restart upmpdcli
 >
 > Open your chosen UPnP/DLNA controller platform on a network-connected remote device. Your system should discover the endpoint, displaying **DIRETTA** as an active, selectable playback zone.
 >
-> If you have UPnP installed and enabled, now is a good time to return to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
+> If you have UPnP installed and enabled, now is a good time to return to [**Appendix 5**](#18-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
 ---
 
-## A. Appendix 1: Optional Argon ONE Fan Control
+## 14. Appendix 1: Optional Argon ONE Fan Control
 If you decided to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
 
 If you are using Argon ONE cases for both Diretta Host and Target, you'll need to perform these steps on both computers.
@@ -1318,7 +1321,7 @@ Now, feel free to adjust the values as needed, following the steps above.
 
 ---
 
-## B. Appendix 2: Optional IR Remote Control
+## 15. Appendix 2: Optional IR Remote Control
 
 This guide provides instructions for installing and configuring an IR remote to control Roon. The setup is divided into two parts.
 
@@ -1710,14 +1713,14 @@ set-roon-zone
 Follow the prompts to enter the new name for your Roon Zone. You may have to enter the root password to make the changes take effect.
 
 **Note: A Better Way to Set the Zone**
-While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, detailed in [Appendix 4](#d-appendix-4-optional-system-control-web-ui). The web UI provides a dedicated page for viewing and editing the zone name from your phone or browser.
+While this script works perfectly, the recommended method for changing the Roon Zone is to use the AnCaolas Link System Control web application, detailed in [Appendix 4](#17-appendix-4-optional-system-control-web-ui). The web UI provides a dedicated page for viewing and editing the zone name from your phone or browser.
 
 ### **Step 9: Profit! 📈**
 
 > ---
 > ### ✅ Checkpoint: Verify Your IR Remote Setup
 >
-> Your IR Remote hardware and software should now be configured. To verify the setup, proceed to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on the Diretta Host.
+> Your IR Remote hardware and software should now be configured. To verify the setup, proceed to [**Appendix 5**](#18-appendix-5-system-health-checks) and run the universal **System Health Check** command on the Diretta Host.
 >
 > ---
 
@@ -1725,7 +1728,7 @@ Your IR remote should now control Roon. Enjoy!
 
 ---
 
-## C. Appendix 3: Optional Purist Mode
+## 16. Appendix 3: Optional Purist Mode
 There is minimal network and background activity on the Diretta Target computer that is not related to music playback using the Diretta protocol. However, some users prefer to take extra steps to reduce the possibility of such activity. We are already on the extreme edge of audio performance, so why not?
 
 ---
@@ -1927,7 +1930,7 @@ You have full interactive control over the system at any time.
 
 ---
 
-## D. Appendix 4: Optional System Control Web UI
+## 17. Appendix 4: Optional System Control Web UI
 
 This appendix provides instructions for installing a simple web-based application on the Diretta Host. This application provides an easy-to-use interface, accessible from a phone or tablet, to manage key features of your Diretta system, including Purist Mode on the Target and Roon IR Remote integration settings on the Host.
 
@@ -2405,16 +2408,16 @@ From the landing page, a navigation bar at the top will guide you to the differe
 
 ### 🔗 Note on Full Web UI Functionality
 
-To unlock the full capabilities of the System Control Web UI—specifically the network **Link Speed** adjustments and the **Super Purist** toggle—you must also complete the hardware and service configurations detailed in [**Appendix 8: Optional Purist Network Speeds**](#h-appendix-8-optional-purist-network-speeds)[cite: 1]. The web interface relies directly on the underlying scripts, flags, and services established in that section to successfully modify and enforce physical link speed boundaries on your point-to-point connection[cite: 1].
+To unlock the full capabilities of the System Control Web UI—specifically the network **Link Speed** adjustments and the **Super Purist** toggle—you must also complete the hardware and service configurations detailed in [**Appendix 8: Optional Purist Network Speeds**](#21-appendix-8-optional-purist-network-speeds)[cite: 1]. The web interface relies directly on the underlying scripts, flags, and services established in that section to successfully modify and enforce physical link speed boundaries on your point-to-point connection[cite: 1].
 
 > ---
 > ### ✅ Checkpoint: Verify Your Web UI Setup
 >
-> The Purist Mode Web UI should now be operational. To verify all components of this complex feature, proceed to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
+> The Purist Mode Web UI should now be operational. To verify all components of this complex feature, proceed to [**Appendix 5**](#18-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
-## E. Appendix 5: System Health Checks
+## 18. Appendix 5: System Health Checks
 
 After completing major sections of this guide, it's a good idea to run a quick quality assurance (QA) check to verify that everything is configured correctly.
 
@@ -2430,7 +2433,7 @@ curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/script
 
 ---
 
-## F. Appendix 6: Optional Realtime Performance Tuning
+## 19. Appendix 6: Optional Realtime Performance Tuning
 
 The following steps are optional but recommended for users seeking to extract the absolute maximum performance from their Diretta setup. The strategy, based on advice from AudioLinux author Piero, is to create the most stable and electrically quiet environment possible on both the Host and Target devices.
 
@@ -2586,7 +2589,7 @@ sudo systemctl disable rtapp.timer
 sudo sync && sudo reboot
 ```
 
-## G. Appendix 7: Optional IRQ and Thread Optimizations
+## 20. Appendix 7: Optional IRQ and Thread Optimizations
 
 ### Part 1: Diretta Target USB Path Isolation
 By default, even when CPU cores are isolated, USB interrupts may still compete for resources on the "noisy" system cores (0 and 1). This script dynamically identifies the specific USB controller your DAC is connected to and pins its hardware interrupts to your isolated audio cores (2 and 3).  On the Raspberry Pi 5, the USB controllers are managed by the RP1 chip, allowing us to steer hardware interrupts to specific cores.
@@ -2654,11 +2657,11 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
 > ---
 > ### ✅ Checkpoint: Verify Your Realtime Tuning
 >
-> Your advanced realtime tuning should now be complete. To verify all components of this new configuration, please return to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
+> Your advanced realtime tuning should now be complete. To verify all components of this new configuration, please return to [**Appendix 5**](#18-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
-## H. Appendix 8: Optional Purist Network Speeds
+## 21. Appendix 8: Optional Purist Network Speeds
 
 **Objective:** Reduce electrical noise and improve OS scheduler precision by limiting the dedicated network link speed and explicitly disabling Energy Efficient Ethernet (EEE).
 
@@ -2793,11 +2796,11 @@ sudo systemctl enable --now limit-speed-100m.service
 >
 > ### ✅ Checkpoint: Verify Network Configuration
 >
-> Your dedicated network link is now configured for "Purist" 100Mbps operation. To verify that the Host service is active and the Target has correctly negotiated the speed (detected via the marker file), please return to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
+> Your dedicated network link is now configured for "Purist" 100Mbps operation. To verify that the Host service is active and the Target has correctly negotiated the speed (detected via the marker file), please return to [**Appendix 5**](#18-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
-## I. Appendix 9: Optional Jumbo Frames Optimization
+## 22. Appendix 9: Optional Jumbo Frames Optimization
 This section optimizes the transport for high-bandwidth efficiency.
 
 #### **Step 1:** Prepare Interfaces
@@ -2946,7 +2949,7 @@ sudo sync && sudo reboot
 >
 > ### ✅ Checkpoint: Verify Network Configuration
 >
-> If you were able to enable Jumbo frames support for your configuration, now is a good time to return to [**Appendix 5**](#e-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
+> If you were able to enable Jumbo frames support for your configuration, now is a good time to return to [**Appendix 5**](#18-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target.
 >
 > ---
 
@@ -3041,7 +3044,7 @@ The system update process requires a strict sequence to ensure the custom kernel
 >    ```bash
 >    purist-mode --revert
 >    ```
-> 3. Run the universal **System Health Check** QA script from [**Appendix 5**](#e-appendix-5-system-health-checks) on **both** the Host and the Target.
+> 3. Run the universal **System Health Check** QA script from [**Appendix 5**](#18-appendix-5-system-health-checks) on **both** the Host and the Target.
 > 4. Carefully verify the output and resolve any isolated thread affinity or priority issues caught by the script.
 >
 > ---
