@@ -1194,6 +1194,24 @@ sudo systemctl restart upmpdcli
 
 ---
 
+## 11. NAA Integration Option
+
+**Objective:** Enable the Signalyst HQPlayer NAA (Network Audio Adapter) protocol on the Diretta Host.
+
+---
+
+## 12. LMS Integration Option
+
+**Objective:** Enable the SlimProto streaming protocol for integration with Lyrion Media Server on the Diretta Host
+
+---
+
+## 13. AES Integration Option
+
+**Objective:** Enable the AES67 low-latency streaming protocol for compatibility with REVENNA and Dante Audio services on the Diretta Host
+
+---
+
 ## 14. Appendix 1: Optional Argon ONE Fan Control
 If you decided to use an Argon ONE case for your Raspberry Pi, the default installer script assumes you're running a Debian O/S. However Audiolinux is based on Arch Linux, so you'll have to follow these steps instead.
 
