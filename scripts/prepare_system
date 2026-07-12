@@ -138,9 +138,9 @@ chmod 600 "/opt/configuration/data"
 
 echo "------------------------------------------------"
 
-# Step 6: Remove test scripts in /home/audiolinux
-echo "🧹 Removing test scripts from /home/$TARGET_USER..."
-for test_script in tspc.sh hspc.sh; do
+# Step 6: Remove test and QA scripts in /home/audiolinux
+echo "🧹 Removing test and QA scripts from /home/$TARGET_USER..."
+for test_script in tspc.sh hspc.sh diretta-target-checks.sh diretta-host-checks.sh; do
     script_path="/home/$TARGET_USER/$test_script"
     if [ -f "$script_path" ]; then
         rm -fv "$script_path"
