@@ -1097,6 +1097,7 @@ This configuration permits the Diretta Host to receive standard UPnP network str
 > ### ⚠️ Topology Note: Perform on the Host Only
 >
 > All installation and configuration steps detailed in this section must be executed exclusively on the **Diretta Host**. The Diretta Target remains a minimalist protocol endpoint and requires no adjustments for UPnP playback.
+>
 > ---
 
 ### Step 1: Install and Enable MPD and UPMPDCLI
