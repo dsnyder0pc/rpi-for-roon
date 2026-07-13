@@ -1097,6 +1097,7 @@ Diese Konfiguration ermöglicht es dem Diretta-Host, Standard-UPnP-Netzwerk-Stre
 > ### ⚠️ Topologie-Hinweis: Nur auf dem Host ausführen
 >
 > Alle in diesem Anhang beschriebenen Installations- und Konfigurationsschritte müssen ausschließlich auf dem **Diretta-Host** ausgeführt werden. Das Diretta-Target bleibt ein minimalistischer Protokoll-Endpunkt und erfordert keine Anpassungen für die UPnP-Wiedergabe.
+>
 > ---
 
 ### Schritt 1: MPD und UPMPDCLI installieren und aktivieren

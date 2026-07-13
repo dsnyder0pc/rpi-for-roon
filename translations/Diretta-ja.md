@@ -1097,6 +1097,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 > ### ⚠️ トポロジーに関する注意: ホスト側でのみ実行してください
 >
 > この付録に記載されているすべてのインストールおよび設定手順は、**Diretta ホスト**上でのみ実行する必要があります。Diretta ターゲットはミニマリストなプロトコルエンドポイントのままであり、UPnP 再生のための調整は必要ありません。
+>
 > ---
 
 ### ステップ 1: MPD と UPMPDCLI のインストールと有効化

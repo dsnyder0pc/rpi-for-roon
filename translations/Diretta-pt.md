@@ -1097,6 +1097,7 @@ Esta configuração permite que o Diretta Host receba fluxos de rede UPnP padrã
 > ### ⚠️ Nota de topologia: Executar apenas no Host
 >
 > Todas as etapas de instalação e configuração detalhadas neste apêndice devem ser executadas exclusivamente no **Diretta Host**. O Diretta Target continua sendo um endpoint de protocolo minimalista e não requer ajustes para reprodução UPnP.
+>
 > ---
 
 ### Passo 1: Instalar e habilitar MPD e UPMPDCLI
