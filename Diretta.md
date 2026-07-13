@@ -136,25 +136,27 @@ A complete bill of materials is provided below. While other parts can be substit
 
 **Required Networking Components:**
 * 1 x [Plugable USB3 to Ethernet Adapter](https://www.amazon.com/dp/B00AQM8586) (for the Diretta Host)
-* 1 x [Short CAT6 Ethernet Patch Cable](https://www.amazon.com/Cable-Matters-Snagless-Ethernet-Internet/dp/B0B57S1G2Y/?th=1) (for the point-to-point link)
+* 1 x [Short CAT6 Ethernet Patch Cable](https://www.amazon.com/Cable-Matters-Snagless-Ethernet-Internet/dp/B0B57S1G2Y) (for the point-to-point link)
 
-**Optional, but helpful for troubleshooting:**
+**Optional, but helpful for assembly and troubleshooting:**
+* 1 x [Small Screwdriver Set](https://www.amazon.com/dp/B01MFER4XH)
+* 1 x [USB Flash Drive](https://www.amazon.com/PNY-Elite-X-128GB-Flash-Drive/dp/B01LFV52T6)
 * 1 x [Micro-HDMI to Standard HDMI (A/M), 2m Cable, White](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Raspberry Pi Official Keyboard - Red/White](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 * 1 x [Raspberry Pi Official Mouse - Red/White](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)
 * 1 x [Raspberry Pi Monitor - Red/White](https://www.pishop.us/product/raspberry-pi-monitor-red-white/)
 
 **Optional Upgrades:**
-* 2 x [Argon ONE V3 Raspberry Pi 5 Case](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (instead of the Flirc cases)
-* 1 x [Argon IR Remote](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (to add remote control capabilities to the Diretta Host)
+* 2 x [Argon ONE V3 Raspberry Pi 5 Case](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2) (instead of the Flirc cases)
+* 1 x [Argon IR Remote](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6) (to add remote control capabilities to the Diretta Host)
 * 1 x [Flirc USB IR Receiver](https://www.pishop.us/product/flirc-rpi-usb-xbmc-ir-remote-receiver/) (to use the Argon IR Remote with the Diretta Host in a Flirc Case)
 * 1 x [Blue Jeans BJC CAT6a Belden Bonded Pairs 500 MHz](https://www.bluejeanscable.com/store/data-cables/index.htm) (for the point-to-point connection between Host and Target)
-* 1 x [iFi SilentPower iPower Elite](https://www.amazon.com/gp/product/B08S622SM7/) (to provide clean power to the Diretta Target)
+* 1 x [iFi SilentPower iPower Elite](https://www.amazon.com/gp/product/B08S622SM7) (to provide clean power to the Diretta Target)
 * 1 x [iFi SilentPower Pulsar USB Cable](https://www.silentpower.tech/products/pulsar-usb) (USB connection with galvanic isolation)
-* 1 x [DC 5.5mm x 2.1mm to UsB C Adapter](https://www.amazon.com/5-5mm-Adapter-Female-Convert-Connector/dp/B0CRB7N4GH/) (needed to adapt the plug on the iPower Elite to the Diretta Target's USB C power input)
+* 1 x [DC 5.5mm x 2.1mm to UsB C Adapter](https://www.amazon.com/5-5mm-Adapter-Female-Convert-Connector/dp/B0CRB7N4GH) (needed to adapt the plug on the iPower Elite to the Diretta Target's USB C power input)
 * 1 x [SMSL PO100 PRO DDC](https://www.amazon.com/dp/B0BLYVZCV5) (a digital-to-digital converter for DACs that lack a good USB input implementation)
 * 1 x [USB Wireless Adapter](https://www.pishop.us/product/raspberry-pi-dual-band-5ghz-2-4ghz-usb-wifi-adapter-with-antenna/) (a wired connection is highly preferable and more reliable, but if adding wired Ethernet near your audio system is impractical, replace the Plugable USB to Ethernet adapter with this Wi-Fi adapter)
-* 1 x [Power Splitter Cord](https://www.amazon.com/dp/B01K3ADXX2?th=1) (plug both 45W power adapters into a single receptacle)
+* 1 x [Power Splitter Cord](https://www.amazon.com/dp/B01K3ADXX2) (plug both 45W power adapters into a single receptacle)
 
 **Required Audio Component:**
 * 1 x USB DAC or DDC

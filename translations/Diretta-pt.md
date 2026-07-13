@@ -136,25 +136,27 @@ Uma lista completa de materiais é fornecida abaixo. Embora outras partes possam
 
 **Componentes de Rede Necessários:**
 * 1 x [Adaptador Plugable USB3 para Ethernet](https://www.amazon.com/dp/B00AQM8586) (para o Host Diretta)
-* 1 x [Cabo de Conexão Ethernet CAT6 Curto](https://www.amazon.com/Cable-Matters-Snagless-Ethernet-Internet/dp/B0B57S1G2Y/?th=1) (para o link ponto a ponto)
+* 1 x [Cabo de Conexão Ethernet CAT6 Curto](https://www.amazon.com/Cable-Matters-Snagless-Ethernet-Internet/dp/B0B57S1G2Y) (para o link ponto a ponto)
 
-**Opcional, mas útil para solução de problemas:**
+**Opcional, mas útil para montagem e solução de problemas:**
+* 1 x [Jogo de chaves de fenda pequenas](https://www.amazon.com/dp/B01MFER4XH)
+* 1 x [Unidade flash USB](https://www.amazon.com/PNY-Elite-X-128GB-Flash-Drive/dp/B01LFV52T6)
 * 1 x [Cabo Micro-HDMI para HDMI Padrão (A/M), 2m, Branco](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Teclado Oficial do Raspberry Pi - Vermelho/Branco](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 * 1 x [Mouse Oficial do Raspberry Pi - Vermelho/Branco](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)
 * 1 x [Monitor Raspberry Pi - Vermelho/Branco](https://www.pishop.us/product/raspberry-pi-monitor-red-white/)
 
 **Upgrades Opcionais:**
-* 2 x [Gabinete Argon ONE V3 Raspberry Pi 5](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (em vez dos gabinetes Flirc)
-* 1 x [Controle Remoto IR Argon](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (para adicionar recursos de controle remoto ao Host Diretta)
+* 2 x [Gabinete Argon ONE V3 Raspberry Pi 5](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2) (em vez dos gabinetes Flirc)
+* 1 x [Controle Remoto IR Argon](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6) (para adicionar recursos de controle remoto ao Host Diretta)
 * 1 x [Receptor IR USB Flirc](https://www.pishop.us/product/flirc-rpi-usb-xbmc-ir-remote-receiver/) (para usar o Controle Remoto IR Argon com o Host Diretta em um Gabinete Flirc)
 * 1 x [Blue Jeans BJC CAT6a Belden Bonded Pairs 500 MHz](https://www.bluejeanscable.com/store/data-cables/index.htm) (para a conexão ponto a ponto entre Host e Target)
-* 1 x [iFi SilentPower iPower Elite](https://www.amazon.com/gp/product/B08S622SM7/) (para fornecer energia limpa ao Target Diretta)
+* 1 x [iFi SilentPower iPower Elite](https://www.amazon.com/gp/product/B08S622SM7) (para fornecer energia limpa ao Target Diretta)
 * 1 x [Cabo USB iFi SilentPower Pulsar](https://www.silentpower.tech/products/pulsar-usb) (conexão USB com isolamento galvânico)
-* 1 x [Adaptador DC 5.5mm x 2.1mm para USB C](https://www.amazon.com/5-5mm-Adapter-Female-Convert-Connector/dp/B0CRB7N4GH/) (necessário para adaptar o plugue do iPower Elite para a entrada de energia USB C do Target Diretta)
+* 1 x [Adaptador DC 5.5mm x 2.1mm para USB C](https://www.amazon.com/5-5mm-Adapter-Female-Convert-Connector/dp/B0CRB7N4GH) (necessário para adaptar o plugue do iPower Elite para a entrada de energia USB C do Target Diretta)
 * 1 x [SMSL PO100 PRO DDC](https://www.amazon.com/dp/B0BLYVZCV5) (um conversor digital para digital para DACs que não possuem uma boa implementação de entrada USB)
 * 1 x [Adaptador Wireless USB](https://www.pishop.us/product/raspberry-pi-dual-band-5ghz-2-4ghz-usb-wifi-adapter-with-antenna/) (uma conexão cabeada é altamente preferível e mais confiável, mas se a adição de Ethernet cabeada perto do seu sistema de áudio for impraticável, substitua o adaptador Plugable USB para Ethernet por este adaptador Wi-Fi)
-* 1 x [Cabo Divisor de Energia](https://www.amazon.com/dp/B01K3ADXX2?th=1) (conecte ambos os adaptadores de energia de 45W em uma única tomada)
+* 1 x [Cabo Divisor de Energia](https://www.amazon.com/dp/B01K3ADXX2) (conecte ambos os adaptadores de energia de 45W em uma única tomada)
 
 **Componente de Áudio Necessário:**
 * 1 x USB DAC ou DDC

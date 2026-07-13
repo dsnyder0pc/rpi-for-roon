@@ -136,25 +136,27 @@ Une liste complète des composants est fournie ci-dessous. Bien que d'autres pi�
 
 **Composants réseau requis :**
 * 1 x [Adaptateur Plugable USB3 vers Ethernet](https://www.amazon.com/dp/B00AQM8586) (pour le Host Diretta)
-* 1 x [Câble de brassage Ethernet CAT6 court](https://www.amazon.com/Cable-Matters-Snagless-Ethernet-Internet/dp/B0B57S1G2Y/?th=1) (pour la liaison point à point)
+* 1 x [Câble de brassage Ethernet CAT6 court](https://www.amazon.com/Cable-Matters-Snagless-Ethernet-Internet/dp/B0B57S1G2Y) (pour la liaison point à point)
 
-**Optionnel, mais utile pour le dépannage :**
+**Optionnel, mais utile pour l'assemblage et le dépannage :**
+* 1 x [Jeu de petits tournevis](https://www.amazon.com/dp/B01MFER4XH)
+* 1 x [Clé USB](https://www.amazon.com/PNY-Elite-X-128GB-Flash-Drive/dp/B01LFV52T6)
 * 1 x [Câble Micro-HDMI vers HDMI standard (A/M), 2m, Blanc](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Clavier officiel Raspberry Pi - Rouge/Blanc](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 * 1 x [Souris officielle Raspberry Pi - Rouge/Blanc](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)
 * 1 x [Moniteur Raspberry Pi - Rouge/Blanc](https://www.pishop.us/product/raspberry-pi-monitor-red-white/)
 
 **Mises à niveau optionnelles :**
-* 2 x [Boîtier Argon ONE V3 Raspberry Pi 5](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (au lieu des boîtiers Flirc)
-* 1 x [Télécommande IR Argon](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (pour ajouter des fonctionnalités de télécommande au Host Diretta)
+* 2 x [Boîtier Argon ONE V3 Raspberry Pi 5](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2) (au lieu des boîtiers Flirc)
+* 1 x [Télécommande IR Argon](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6) (pour ajouter des fonctionnalités de télécommande au Host Diretta)
 * 1 x [Récepteur IR USB Flirc](https://www.pishop.us/product/flirc-rpi-usb-xbmc-ir-remote-receiver/) (pour utiliser la télécommande IR Argon avec le Host Diretta dans un boîtier Flirc)
 * 1 x [Câble Blue Jeans BJC CAT6a Belden Bonded Pairs 500 MHz](https://www.bluejeanscable.com/store/data-cables/index.htm) (pour la connexion point à point entre Host et Target)
-* 1 x [iFi SilentPower iPower Elite](https://www.amazon.com/gp/product/B08S622SM7/) (pour fournir une alimentation propre au Target Diretta)
+* 1 x [iFi SilentPower iPower Elite](https://www.amazon.com/gp/product/B08S622SM7) (pour fournir une alimentation propre au Target Diretta)
 * 1 x [Câble USB iFi SilentPower Pulsar](https://www.silentpower.tech/products/pulsar-usb) (connexion USB avec isolation galvanique)
-* 1 x [Adaptateur DC 5.5mm x 2.1mm vers USB C](https://www.amazon.com/5-5mm-Adapter-Female-Convert-Connector/dp/B0CRB7N4GH/) (nécessaire pour adapter la fiche de l'iPower Elite à l'entrée d'alimentation USB C du Target Diretta)
+* 1 x [Adaptateur DC 5.5mm x 2.1mm vers USB C](https://www.amazon.com/5-5mm-Adapter-Female-Convert-Connector/dp/B0CRB7N4GH) (nécessaire pour adapter la fiche de l'iPower Elite à l'entrée d'alimentation USB C du Target Diretta)
 * 1 x [SMSL PO100 PRO DDC](https://www.amazon.com/dp/B0BLYVZCV5) (un convertisseur numérique-numérique pour les DAC qui manquent d'une bonne implémentation d'entrée USB)
 * 1 x [Adaptateur sans fil USB](https://www.pishop.us/product/raspberry-pi-dual-band-5ghz-2-4ghz-usb-wifi-adapter-with-antenna/) (une connexion filaire est fortement préférable et plus fiable, mais si l'ajout d'une connexion Ethernet filaire près de votre système audio n'est pas pratique, remplacez l'adaptateur Plugable USB vers Ethernet par cet adaptateur Wi-Fi)
-* 1 x [Cordon répartiteur d'alimentation](https://www.amazon.com/dp/B01K3ADXX2?th=1) (branchez les deux adaptateurs secteur 45W sur une seule prise)
+* 1 x [Cordon répartiteur d'alimentation](https://www.amazon.com/dp/B01K3ADXX2) (branchez les deux adaptateurs secteur 45W sur une seule prise)
 
 **Composant audio requis :**
 * 1 x DAC USB ou DDC

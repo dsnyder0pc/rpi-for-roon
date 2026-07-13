@@ -136,25 +136,27 @@ Roon Labs自身も、この主要な問題を解決するために「2筐体」�
 
 **必須のネットワークコンポーネント:**
 * 1 x [Plugable USB3 - Ethernet アダプター](https://www.amazon.com/dp/B00AQM8586) (Diretta Host用)
-* 1 x [短いCAT6 Ethernetパッチケーブル](https://www.amazon.com/Cable-Matters-Snagless-Ethernet-Internet/dp/B0B57S1G2Y/?th=1) (ポイント・ツー・ポイント接続用)
+* 1 x [短いCAT6 Ethernetパッチケーブル](https://www.amazon.com/Cable-Matters-Snagless-Ethernet-Internet/dp/B0B57S1G2Y) (ポイント・ツー・ポイント接続用)
 
-**トラブルシューティングに役立つオプションの機器:**
+**組み立てやトラブルシューティングに役立つオプションの機器:**
+* 1 x [小型ドライバーセット](https://www.amazon.com/dp/B01MFER4XH)
+* 1 x [USBフラッシュドライブ](https://www.amazon.com/PNY-Elite-X-128GB-Flash-Drive/dp/B01LFV52T6)
 * 1 x [Micro-HDMI - 標準HDMI (A/M) 2mケーブル（白）](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Raspberry Pi公式キーボード（赤/白）](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 * 1 x [Raspberry Pi公式マウス（赤/白）](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)
 * 1 x [Raspberry Piモニター（赤/白）](https://www.pishop.us/product/raspberry-pi-monitor-red-white/)
 
 **オプションのアップグレードパーツ:**
-* 2 x [Argon ONE V3 Raspberry Pi 5ケース](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2/) (Flircケースの代替品として)
-* 1 x [Argon 赤外線（IR）リモコン](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6/) (Diretta Hostにリモコン制御機能を追加するため)
+* 2 x [Argon ONE V3 Raspberry Pi 5ケース](https://www.amazon.com/Argon-ONE-V3-Raspberry-Case/dp/B0CNGSXGT2) (Flircケースの代替品として)
+* 1 x [Argon 赤外線（IR）リモコン](https://www.amazon.com/Argon-Raspberry-Infrared-Batteries-Included/dp/B091F3XSF6) (Diretta Hostにリモコン制御機能を追加するため)
 * 1 x [Flirc USB赤外線（IR）レシーバー](https://www.pishop.us/product/flirc-rpi-usb-xbmc-ir-remote-receiver/) (Flircケースに入れたDiretta HostでArgon IRリモコンを使用するため)
 * 1 x [Blue Jeans Cable BJC CAT6a Belden Bonded Pairs 500 MHz](https://www.bluejeanscable.com/store/data-cables/index.htm) (HostとTarget間のポイント・ツー・ポイント接続用)
-* 1 x [iFi SilentPower iPower Elite](https://www.amazon.com/gp/product/B08S622SM7/) (Diretta Targetにクリーンな電力を供給するため)
+* 1 x [iFi SilentPower iPower Elite](https://www.amazon.com/gp/product/B08S622SM7) (Diretta Targetにクリーンな電力を供給するため)
 * 1 x [iFi SilentPower Pulsar USBケーブル](https://www.silentpower.tech/products/pulsar-usb) (ガルバニックアイソレーション機能付きUSB接続ケーブル)
-* 1 x [DC 5.5mm x 2.1mm - USB-Cアダプター](https://www.amazon.com/5-5mm-Adapter-Female-Convert-Connector/dp/B0CRB7N4GH/) (iPower EliteのプラグをDiretta TargetのUSB-C電源入力に変換するために必要)
+* 1 x [DC 5.5mm x 2.1mm - USB-Cアダプター](https://www.amazon.com/5-5mm-Adapter-Female-Convert-Connector/dp/B0CRB7N4GH) (iPower EliteのプラグをDiretta TargetのUSB-C電源入力に変換するために必要)
 * 1 x [SMSL PO100 PRO DDC](https://www.amazon.com/dp/B0BLYVZCV5) (USB入力の設計が不十分なDAC向けデジタル・ツー・デジタルコンバーター)
 * 1 x [USB無線LANアダプター](https://www.pishop.us/product/raspberry-pi-dual-band-5ghz-2-4ghz-usb-wifi-adapter-with-antenna/) (有線接続の方がはるかに望ましく信頼性も高いですが、オーディオシステムの近くに有線LANを引き回すのが現実的でない場合、Plugable USB - Ethernetアダプターの代わりにこのWi-Fi adapterを使用します)
-* 1 x [電源用2分配ケーブル](https://www.amazon.com/dp/B01K3ADXX2?th=1) (2基の45W電源アダプターを1つのコンセントに差し込むため)
+* 1 x [電源用2分配ケーブル](https://www.amazon.com/dp/B01K3ADXX2) (2基の45W電源アダプターを1つのコンセントに差し込むため)
 
 **必須のオーディオ機器:**
 * 1 x USB DACまたはDDC
