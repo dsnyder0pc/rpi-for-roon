@@ -226,7 +226,7 @@ run_step10_checks() {
     check "'upmpdcli' service is enabled" "systemctl is-enabled upmpdcli.service"
     check "'upmpdcli' service is active" "systemctl is-active upmpdcli.service"
     check "MPD ALSA output device is configured for Diretta ('hw:0,0')" "grep -q 'device \"hw:0,0\"' /etc/mpd.conf"
-    check "UPMPDCLI avfriendlyname is set to 'Diretta'" "grep -q '^avfriendlyname = Diretta' /etc/upmpdcli.conf"
+    check "UPMPDCLI avfriendlyname is set to 'Diretta'" "grep -iq '^avfriendlyname = Diretta' /etc/upmpdcli.conf"
     check "UPMPDCLI friendlyname is configured" "grep -q '^friendlyname = ' /etc/upmpdcli.conf"
     check "UPMPDCLI network interface is configured" "grep -q '^upnpiface = ' /etc/upmpdcli.conf"
 }
