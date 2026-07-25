@@ -2,7 +2,7 @@
 set -e
 
 # --- Configuration and Defaults ---
-DEFAULT_IMAGE_FILE="${HOME}/img/audiolinux_pi4-pi5_510.img.gz"
+DEFAULT_IMAGE_FILE="${HOME}/img/audiolinux_pi4-pi5_520.img.gz"
 IMAGE_FILE="${1:-$DEFAULT_IMAGE_FILE}"
 
 # --- Helper functions for color output ---
@@ -21,23 +21,53 @@ fi
 echo "Source Image: ${IMAGE_FILE}"
 
 # 2. Detect and select the target device
-echo "🔎 Searching for internal microSD card reader..."
-mapfile -t mmc_devices < <(lsblk -dno PATH | grep /mmcblk)
+echo "🔎 Searching for microSD card / USB devices..."
+mapfile -t mmc_devices < <(lsblk -dnbo PATH,SIZE | awk '$2 > 0 {print $1}' | grep /mmcblk || true)
 
-# Check how many devices were found
-device_count=${#mmc_devices[@]}
-
-if [ "$device_count" -eq 0 ]; then
-    echo "🚫 Error: No microSD card found in the internal slot."
-    exit 1
-elif [ "$device_count" -gt 1 ]; then
+if [ "${#mmc_devices[@]}" -eq 1 ]; then
+    TARGET_DEVICE="${mmc_devices[0]}"
+    echo "✅ Success! Using internal microSD card reader: ${TARGET_DEVICE}"
+elif [ "${#mmc_devices[@]}" -gt 1 ]; then
     echo "🚫 Error: Multiple 'mmc' devices detected. Cannot determine the correct one."
     exit 1
-fi
+else
+    # Exclude root disk, loop devices, zram devices
+    ROOT_PART=$(findmnt -n -o SOURCE / | cut -d'[' -f1)
+    ROOT_DISK=$(lsblk -no PKNAME "${ROOT_PART}" 2>/dev/null || true)
+    if [ -z "${ROOT_DISK}" ]; then
+        ROOT_DISK_PATH="${ROOT_PART}"
+    else
+        ROOT_DISK_PATH="/dev/${ROOT_DISK}"
+    fi
 
-# Exactly one device was found, so we can proceed.
-TARGET_DEVICE="${mmc_devices[0]}"
-echo "✅ Success! Using device: ${TARGET_DEVICE}"
+    mapfile -t candidate_devices < <(lsblk -dnbo PATH,SIZE | awk '$2 > 0 {print $1}' | grep -v -E "(${ROOT_DISK_PATH}|zram|loop)" || true)
+
+    if [ "${#candidate_devices[@]}" -eq 0 ]; then
+        echo "🚫 Error: No microSD card or USB storage device found."
+        exit 1
+    elif [ "${#candidate_devices[@]}" -eq 1 ]; then
+        TARGET_DEVICE="${candidate_devices[0]}"
+        DEV_INFO=$(lsblk -dno SIZE,MODEL "${TARGET_DEVICE}")
+        echo "Found one potential device: ${TARGET_DEVICE} (${DEV_INFO})"
+        read -r -p "Do you want to use this device? (y/N) " -n 1
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Aborting."
+            exit 1
+        fi
+    else
+        echo "Multiple potential devices found:"
+        select opt in "${candidate_devices[@]}" "Abort"; do
+            if [ -n "${opt}" ] && [ "${opt}" != "Abort" ]; then
+                TARGET_DEVICE="${opt}"
+                break
+            else
+                echo "Aborting."
+                exit 1
+            fi
+        done
+    fi
+fi
 
 # 3. Unmount the target device if it's mounted
 MOUNTED_PARTS=$(lsblk -no MOUNTPOINT "${TARGET_DEVICE}" | grep -v '^$' || true)
