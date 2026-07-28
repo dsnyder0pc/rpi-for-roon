@@ -140,7 +140,7 @@ Uma lista completa de materiais é fornecida abaixo. Embora outras partes possam
 
 **Opcional, mas útil para montagem e solução de problemas:**
 * 1 x [Jogo de chaves de fenda pequenas](https://www.amazon.com/dp/B01MFER4XH)
-* 1 x [Unidade flash USB](https://www.amazon.com/PNY-Elite-X-128GB-Flash-Drive/dp/B01LFV52T6)
+* 1 x [Unidade flash USB](https://www.amazon.com/Samsung-BAR-Plus-128GB-MUF-128BE4/dp/B07BPK3XWW)
 * 1 x [Cabo Micro-HDMI para HDMI Padrão (A/M), 2m, Branco](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Teclado Oficial do Raspberry Pi - Vermelho/Branco](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 * 1 x [Mouse Oficial do Raspberry Pi - Vermelho/Branco](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)

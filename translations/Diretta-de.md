@@ -140,7 +140,7 @@ Eine vollständige Stückliste finden Sie unten. Obwohl andere Teile ersetzt wer
 
 **Optional, aber hilfreich für Zusammenbau und Fehlersuche:**
 * 1 x [Kleines Schraubendreher-Set](https://www.amazon.com/dp/B01MFER4XH)
-* 1 x [USB-Stick](https://www.amazon.com/PNY-Elite-X-128GB-Flash-Drive/dp/B01LFV52T6)
+* 1 x [USB-Stick](https://www.amazon.com/Samsung-BAR-Plus-128GB-MUF-128BE4/dp/B07BPK3XWW)
 * 1 x [Micro-HDMI auf Standard HDMI (A/M), 2m Kabel, Weiß](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Offizielle Raspberry Pi Tastatur - Rot/Weiß](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 * 1 x [Offizielle Raspberry Pi Maus - Rot/Weiß](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)

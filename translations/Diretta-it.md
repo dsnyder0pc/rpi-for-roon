@@ -140,7 +140,7 @@ Di seguito viene fornito un elenco completo dei materiali. Sebbene sia possibile
 
 **Opzionale, ma utile per l'assemblaggio e la risoluzione dei problemi:**
 * 1 x [Set di cacciaviti piccoli](https://www.amazon.com/dp/B01MFER4XH)
-* 1 x [Chiavetta USB](https://www.amazon.com/PNY-Elite-X-128GB-Flash-Drive/dp/B01LFV52T6)
+* 1 x [Chiavetta USB](https://www.amazon.com/Samsung-BAR-Plus-128GB-MUF-128BE4/dp/B07BPK3XWW)
 * 1 x [Cavo da Micro-HDMI a HDMI standard (A/M), 2m, Bianco](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Tastiera ufficiale Raspberry Pi - Rosso/Bianco](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 * 1 x [Mouse ufficiale Raspberry Pi - Rosso/Bianco](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)

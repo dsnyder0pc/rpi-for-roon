@@ -140,7 +140,7 @@ Une liste complète des composants est fournie ci-dessous. Bien que d'autres pi�
 
 **Optionnel, mais utile pour l'assemblage et le dépannage :**
 * 1 x [Jeu de petits tournevis](https://www.amazon.com/dp/B01MFER4XH)
-* 1 x [Clé USB](https://www.amazon.com/PNY-Elite-X-128GB-Flash-Drive/dp/B01LFV52T6)
+* 1 x [Clé USB](https://www.amazon.com/Samsung-BAR-Plus-128GB-MUF-128BE4/dp/B07BPK3XWW)
 * 1 x [Câble Micro-HDMI vers HDMI standard (A/M), 2m, Blanc](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Clavier officiel Raspberry Pi - Rouge/Blanc](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 * 1 x [Souris officielle Raspberry Pi - Rouge/Blanc](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)

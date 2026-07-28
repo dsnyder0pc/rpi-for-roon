@@ -140,7 +140,7 @@ A continuación se proporciona una lista completa de materiales. Aunque se puede
 
 **Opcional, pero útil para el montaje y la resolución de problemas:**
 * 1 x [Juego de destornilladores pequeños](https://www.amazon.com/dp/B01MFER4XH)
-* 1 x [Memoria USB](https://www.amazon.com/PNY-Elite-X-128GB-Flash-Drive/dp/B01LFV52T6)
+* 1 x [Memoria USB](https://www.amazon.com/Samsung-BAR-Plus-128GB-MUF-128BE4/dp/B07BPK3XWW)
 * 1 x [Cable de Micro-HDMI a HDMI estándar (A/M) de 2m, Blanco](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Teclado oficial de Raspberry Pi - Rojo/Blanco](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 * 1 x [Ratón oficial de Raspberry Pi - Rojo/Blanco](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)

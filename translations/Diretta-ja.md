@@ -140,7 +140,7 @@ Roon Labs自身も、この主要な問題を解決するために「2筐体」�
 
 **組み立てやトラブルシューティングに役立つオプションの機器:**
 * 1 x [小型ドライバーセット](https://www.amazon.com/dp/B01MFER4XH)
-* 1 x [USBフラッシュドライブ](https://www.amazon.com/PNY-Elite-X-128GB-Flash-Drive/dp/B01LFV52T6)
+* 1 x [USBフラッシュドライブ](https://www.amazon.com/Samsung-BAR-Plus-128GB-MUF-128BE4/dp/B07BPK3XWW)
 * 1 x [Micro-HDMI - 標準HDMI (A/M) 2mケーブル（白）](https://www.pishop.us/product/micro-hdmi-to-standard-hdmi-a-m-2m-cable-white/)
 * 1 x [Raspberry Pi公式キーボード（赤/白）](https://www.pishop.us/product/raspberry-pi-official-keyboard-red-white/)
 * 1 x [Raspberry Pi公式マウス（赤/白）](https://www.pishop.us/product/raspberry-pi-official-mouse-red-white/)
