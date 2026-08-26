@@ -1998,7 +1998,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     fi
 
     # Check the validated boot cache for an active evaluation link
-    if [ ! -f /tmp/diretta_license_url.cache ] || grep -q "http" /tmp/diretta_license_url.cache; then
+    if [ ! -f /run/diretta/license.cache ] || grep -q "http" /run/diretta/license.cache; then
       LICENSE_LIMITED="true"
     fi
 
@@ -2045,7 +2045,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     #!/bin/bash
 
     # This script's only job is to read the cache file created at boot.
-    readonly CACHE_FILE="/tmp/diretta_license_url.cache"
+    readonly CACHE_FILE="/run/diretta/license.cache"
 
     if [ -s "$CACHE_FILE" ]; then
         # If the cache exists and has content, display it.
@@ -2119,6 +2119,10 @@ On the **Diretta Target**, we will create a new user with very limited permissio
     [Service]
     Type=oneshot
     RemainAfterExit=yes
+    # systemd creates /run/diretta and keeps it across unit restarts
+    RuntimeDirectory=diretta
+    RuntimeDirectoryMode=0755
+    RuntimeDirectoryPreserve=yes
     # Block execution cleanly here until the Host replies to a ping
     TimeoutStartSec=infinity
     ExecStartPre=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done"
@@ -2136,7 +2140,7 @@ On the **Diretta Target**, we will create a new user with very limited permissio
 
     # Go ahead and run the script manually once
     sudo /usr/local/bin/create-diretta-cache.sh
-    ls -l /tmp/diretta_license_url.cache
+    ls -l /run/diretta/license.cache
     ```
 
 ---

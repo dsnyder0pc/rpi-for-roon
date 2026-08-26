@@ -458,40 +458,40 @@ Se você acabou de atualizar o seu Diretta Target, clique [aqui](https://github.
     # Criar uma tabela chamada 'ip' (IPv4) denominada 'my_table'
     table ip my_table {
 
-        # === Rule 2: Port Forwarding (DNAT) ===
-        # This chain hooks into the 'prerouting' path for NAT
+        # === Regra 2: Encaminhamento de portas (DNAT) ===
+        # Esta cadeia se conecta ao caminho 'prerouting' para o NAT
         chain prerouting {
             type nat hook prerouting priority dstnat;
 
-            # Forward Host port 5101 to Target port 172.20.0.2:5001
+            # Encaminhar a porta 5101 do Host para a porta 172.20.0.2:5001 do Target
             tcp dport 5101 dnat to 172.20.0.2:5001
         }
 
-        # === Rule 3: Allow Forwarded Traffic (FILTER) ===
-        # This chain hooks into the 'forward' path for packet filtering
+        # === Regra 3: Permitir o tráfego encaminhado (FILTER) ===
+        # Esta cadeia se conecta ao caminho 'forward' para a filtragem de pacotes
         chain forward {
             type filter hook forward priority 0;
 
-            # By default, drop all forwarded traffic
+            # Por padrão, descartar (drop) todo o tráfego encaminhado
             policy drop;
 
-            # Allow connections that are already established or related
+            # Permitir as conexões já estabelecidas ou relacionadas
             ct state established,related accept
 
-            # Allow NEW traffic matching your port forward rule
+            # Permitir o NOVO tráfego que corresponda à sua regra de encaminhamento de portas
             ip daddr 172.20.0.2 tcp dport 5001 ct state new accept
 
-            # Allow all other NEW traffic from the Target subnet
+            # Permitir todo o restante tráfego NOVO proveniente da sub-rede do Target
             ip saddr 172.20.0.0/24 accept
         }
 
-        # === Rule 1: Internet Access (MASQUERADE) ===
-        # This chain hooks into the 'postrouting' path for NAT
+        # === Regra 1: Acesso à Internet (MASQUERADE) ===
+        # Esta cadeia se conecta ao caminho 'postrouting' para o NAT
         chain postrouting {
             type nat hook postrouting priority 100;
 
-            # NAT (Masquerade) traffic from your subnet going
-            # out any interface starting with 'enp', 'enu' or 'wlp'
+            # Aplicar NAT (Masquerade) ao tráfego da sua sub-rede que sai
+            # por qualquer interface que comece com 'enp', 'enu' ou 'wlp'
             ip saddr 172.20.0.0/24 oifname "enp*" masquerade
             ip saddr 172.20.0.0/24 oifname "enu*" masquerade
             ip saddr 172.20.0.0/24 oifname "wlp*" masquerade
@@ -661,7 +661,7 @@ chmod 0600 "$SSH_CONFIG_FILE"
 
 # --- Definir o bloco de configurações globais recomendado ---
 GLOBAL_SETTINGS=$(cat <<'EOF'
-# --- Recommended Global SSH Settings ---
+# --- Configurações globais de SSH recomendadas ---
 Host *
     AddKeysToAgent yes
     IdentityFile ~/.ssh/id_ed25519
@@ -672,7 +672,7 @@ EOF
 # --- Preceder configurações globais se elas não existirem ---
 if ! grep -q "AddKeysToAgent yes" "$SSH_CONFIG_FILE"; then
   echo "✅ Adicionando configurações SSH globais recomendadas..."
-  # Use a temporary file to prepend the settings
+  # Usar um arquivo temporário para inserir as configurações no início
   echo "$GLOBAL_SETTINGS" | cat - "$SSH_CONFIG_FILE" > temp_ssh_config && mv temp_ssh_config "$SSH_CONFIG_FILE"
 else
   echo "✅ As configurações SSH globais recomendadas já existem. Nenhuma alteração feita."
@@ -684,10 +684,10 @@ if grep -q "Host diretta-host" "$SSH_CONFIG_FILE"; then
 else
   read -rp "Insira o endereço IP da LAN do seu Host Diretta e pressione [Enter]: " Diretta_Host_IP
 
-  # Append the new configuration using a heredoc for clarity
+  # Anexar a nova configuração usando um heredoc para maior clareza
   cat <<EOT_HOSTS >> "$SSH_CONFIG_FILE"
 
-# --- Diretta Configuration (added by script) ---
+# --- Configuração Diretta (adicionada pelo script) ---
 Host diretta-host host
     HostName ${Diretta_Host_IP}
     User audiolinux
@@ -705,7 +705,7 @@ fi
 # Isso não é mais necessário com a configuração recomendada de chave SSH
 if command -v sed >/dev/null; then
     sed -i.bak -e '/StrictHostKeyChecking/d' "$SSH_CONFIG_FILE"
-    # Remove empty lines that might be left over
+    # Remover as linhas vazias que possam ter sobrado
     sed -i.bak -e '/^$/N;/^\n$/D' "$SSH_CONFIG_FILE"
     rm -f "${SSH_CONFIG_FILE}.bak"
 fi
@@ -1229,7 +1229,7 @@ Esses comandos ativarão a interface I2C e adicionarão o `dtoverlay` específic
 BOOT_CONFIG="/boot/config.txt"
 I2C_PARAM="dtparam=i2c_arm=on"
 
-# --- Enable I2C by uncommenting the line if it exists ---
+# --- Ativar o I2C descomentando a linha, se ela existir ---
 if grep -q -F "#$I2C_PARAM" "$BOOT_CONFIG"; then
   echo "Ativando o parâmetro I2C..."
   sudo sed -i -e "s/^#\($I2C_PARAM\)/\1/" "$BOOT_CONFIG"
@@ -1274,7 +1274,7 @@ sudo pacman -S --noconfirm --needed i2c-tools libgpiod
 ```
 
 ```bash
-# Create systemd overrides to switch the case to software mode on boot
+# Criar overrides do systemd para alternar o gabinete para o modo software na inicialização
 sudo mkdir -pv /etc/systemd/system/argononed.service.d
 cat <<'EOT'| sudo tee /etc/systemd/system/argononed.service.d/software-mode.conf
 [Service]
@@ -1644,7 +1644,7 @@ EOD
 echo ""
 echo "✅ Arquivo de configuração 'roon-ir-remote/app_info.json' criado com sucesso."
 
-# --- End of Script ---
+# --- Fim do script ---
 EOF
 ```
 
@@ -1766,7 +1766,7 @@ curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/ma
 sudo install -m 0755 purist-mode /usr/local/bin
 rm purist-mode
 
-# Script for showing Purist Mode status on login
+# Script para exibir o status do Modo Purista no login
 cat <<'EOT' | sudo tee /etc/profile.d/purist-status.sh
 #!/bin/sh
 BACKUP_FILE="/etc/nsswitch.conf.purist-bak"
@@ -1862,10 +1862,10 @@ else
   echo "Adicionando um wrapper em torno do comando menu"
   cat <<'EOT' | tee -a ~/.bashrc
 
-# Custom wrapper for the AudioLinux menu to manage Purist Mode
+# Wrapper personalizado para o menu do AudioLinux para gerenciar o Modo Purista
 menu_wrapper() {
   local was_active=false
-  # Check the initial state of Purist Mode by looking for the backup file.
+  # Verificar o estado inicial do Modo Purista procurando pelo arquivo de backup.
   if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
     was_active=true
   fi
@@ -1942,10 +1942,10 @@ Você tem controle interativo total sobre o sistema a qualquer momento.
   * Para controlar o **comportamento automático de inicialização**, use os aliases de conveniência no Diretta Target:
 
     ```bash
-    # This enables the 60-second auto-activation on the next boot
+    # Isso ativa a auto-ativação de 60 segundos na próxima inicialização
     purist-mode-auto-enable
 
-    # This disables the auto-activation on the next boot
+    # Isso desativa a auto-ativação na próxima inicialização
     purist-mode-auto-disable
     ```
 
@@ -1980,38 +1980,38 @@ No **Diretta Target**, criaremos um novo usuário com permissões muito limitada
 3.  **Criar Scripts de Comando Seguros:**
     Criaremos quatro pequenos scripts dedicados que são as *únicas* ações que o aplicativo web tem permissão de realizar. Esta é uma etapa de segurança crítica.
     ```bash
-    # Script to get the current status, including license state
+    # Script para obter o status atual, incluindo o estado da licença
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
     #!/bin/bash
     IS_ACTIVE="false"
     IS_AUTO_ENABLED="false"
     LICENSE_LIMITED="false"
 
-    # Check for Purist Mode
+    # Verificar o Modo Purista
     if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
       IS_ACTIVE="true"
     fi
 
-    # Check if auto-start is enabled
+    # Verificar se a inicialização automática está ativada
     if systemctl is-enabled --quiet purist-mode-auto.service; then
       IS_AUTO_ENABLED="true"
     fi
 
-    # Check the validated boot cache for an active evaluation link
-    if [ ! -f /tmp/diretta_license_url.cache ] || grep -q "http" /tmp/diretta_license_url.cache; then
+    # Verificar o cache de inicialização validado em busca de um link de avaliação ativo
+    if [ ! -f /run/diretta/license.cache ] || grep -q "http" /run/diretta/license.cache; then
       LICENSE_LIMITED="true"
     fi
 
-    # Output all status flags as a single JSON object
+    # Exibir todos os indicadores de status como um único objeto JSON
     echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED}"
     EOT
 
-    # Script to toggle Purist Mode
+    # Script para alternar o Modo Purista
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-mode
     #!/bin/bash
     if [[ "$1" == "--enforce" ]]; then
-        # Absolute enforcement: If it's supposed to be active, re-run
-        # the baseline script to clean up any resurrected default routes.
+        # Aplicação absoluta: se ele deveria estar ativo, executar novamente
+        # o script base para limpar quaisquer rotas padrão ressuscitadas.
         if [ -f "/etc/nsswitch.conf.purist-bak" ]; then
             /usr/local/bin/purist-mode
         fi
@@ -2022,7 +2022,7 @@ No **Diretta Target**, criaremos um novo usuário com permissões muito limitada
     fi
     EOT
 
-    # Script to toggle the auto-start service
+    # Script para alternar o serviço de inicialização automática
     cat <<'EOT' | sudo tee /usr/local/bin/pm-toggle-auto
     #!/bin/bash
     if systemctl is-enabled --quiet purist-mode-auto.service; then
@@ -2032,20 +2032,20 @@ No **Diretta Target**, criaremos um novo usuário com permissões muito limitada
     fi
     EOT
 
-    # Create the script to restart the Diretta service
+    # Criar o script para reiniciar o serviço Diretta
     cat <<'EOT' | sudo tee /usr/local/bin/pm-restart-target
     #!/bin/bash
-    # Restarts the Diretta ALSA Target service.
-    # This script is intended to be called via sudo by the purist-app user.
+    # Reinicia o serviço Diretta ALSA Target.
+    # Este script destina-se a ser chamado via sudo pelo usuário purist-app.
     /usr/bin/systemctl restart diretta_alsa_target.service
     EOT
 
-    # Create the script to fetch the Diretta License URL
+    # Criar o script para obter a URL de licença Diretta
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-license-url
     #!/bin/bash
 
     # A única função deste script é ler o arquivo de cache criado na inicialização.
-    readonly CACHE_FILE="/tmp/diretta_license_url.cache"
+    readonly CACHE_FILE="/run/diretta/license.cache"
 
     if [ -s "$CACHE_FILE" ]; then
         # Se o cache existir e tiver conteúdo, exibi-lo.
@@ -2057,7 +2057,7 @@ No **Diretta Target**, criaremos um novo usuário com permissões muito limitada
     fi
     EOT
 
-    # Create script to set the link speed
+    # Criar o script para definir a velocidade do enlace
     cat <<'EOT' | sudo tee /usr/local/bin/pm-set-link
     #!/bin/bash
     # Script de perfil para impor os limites físicos de link do Target
@@ -2088,10 +2088,10 @@ No **Diretta Target**, criaremos um novo usuário com permissões muito limitada
     Esta etapa permite que o usuário `purist-app` execute nossos quatro novos scripts com privilégios de root e sem a necessidade de um terminal interativo.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/purist-app
-    # Tell sudo not to require a TTY for the purist-app user
+    # Instruir o sudo a não exigir um TTY para o usuário purist-app
     Defaults:purist-app !requiretty
 
-    # Allow the purist-app user to run the specific control scripts without a password
+    # Permitir que o usuário purist-app execute os scripts de controle específicos sem senha
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-status
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-mode
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-toggle-auto
@@ -2104,12 +2104,12 @@ No **Diretta Target**, criaremos um novo usuário com permissões muito limitada
 5.  **Preencher o Arquivo de Cache de Licença do Diretta no Momento da Inicialização**
     A busca pela URL de Licença do Diretta requer uma conexão com a Internet. Se tivermos o Modo Purista ativado por padrão, o Target nunca poderá buscar a URL. No entanto, no momento da inicialização, temos o Modo Purista desativado por 60 segundos para acertar o relógio e verificar a ativação da Licença do Diretta. Podemos usar essa janela de tempo para buscar a URL também.
     ```bash
-    # Download the script, set correct permissions, and place it in the system path
+    # Baixar o script, definir as permissões corretas e colocá-lo no caminho do sistema
     curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh
     sudo install -m 0755 create-diretta-cache.sh /usr/local/bin/
     rm create-diretta-cache.sh
 
-    # Create a service for populating the license status cache
+    # Criar um serviço para popular o cache de status da licença
     cat <<'EOT' | sudo tee /etc/systemd/system/diretta-cache.service
     [Unit]
     Description=Asynchronous Diretta License Cache Collector
@@ -2119,7 +2119,11 @@ No **Diretta Target**, criaremos um novo usuário com permissões muito limitada
     [Service]
     Type=oneshot
     RemainAfterExit=yes
-    # Block execution cleanly here until the Host replies to a ping
+    # O systemd cria /run/diretta e o mantém entre reinícios da unidade
+    RuntimeDirectory=diretta
+    RuntimeDirectoryMode=0755
+    RuntimeDirectoryPreserve=yes
+    # Bloquear a execução de forma limpa aqui até que o Host responda a um ping
     TimeoutStartSec=infinity
     ExecStartPre=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done"
     ExecStart=/usr/local/bin/create-diretta-cache.sh
@@ -2136,7 +2140,7 @@ No **Diretta Target**, criaremos um novo usuário com permissões muito limitada
 
     # Prosseguir e executar o script manualmente uma vez
     sudo /usr/local/bin/create-diretta-cache.sh
-    ls -l /tmp/diretta_license_url.cache
+    ls -l /run/diretta/license.cache
     ```
 
 ---
@@ -2346,7 +2350,7 @@ Agora, no **Host Diretta**, realizaremos todas as etapas para instalar e configu
     Esta etapa é crítica para permitir que o aplicativo web reinicie os serviços necessários relacionados ao Roon sem uma senha.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/webui-restarts
-    # Allow the webui (running as audiolinux) to enforce host profiles and restart services
+    # Permitir que a webui (executando como audiolinux) aplique os perfis do host e reinicie os serviços
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl daemon-reload
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roon-ir-remote.service
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart roonbridge.service
@@ -2721,9 +2725,9 @@ After=sys-subsystem-net-devices-end0.device
 
 [Service]
 Type=oneshot
-# Wait up to 5 seconds for the interface to actually show as UP
+# Aguardar até 5 segundos para que a interface realmente apareça como UP
 ExecStartPre=/usr/bin/bash -c 'for i in {1..5}; do if ip link show end0 | grep -q "UP"; then exit 0; fi; sleep 1; done; exit 1'
-# Now set the hardware optimization
+# Agora, definir a otimização de hardware
 ExecStart=-/usr/bin/ethtool -s end0 advertise 0x03f
 ExecStart=-/usr/bin/ethtool --set-eee end0 eee off
 RemainAfterExit=yes

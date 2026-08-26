@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.23.5
-# (Exact awk PID parsing for isolated core checks)
+# Diretta Target QA Check Script v1.24.0
+# (Diretta license cache moved to /run; adds cache-path consistency checks)
 #
 
 # --- Colors and Formatting ---
@@ -84,9 +84,13 @@ run_appendix4_checks() {
     check "'pm-toggle-auto' script exists" "[ -x /usr/local/bin/pm-toggle-auto ]"
     check "'pm-restart-target' script exists" "[ -x /usr/local/bin/pm-restart-target ]"
     check "'create-diretta-cache.sh' script exists" "[ -x /usr/local/bin/create-diretta-cache.sh ]"
+    check "'create-diretta-cache.sh' script is up-to-date" "check_hash /usr/local/bin/create-diretta-cache.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh"
     check "'diretta-cache' service file exists" "[ -f /etc/systemd/system/diretta-cache.service ]"
     check "'diretta-cache' service is enabled" "systemctl is-enabled --quiet diretta-cache.service"
-    check "'diretta-cache' license status cache exists" "[ -s /tmp/diretta_license_url.cache ]"
+    check "'diretta-cache' service defines its runtime directory" "grep -q '^RuntimeDirectory=diretta' /etc/systemd/system/diretta-cache.service"
+    check "'diretta-cache' license status cache exists" "[ -s /run/diretta/license.cache ]"
+    check "Web app readers use the same cache path as the writer" "grep -q '/run/diretta/license.cache' /usr/local/bin/pm-get-status && grep -q '/run/diretta/license.cache' /usr/local/bin/pm-get-license-url"
+    check "'pm-get-license-url' returns cached license data" "/usr/local/bin/pm-get-license-url"
     check "Sudoers file for 'purist-app' exists" "[ -f /etc/sudoers.d/purist-app ]"
     check "Sudoers allows 'pm-get-license-url'" "grep -q 'NOPASSWD: /usr/local/bin/pm-get-license-url' /etc/sudoers.d/purist-app"
     check "SSH authorized_keys for 'purist-app' exists" "[ -f /home/purist-app/.ssh/authorized_keys ]"
@@ -270,7 +274,7 @@ check "'diretta-alsa-target' is installed" "[ -d /opt/diretta-alsa-target ]"
 check "'diretta_alsa_target' service is enabled" "systemctl is-enabled diretta_alsa_target.service"
 check "'diretta_alsa_target' service is active" "systemctl is-active diretta_alsa_target.service"
 check "USB DAC/DDC is configured and detected" "grep -q ' \[.*\]:' /proc/asound/cards"
-check_status "Diretta Target License Status" "{ cat /tmp/diretta_license_url.cache 2>/dev/null || sudo /opt/diretta-alsa-target/diretta_app_activate 2>/dev/null; } | grep -qE '^(Licensed|valid)'" "activated" "limited"
+check_status "Diretta Target License Status" "{ cat /run/diretta/license.cache 2>/dev/null || sudo /opt/diretta-alsa-target/diretta_app_activate 2>/dev/null; } | grep -qE '^(Licensed|valid)'" "activated" "limited"
 
 header "Section 8a" "Diretta Compiler Toolchain"
 # --- Version-Aware Compiler Checks ---

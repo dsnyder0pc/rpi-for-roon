@@ -1998,7 +1998,7 @@ Sul **Diretta Target** creeremo un nuovo utente con permessi molto limitati. Que
     fi
 
     # Verifica la cache di avvio validata per un link di valutazione attivo
-    if [ ! -f /tmp/diretta_license_url.cache ] || grep -q "http" /tmp/diretta_license_url.cache; then
+    if [ ! -f /run/diretta/license.cache ] || grep -q "http" /run/diretta/license.cache; then
       LICENSE_LIMITED="true"
     fi
 
@@ -2045,7 +2045,7 @@ Sul **Diretta Target** creeremo un nuovo utente con permessi molto limitati. Que
     #!/bin/bash
 
     # L'unico compito di questo script è leggere il file di cache creato all'avvio.
-    readonly CACHE_FILE="/tmp/diretta_license_url.cache"
+    readonly CACHE_FILE="/run/diretta/license.cache"
 
     if [ -s "$CACHE_FILE" ]; then
         # Se la cache esiste ed ha contenuto, lo visualizza.
@@ -2119,6 +2119,10 @@ Sul **Diretta Target** creeremo un nuovo utente con permessi molto limitati. Que
     [Service]
     Type=oneshot
     RemainAfterExit=yes
+    # systemd crea /run/diretta e lo mantiene tra i riavvii dell'unità
+    RuntimeDirectory=diretta
+    RuntimeDirectoryMode=0755
+    RuntimeDirectoryPreserve=yes
     # Blocca l'esecuzione in modo pulito qui finché l'Host non risponde a un ping
     TimeoutStartSec=infinity
     ExecStartPre=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done"
@@ -2136,7 +2140,7 @@ Sul **Diretta Target** creeremo un nuovo utente con permessi molto limitati. Que
 
     # Esegue lo script manualmente una volta
     sudo /usr/local/bin/create-diretta-cache.sh
-    ls -l /tmp/diretta_license_url.cache
+    ls -l /run/diretta/license.cache
     ```
 
 ---

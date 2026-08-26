@@ -1876,7 +1876,7 @@ menu_wrapper() {
     sudo -v
 
     echo "Désactivation temporaire du Purist Mode pour exécuter menu..."
-    purist-mode --revert > /dev/null 2>&1 # Revert quietly
+    purist-mode --revert > /dev/null 2>&1 # Rétablir silencieusement
   fi
 
   # Appeler la commande menu d'origine
@@ -1885,7 +1885,7 @@ menu_wrapper() {
   # Si le Mode Puriste était actif auparavant, le réactiver maintenant.
   if [ "$was_active" = true ]; then
     echo "Réactivation du Purist Mode..."
-    purist-mode > /dev/null 2>&1 # Activate quietly
+    purist-mode > /dev/null 2>&1 # Réactiver silencieusement
     echo "Le Purist Mode est de nouveau actif."
   fi
 }
@@ -1998,7 +1998,7 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
     fi
 
     # Vérifier le cache de démarrage validé pour un lien d'évaluation actif
-    if [ ! -f /tmp/diretta_license_url.cache ] || grep -q "http" /tmp/diretta_license_url.cache; then
+    if [ ! -f /run/diretta/license.cache ] || grep -q "http" /run/diretta/license.cache; then
       LICENSE_LIMITED="true"
     fi
 
@@ -2045,7 +2045,7 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
     #!/bin/bash
 
     # La seule tâche de ce script est de lire le fichier cache créé au démarrage.
-    readonly CACHE_FILE="/tmp/diretta_license_url.cache"
+    readonly CACHE_FILE="/run/diretta/license.cache"
 
     if [ -s "$CACHE_FILE" ]; then
         # Si le cache existe et contient des données, les afficher.
@@ -2119,6 +2119,10 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
     [Service]
     Type=oneshot
     RemainAfterExit=yes
+    # systemd crée /run/diretta et le conserve lors des redémarrages de l'unité
+    RuntimeDirectory=diretta
+    RuntimeDirectoryMode=0755
+    RuntimeDirectoryPreserve=yes
     # Bloquer proprement l'exécution ici jusqu'à ce que le Host réponde à un ping
     TimeoutStartSec=infinity
     ExecStartPre=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done"
@@ -2136,7 +2140,7 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
 
     # Exécuter manuellement le script une fois
     sudo /usr/local/bin/create-diretta-cache.sh
-    ls -l /tmp/diretta_license_url.cache
+    ls -l /run/diretta/license.cache
     ```
 
 ---

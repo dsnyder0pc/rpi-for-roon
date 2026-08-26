@@ -1876,7 +1876,7 @@ menu_wrapper() {
     sudo -v
 
     echo "メニューを実行するためにPurist Modeを一時的に無効化しています..."
-    purist-mode --revert > /dev/null 2>&1 # Revert quietly
+    purist-mode --revert > /dev/null 2>&1 # 静かに解除する
   fi
 
   # オリジナルのmenuコマンドを呼び出す
@@ -1885,7 +1885,7 @@ menu_wrapper() {
   # 以前にPurist Modeが有効だった場合は、ここで再有効化します。
   if [ "$was_active" = true ]; then
     echo "Purist Modeを再有効化しています..."
-    purist-mode > /dev/null 2>&1 # Activate quietly
+    purist-mode > /dev/null 2>&1 # 静かに再有効化する
     echo "Purist Modeが再び有効になりました。"
   fi
 }
@@ -1998,7 +1998,7 @@ source ~/.bashrc
     fi
 
     # アクティブな評価用リンクがないか、検証済みの起動キャッシュを確認する
-    if [ ! -f /tmp/diretta_license_url.cache ] || grep -q "http" /tmp/diretta_license_url.cache; then
+    if [ ! -f /run/diretta/license.cache ] || grep -q "http" /run/diretta/license.cache; then
       LICENSE_LIMITED="true"
     fi
 
@@ -2045,7 +2045,7 @@ source ~/.bashrc
     #!/bin/bash
 
     # このスクリプトの唯一の役割は、起動時に作成されたキャッシュファイルを読み取ることです。
-    readonly CACHE_FILE="/tmp/diretta_license_url.cache"
+    readonly CACHE_FILE="/run/diretta/license.cache"
 
     if [ -s "$CACHE_FILE" ]; then
         # キャッシュが存在し内容がある場合はそれを表示する。
@@ -2119,6 +2119,10 @@ source ~/.bashrc
     [Service]
     Type=oneshot
     RemainAfterExit=yes
+    # systemdが /run/diretta を作成し、ユニットの再起動をまたいで保持する
+    RuntimeDirectory=diretta
+    RuntimeDirectoryMode=0755
+    RuntimeDirectoryPreserve=yes
     # Hostがpingに応答するまで、ここでクリーンに実行をブロック（待機）する
     TimeoutStartSec=infinity
     ExecStartPre=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done"
@@ -2136,7 +2140,7 @@ source ~/.bashrc
 
     # スクリプトを手動で一度実行する
     sudo /usr/local/bin/create-diretta-cache.sh
-    ls -l /tmp/diretta_license_url.cache
+    ls -l /run/diretta/license.cache
     ```
 
 ---

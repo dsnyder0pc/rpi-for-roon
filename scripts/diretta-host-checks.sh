@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.23.5
+# Diretta Host QA Check Script v1.24.0
 # (Hardware gating for IR remote + exact awk PID parsing)
 #
 

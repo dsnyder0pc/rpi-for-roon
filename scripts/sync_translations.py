@@ -14,6 +14,14 @@ Workflow:
   3. Translate the entries in the 'todo_<lang>.json' files.
   4. Run 'python3 scripts/sync_translations.py --apply'
      This applies the translated strings, aligns indentation, verifies correctness, and cleans up.
+
+Every command is safe to re-run. Before patching a translation, --sync classifies it
+against both the old and the new Diretta.md: a file already aligned with the new
+source is left untouched and only its TODO list is refreshed, so running --sync twice
+(or running it after translations were updated by hand) cannot double-apply a hunk.
+A file matching neither source is reported and skipped rather than patched blindly.
+
+Exit status is non-zero if any file could not be synced, applied, or verified.
 """
 
 import os
@@ -51,6 +59,48 @@ def run_git_diff(ref):
         print(f"Error running git diff: {res.stderr.strip()}")
         sys.exit(1)
     return res.stdout
+
+def read_src_at_ref(ref):
+    """Return the contents of Diretta.md as it existed at a git ref, as a list of lines."""
+    cmd = ["git", "show", f"{ref}:{SRC_PATH}"]
+    res = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
+    if res.returncode != 0:
+        print(f"Error reading {SRC_PATH} at '{ref}': {res.stderr.strip()}")
+        sys.exit(1)
+    return res.stdout.splitlines()
+
+def is_aligned_with(target_lines, src_lines):
+    """True if target_lines is a structurally valid translation of src_lines.
+
+    This is the invariant the tool maintains: same line count, same code/indent
+    structure, with only translatable text allowed to differ.
+    """
+    return verify_translation(src_lines, target_lines, quiet=True)
+
+def hunk_placeholders(hunks):
+    """Map 1-based line numbers in the NEW source to the English text added there.
+
+    Derived purely from the diff metadata, so it is valid regardless of whether a
+    given translation has already been synced.
+    """
+    placeholders = {}
+    for hunk in hunks:
+        for offset, added_line in enumerate(hunk['added_lines']):
+            placeholders[hunk['new_start'] + offset] = added_line
+    return placeholders
+
+def build_todo(placeholders, needs_translation, target_lines):
+    """Collect lines that still need translating: added, translatable, still English."""
+    todo = {}
+    for line_num, english_text in sorted(placeholders.items()):
+        if not needs_translation.get(line_num, False):
+            continue
+        idx = line_num - 1
+        if idx >= len(target_lines):
+            continue
+        if target_lines[idx].strip() == english_text.strip():
+            todo[str(line_num)] = english_text
+    return todo
 
 def parse_diff(diff_output):
     """Parse unified diff hunks into structured metadata."""
@@ -234,10 +284,14 @@ def verify_codeblock_line(src, dst):
         
     return False
 
-def verify_translation(src_lines, dst_lines):
+def verify_translation(src_lines, dst_lines, quiet=False):
     """Verify that a translation file matches the source file's format, code blocks, and indentation."""
+    def report(msg):
+        if not quiet:
+            print(msg)
+
     if len(src_lines) != len(dst_lines):
-        print(f"  [Error] Line count mismatch: Source={len(src_lines)}, Target={len(dst_lines)}")
+        report(f"  [Error] Line count mismatch: Source={len(src_lines)}, Target={len(dst_lines)}")
         return False
         
     errors = 0
@@ -249,13 +303,13 @@ def verify_translation(src_lines, dst_lines):
         dst = dst_lines[i]
         
         if (src == '') != (dst == ''):
-            print(f"  [Error] Line {i+1}: Empty line mismatch.")
+            report(f"  [Error] Line {i+1}: Empty line mismatch.")
             errors += 1
             if errors > 5: break
             
         if src.strip().startswith("```"):
             if not dst.strip().startswith("```") or src.strip() != dst.strip():
-                print(f"  [Error] Line {i+1}: Code block tag mismatch. SRC={repr(src)}, DST={repr(dst)}")
+                report(f"  [Error] Line {i+1}: Code block tag mismatch. SRC={repr(src)}, DST={repr(dst)}")
                 errors += 1
                 if errors > 5: break
             if not in_code_block:
@@ -270,81 +324,109 @@ def verify_translation(src_lines, dst_lines):
                 is_src_comment = src.strip().startswith("#")
                 is_dst_comment = dst.strip().startswith("#")
                 if is_src_comment != is_dst_comment:
-                    print(f"  [Error] Line {i+1}: Code block comment status mismatch.")
+                    report(f"  [Error] Line {i+1}: Code block comment status mismatch.")
                     errors += 1
                     if errors > 5: break
                     
                 if not is_src_comment:
                     if not verify_codeblock_line(src, dst):
-                        print(f"  [Error] Line {i+1}: Code block command mismatch. SRC={repr(src)}, DST={repr(dst)}")
+                        report(f"  [Error] Line {i+1}: Code block command mismatch. SRC={repr(src)}, DST={repr(dst)}")
                         errors += 1
                         if errors > 5: break
                         
         src_space = len(src) - len(src.lstrip())
         dst_space = len(dst) - len(dst.lstrip())
         if src_space != dst_space:
-            print(f"  [Error] Line {i+1}: Indentation mismatch. SRC={repr(src)}, DST={repr(dst)}")
+            report(f"  [Error] Line {i+1}: Indentation mismatch. SRC={repr(src)}, DST={repr(dst)}")
             errors += 1
             if errors > 5: break
             
     return errors == 0
 
-def cmd_sync(ref):
-    """Extract changes in Diretta.md and structurally sync translation files."""
+def cmd_sync(ref, dry_run=False):
+    """Extract changes in Diretta.md and structurally sync translation files.
+
+    Safe to re-run: each translation file is classified before it is touched, so a
+    file that is already aligned with the new Diretta.md is never patched a second
+    time. Re-running only refreshes the TODO lists.
+    """
     if not os.path.exists(SRC_PATH):
         print(f"Source file {SRC_PATH} not found.")
         sys.exit(1)
-        
+
     diff_output = run_git_diff(ref)
     if not diff_output.strip():
         print(f"No changes detected in {SRC_PATH} compared to reference '{ref}'.")
-        return
-        
+        return 0
+
     hunks = parse_diff(diff_output)
     print(f"Parsed {len(hunks)} diff hunks from git diff.")
-    
-    # Read the current/new version of Diretta.md
+
+    old_src_lines = read_src_at_ref(ref)
     with open(SRC_PATH, 'r', encoding='utf-8') as f:
         new_src_lines = f.read().splitlines()
-        
+
     needs_translation = analyze_lines(new_src_lines)
+    placeholders = hunk_placeholders(hunks)
     languages = get_languages()
-    
+
     if not languages:
         print("No translation files found in translations/ directory.")
-        return
-        
+        return 0
+
     print(f"Syncing target languages: {', '.join(languages)}")
-    
+    if dry_run:
+        print("(dry run: no files will be modified)")
+
+    errors = 0
+
     for lang in languages:
         target_path = os.path.join(TRANSLATIONS_DIR, f"Diretta-{lang}.md")
         todo_path = os.path.join(TRANSLATIONS_DIR, f"todo_{lang}.json")
-        
-        # Read existing translation
+
         with open(target_path, 'r', encoding='utf-8') as f:
             target_lines = f.read().splitlines()
-            
-        new_target_lines, inserted_placeholders = apply_hunks_to_lines(target_lines, hunks)
-        
-        # Build todo list
-        todo = {}
-        for line_num, english_text in inserted_placeholders.items():
-            if needs_translation.get(line_num, False):
-                todo[str(line_num)] = english_text
-                
-        # Write modified translation file
-        with open(target_path, 'w', encoding='utf-8') as f:
-            f.write("\n".join(new_target_lines) + "\n")
-            
-        # Write/Update todo JSON
+
+        # Classify before touching anything. Check the new source first so that an
+        # already-synced file is never patched again (the ambiguous case, where a
+        # change only affects translatable text, resolves to "leave it alone").
+        if is_aligned_with(target_lines, new_src_lines):
+            new_target_lines = target_lines
+            status = "already in sync"
+        elif is_aligned_with(target_lines, old_src_lines):
+            new_target_lines, _ = apply_hunks_to_lines(target_lines, hunks)
+            if len(new_target_lines) != len(new_src_lines):
+                print(f"  - [{lang}] [Error] Patch produced {len(new_target_lines)} lines, "
+                      f"expected {len(new_src_lines)}. {target_path} left unchanged.")
+                errors += 1
+                continue
+            status = "structurally updated"
+        else:
+            print(f"  - [{lang}] [Error] {target_path} matches neither the old nor the new "
+                  f"{SRC_PATH}; it may have drifted. Run --verify for details. Left unchanged.")
+            errors += 1
+            continue
+
+        todo = build_todo(placeholders, needs_translation, new_target_lines)
+
+        if dry_run:
+            print(f"  - [{lang}] {status}; would leave {len(todo)} line(s) to translate.")
+            continue
+
+        if status == "structurally updated":
+            with open(target_path, 'w', encoding='utf-8') as f:
+                f.write("\n".join(new_target_lines) + "\n")
+
         if todo:
             with open(todo_path, 'w', encoding='utf-8') as f:
                 json.dump(todo, f, indent=2, ensure_ascii=False)
-            print(f"  - [{lang}] Updated {target_path} structurally. Created TODO file: {todo_path} ({len(todo)} items).")
+            print(f"  - [{lang}] {target_path} {status}. TODO file: {todo_path} ({len(todo)} items).")
         else:
             if os.path.exists(todo_path):
                 os.remove(todo_path)
-            print(f"  - [{lang}] Updated {target_path} structurally. No lines require translation.")
+            print(f"  - [{lang}] {target_path} {status}. No lines require translation.")
+
+    return 1 if errors else 0
 
 def cmd_apply():
     """Apply translations from todo_*.json files, format indentation, verify correctness, and clean up."""
@@ -355,7 +437,8 @@ def cmd_apply():
         src_lines = f.read().splitlines()
         
     applied_count = 0
-    
+    failures = 0
+
     for lang in languages:
         todo_path = os.path.join(TRANSLATIONS_DIR, f"todo_{lang}.json")
         target_path = os.path.join(TRANSLATIONS_DIR, f"Diretta-{lang}.md")
@@ -373,6 +456,7 @@ def cmd_apply():
         # Check if the length is already correct
         if len(target_lines) != len(src_lines):
             print(f"  [Error] Cannot apply translations. Target file length ({len(target_lines)}) does not match source file length ({len(src_lines)}). Did you forget to run sync first?")
+            failures += 1
             continue
             
         # Apply translations and enforce indentation
@@ -397,9 +481,12 @@ def cmd_apply():
             applied_count += 1
         else:
             print(f"  [Warning] Verification failed for {target_path}. Please check formatting errors above. {todo_path} was not deleted.")
-            
+            failures += 1
+
     if applied_count == 0:
         print("No translations were applied. (Are there any todo_*.json files present?)")
+
+    return 1 if failures else 0
 
 def cmd_verify():
     """Verify all translation files against Diretta.md."""
@@ -407,16 +494,20 @@ def cmd_verify():
         src_lines = f.read().splitlines()
         
     languages = get_languages()
+    failures = 0
     for lang in languages:
         target_path = os.path.join(TRANSLATIONS_DIR, f"Diretta-{lang}.md")
         with open(target_path, 'r', encoding='utf-8') as f:
             target_lines = f.read().splitlines()
-            
+
         print(f"Verifying {target_path}...")
         if verify_translation(src_lines, target_lines):
             print(f"  [OK] {target_path} is fully aligned and verified.")
         else:
             print(f"  [FAIL] {target_path} contains alignment or format mismatches.")
+            failures += 1
+
+    return 1 if failures else 0
 
 def main():
     parser = argparse.ArgumentParser(description="Synchronize and manage translation files.")
@@ -426,15 +517,18 @@ def main():
     group.add_argument("--verify", action="store_true", help="Verify all translation files against master")
     
     parser.add_argument("--ref", default="HEAD", help="Git revision to diff against when syncing (default: HEAD)")
-    
+    parser.add_argument("--dry-run", action="store_true", help="Report what --sync would do without modifying any files")
+
     args = parser.parse_args()
-    
+
     if args.apply:
-        cmd_apply()
+        rc = cmd_apply()
     elif args.verify:
-        cmd_verify()
+        rc = cmd_verify()
     else:
-        cmd_sync(args.ref)
+        rc = cmd_sync(args.ref, dry_run=args.dry_run)
+
+    sys.exit(rc or 0)
 
 if __name__ == "__main__":
     main()

@@ -1998,7 +1998,7 @@ Auf dem **Diretta-Target** erstellen wir einen neuen Benutzer mit sehr eingeschr
     fi
 
     # Den validierten Boot-Cache auf einen aktiven Evaluierungs-Link prüfen
-    if [ ! -f /tmp/diretta_license_url.cache ] || grep -q "http" /tmp/diretta_license_url.cache; then
+    if [ ! -f /run/diretta/license.cache ] || grep -q "http" /run/diretta/license.cache; then
       LICENSE_LIMITED="true"
     fi
 
@@ -2045,7 +2045,7 @@ Auf dem **Diretta-Target** erstellen wir einen neuen Benutzer mit sehr eingeschr
     #!/bin/bash
 
     # Die einzige Aufgabe dieses Skripts ist es, die beim Booten erstellte Cache-Datei zu lesen.
-    readonly CACHE_FILE="/tmp/diretta_license_url.cache"
+    readonly CACHE_FILE="/run/diretta/license.cache"
 
     if [ -s "$CACHE_FILE" ]; then
         # Wenn der Cache existiert und Inhalt hat, diesen anzeigen.
@@ -2119,6 +2119,10 @@ Auf dem **Diretta-Target** erstellen wir einen neuen Benutzer mit sehr eingeschr
     [Service]
     Type=oneshot
     RemainAfterExit=yes
+    # systemd erstellt /run/diretta und behält es über Unit-Neustarts hinweg bei
+    RuntimeDirectory=diretta
+    RuntimeDirectoryMode=0755
+    RuntimeDirectoryPreserve=yes
     # Blockieren Sie die Ausführung sauber hier, bis der Host auf ein Ping antwortet
     TimeoutStartSec=infinity
     ExecStartPre=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done"
@@ -2136,7 +2140,7 @@ Auf dem **Diretta-Target** erstellen wir einen neuen Benutzer mit sehr eingeschr
 
     # Führen Sie das Skript einmal manuell aus
     sudo /usr/local/bin/create-diretta-cache.sh
-    ls -l /tmp/diretta_license_url.cache
+    ls -l /run/diretta/license.cache
     ```
 
 ---
