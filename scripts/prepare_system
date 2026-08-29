@@ -12,6 +12,7 @@ TARGET_USER="audiolinux"
 MIRRORLIST_PATH="/etc/pacman.d/mirrorlist"
 DEFAULT_MIRROR="http://mirror.archlinuxarm.org/\$arch/\$repo"
 CUSTOM_MIRROR="http://ca.us.mirror.archlinuxarm.org/\$arch/\$repo"
+MOTD_FILE="/etc/motd"
 
 # --- Colors ---
 RED_BOLD='\033[1;31m'
@@ -276,7 +277,32 @@ fi
 
 echo "------------------------------------------------"
 
-# Step 14: Sync disks and power off the system
+# Step 14: Clean up the MOTD
+echo "🧹 Cleaning up $MOTD_FILE..."
+if [ -f "$MOTD_FILE" ]; then
+    # Drop every "Your IP ..." line left behind by update_motd.sh. There can
+    # be more than one (the stock AudioLinux version appends a separate
+    # "Your IP V6 address is" line), and one may carry no address at all.
+    # Then trim trailing blank lines so the banner is followed by exactly one.
+    MOTD_TMP=$(mktemp)
+    awk '!/^Your IP/ {
+             lines[++n] = $0
+             if ($0 ~ /[^[:space:]]/) last = n
+         }
+         END {
+             for (i = 1; i <= last; i++) print lines[i]
+             print ""
+         }' "$MOTD_FILE" > "$MOTD_TMP"
+    cat "$MOTD_TMP" > "$MOTD_FILE"
+    rm -f "$MOTD_TMP"
+    echo "   - Removed IP address lines and normalized trailing blank line."
+else
+    echo "   - No MOTD file found at '$MOTD_FILE'. Skipping."
+fi
+
+echo "------------------------------------------------"
+
+# Step 15: Sync disks and power off the system
 echo "✅ Preparation complete. System will power off in 5 seconds."
 sleep 5
 sync
