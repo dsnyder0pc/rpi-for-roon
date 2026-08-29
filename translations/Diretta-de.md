@@ -9,7 +9,7 @@ Der **Diretta-Host** wird mit Ihrem Hauptnetzwerk verbunden (für den Zugriff au
 Ich bemühe mich, diesen Leitfaden mit dem aktuellen offiziellen AudioLinux-Download-Link von Piero kompatibel zu halten.
 
 **Aktuelle Validierung:**
-Diese Anweisungen wurden zuletzt mit **AudioLinux V5** getestet (Image: `audiolinux_pi4-pi5_520`, Menüversion: `538`).
+Diese Anweisungen wurden zuletzt mit **AudioLinux V5** getestet (Image: `audiolinux_pi4-pi5_530`, Menüversion: `544`).
 
 **Ein Hinweis zu Updates:**
 Da AudioLinux auf Arch (einem Rolling Release) basiert, zieht eine Neuinstallation immer die absolut neueste Software. Sobald Ihr System wunschgemäß läuft, haben Sie zwei Möglichkeiten:
@@ -337,25 +337,10 @@ Nutzen Sie das AudioLinux-Menüsystem, um alle Updates durchzuführen. Halten Si
 
 1.  Führen Sie `menu` im Terminal aus.
 2.  Wählen Sie **INSTALL/UPDATE menu**.
-    ```text
-    Verifying license...
-    Please enter the email address used at the time of purchase
-    (You will only be asked once)
-    ?
-    <email address used to purchase AudioLinux support>
-    OK
-    OK
-
-    Please type your menu update user
-    ?
-    <AUDIOLINUX RASPBERRY "user:" from your license email)>
-    Please type your menu update password
-    ?
-    <AUDIOLINUX RASPBERRY "password:" from your license email)>
-    ```
-3.  Wählen Sie auf dem nächsten Bildschirm **UPDATE system** und warten Sie, bis der Vorgang abgeschlossen ist.
-4.  Nachdem das System-Update abgeschlossen ist, wählen Sie auf demselben Bildschirm **Update menu**, um die neueste Version der AudioLinux-Skripte zu erhalten. *Hinweis:* Sie benötigen die E-Mail-Adresse, mit der Sie AudioLinux erworben haben, sowie Ihren Download-Benutzernamen und Ihr Passwort.
-5.  Verlassen Sie das Menüsystem, um zum Terminal zurückzukehren.
+3.  Wählen Sie auf dem nächsten Bildschirm **UPDATE system**, folgen Sie den Anweisungen und warten Sie, bis der Vorgang abgeschlossen ist.
+4.  Nachdem das System-Update abgeschlossen ist, wählen Sie auf demselben Bildschirm **UPDATE menu**, um die neueste Version der AudioLinux-Skripte zu erhalten. *Hinweis:* Sie benötigen die E-Mail-Adresse, mit der Sie AudioLinux erworben haben, sowie Ihren Download-Benutzernamen und Ihr Passwort.
+5.  Wählen Sie **SELECT/Update kernel**. Wenn sich die Version neben „Your kernel“ von der nach „Audiolinux LTS RT LTO“ aufgeführten Version unterscheidet, wählen Sie Option 1, **Audiolinux LTS RT LTO (default)**, um den Kernel zu aktualisieren.
+6.  Verlassen Sie das Menüsystem, um zum Terminal zurückzukehren.
 
 ### 4.5. Neustart
 Starten Sie das System neu, um den Kernel und andere Updates zu laden:
@@ -897,6 +882,12 @@ journalctl -b -u boot-repair.service
 sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 ```
 
+### 7.7. Neustart
+Starten Sie neu (zuerst das Target, dann den Host), um den Status der Shadow-Dienste zu aktualisieren:
+```bash
+sudo sync && sudo reboot
+```
+
 ---
 
 ## 8. Installation und Konfiguration der Diretta-Software
@@ -1060,7 +1051,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 **Objective:** Wenn Sie ein Roon-Abonnent sind, ist dieser Abschnitt für Sie. Sie folgen diesen Schritten, um Roon Bridge zu installieren, Ihre neue Diretta-Zone zu aktivieren und Musik von Roon abzuspielen.
 
-1.  Führen Sie `menu` aus, falls Sie nach dem vorherigen Schritt zum Terminal zurückgekehrt sind, andernfalls gehen Sie zum **Main menu**.
+1.  Führen Sie `menu` auf dem Host aus, falls Sie nach dem vorherigen Schritt zum Terminal zurückgekehrt sind, andernfalls gehen Sie zum **Main menu**.
 
 2.  **Roon Bridge installieren (auf dem Host):** Wenn Sie Roon verwenden, führen Sie die folgenden Schritte auf dem **Diretta-Host** aus:
     * Führen Sie `menu` aus.
@@ -1086,6 +1077,15 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 Ihre dedizierte Diretta-Verbindung ist nun vollständig für eine makellose, isolierte Audiowiedergabe konfiguriert.
 **Hinweis:** Die „Limited“-Zone für den Diretta-Target-Test verschwindet nach sechs Minuten Wiedergabe von hochauflösender Musik aus Roon. Dies ist normal. An diesem Punkt müssen Sie eine Lizenz für das Diretta-Target erwerben. Die Kosten betragen derzeit 100 € und die Aktivierung kann bis zu 48 Stunden dauern. Sie erhalten zwei E-Mails vom Diretta-Team. Die erste ist Ihre Quittung, die zweite Ihre Aktivierungsbenachrichtigung. Sobald Sie die Aktivierungs-E-Mail erhalten haben, starten Sie Ihren Target-Computer neu, damit die Aktivierung wirksam wird.
+
+> ---
+> ### ✅ Checkpoint: Roon-Integration überprüfen
+>
+> Wählen Sie Ihre neue Diretta-Zone in der Roon-Steuerungs-App aus und spielen Sie etwas Musik ab.
+>
+> Jetzt ist ein guter Zeitpunkt, zu [**Anhang 5**](#18-appendix-5-system-health-checks) zurückzukehren und den universellen Befehl **System-Gesundheitscheck** sowohl auf dem Host als auch auf dem Target auszuführen, um die Konfiguration zu überprüfen.
+>
+> ---
 
 ---
 
@@ -1562,7 +1562,7 @@ fi
 pyenv global "$PYVER"
 ```
 
-**Hinweis:** Es ist normal, dass der Teil `Installing Python-3.14.6...` etwa 10 Minuten dauert, da Python aus den Quellen kompiliert wird. Geben Sie nicht auf! Entspannen Sie sich bei schöner Musik über Ihre neue Diretta-Zone in Roon, während Sie warten. Diese sollte verfügbar sein, während Python auf dem Host installiert wird.
+**Hinweis:** Es ist normal, dass der Teil `Installing Python-3.14.7...` etwa 10 Minuten dauert, da Python aus den Quellen kompiliert wird. Geben Sie nicht auf! Entspannen Sie sich bei schöner Musik über Ihre neue Diretta-Zone in Roon, während Sie warten. Diese sollte verfügbar sein, während Python auf dem Host installiert wird.
 
 ---
 
@@ -2276,7 +2276,7 @@ Nun führen wir auf dem **Diretta-Host** alle Schritte zur Installation und Konf
     pyenv global $PYVER
     ```
 
-    **Hinweis:** Es ist normal, dass der Teil `Installing Python-3.14.6...` etwa 10 Minuten dauert, da Python aus den Quellen kompiliert wird. Geben Sie nicht auf! Entspannen Sie sich bei schöner Musik über Ihre neue Diretta-Zone in Roon, während Sie warten. Diese sollte verfügbar sein, während Python auf dem Host installiert wird.
+    **Hinweis:** Es ist normal, dass der Teil `Installing Python-3.14.7...` etwa 10 Minuten dauert, da Python aus den Quellen kompiliert wird. Geben Sie nicht auf! Entspannen Sie sich bei schöner Musik über Ihre neue Diretta-Zone in Roon, während Sie warten. Diese sollte verfügbar sein, während Python auf dem Host installiert wird.
 
 7.  **Avahi und Python-Abhängigkeiten auf dem Diretta-Host installieren:**
 

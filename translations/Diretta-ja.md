@@ -9,7 +9,7 @@
 このガイドは、Piero氏が提供する現在の公式AudioLinuxダウンロードリンクとの互換性を維持することを目的としています。
 
 **現在の動作確認状況：**
-これらの手順は、**AudioLinux V5**（イメージ：`audiolinux_pi4-pi5_520`、メニューバージョン：`538`）で最後にテストされました。
+これらの手順は、**AudioLinux V5**（イメージ：`audiolinux_pi4-pi5_530`、メニューバージョン：`544`）で最後にテストされました。
 
 **アップデートに関する注意：**
 AudioLinuxはArch Linux（ローリングリリース）ベースであるため、新規インストール時には常に最新のソフトウェアが取得されます。システムが正常に動作し始めたら、次の2つの選択肢があります。
@@ -337,25 +337,10 @@ sudo pacman -S --noconfirm --needed dnsutils
 
 1.  ターミナルで`menu`を実行します。
 2.  **INSTALL/UPDATE menu**を選択します。
-    ```text
-    Verifying license...
-    Please enter the email address used at the time of purchase
-    (You will only be asked once)
-    ?
-    <email address used to purchase AudioLinux support>
-    OK
-    OK
-
-    Please type your menu update user
-    ?
-    <AUDIOLINUX RASPBERRY "user:" from your license email)>
-    Please type your menu update password
-    ?
-    <AUDIOLINUX RASPBERRY "password:" from your license email)>
-    ```
-3.  次の画面で**UPDATE system**を選択し、処理を完了させます。
-4.  システムアップデートの完了後、同じ画面で**Update menu**を選択して最新バージョンのAudioLinuxスクリプトを取得します。*注意：* AudioLinuxの購入時に使用したメールアドレス、およびダウンロード用のユーザー名とパスワードが必要になります。
-5.  メニューシステムを終了し、ターミナルに戻ります。
+3.  次の画面で**UPDATE system**を選択し、表示される指示に従って処理を完了させます。
+4.  システムアップデートの完了後、同じ画面で**UPDATE menu**を選択して最新バージョンのAudioLinuxスクリプトを取得します。*注意：* AudioLinuxの購入時に使用したメールアドレス、およびダウンロード用のユーザー名とパスワードが必要になります。
+5.  **SELECT/Update kernel**を選択します。「Your kernel」の横に表示されているバージョンが「Audiolinux LTS RT LTO」の後に記載されているバージョンと異なる場合は、オプション1の**Audiolinux LTS RT LTO (default)**を選択してカーネルを更新します。
+6.  メニューシステムを終了し、ターミナルに戻ります。
 
 ### 4.5. 再起動
 カーネルおよびその他のアップデートをロードするために再起動します。
@@ -897,6 +882,12 @@ journalctl -b -u boot-repair.service
 sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 ```
 
+### 7.7. 再起動
+シャドウサービスの状態を更新するため、Target、Hostの順で再起動します。
+```bash
+sudo sync && sudo reboot
+```
+
 ---
 
 ## 8. Direttaソフトウェアのインストールと構成
@@ -1060,7 +1051,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 **Objective:** Roonサブスクライバーの方は、このセクションをご覧ください。Roon Bridgeをインストールし、新しいDirettaゾーンを有効にして、Roonから音楽を再生する手順を説明します。
 
-1.  前ステップの後にターミナルに戻っている場合は`menu`を実行し、そうでない場合は**Main menu**に移動します。
+1.  前ステップの後にターミナルに戻っている場合はHost上で`menu`を実行し、そうでない場合は**Main menu**に移動します。
 
 2.  **Roon Bridgeのインストール（Host側）：** Roonを使用する場合は、**Diretta Host**で以下の手順を実行します：
     * `menu`を実行します。
@@ -1086,6 +1077,15 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 これで、最もクリーンで隔離されたオーディオ再生のための専用Direttaリンクの構成が完了しました。
 **注意：** ハイレゾオーディオの再生開始から6分が経過すると、Roon上の体験用「Limited」ゾーンが消えます。これは仕様通りの挙動です。この制限をなくすためには、Diretta Targetのライセンスを購入する必要があります。ライセンス料は現在100ユーロで、アクティベーションが完了するまでに最大48時間かかる場合があります。購入後、Direttaチームから2通のメールが届きます。1通目は領収書で、2通目がアクティベーション完了の通知です。アクティベーション通知メールを受け取ったら、Targetのコンピュータを再起動して設定を適用してください。
+
+> ---
+> ### ✅ Checkpoint: Roon連携の動作確認
+>
+> Roonのコントロールアプリで新しいDirettaゾーンを選択し、音楽を再生してみましょう。
+>
+> ここで[**付録 5**](#18-appendix-5-system-health-checks)に戻り、HostとTargetの両方で共通の**System Health Check（システムヘルスチェック）**コマンドを実行して構成を確認するとよいでしょう。
+>
+> ---
 
 ---
 
@@ -1562,7 +1562,7 @@ fi
 pyenv global "$PYVER"
 ```
 
-**注意：** ソースからPythonをコンパイルするため、`Installing Python-3.14.6...`のステップには通常10分程度かかります。途中で止めないでください！待ち時間の間は、新しいDirettaシステムから流れる素晴らしい音楽を聴いてリラックスしましょう。Host側でPythonのインストールが実行されている間も、音楽の再生は可能です。
+**注意：** ソースからPythonをコンパイルするため、`Installing Python-3.14.7...`のステップには通常10分程度かかります。途中で止めないでください！待ち時間の間は、新しいDirettaシステムから流れる素晴らしい音楽を聴いてリラックスしましょう。Host側でPythonのインストールが実行されている間も、音楽の再生は可能です。
 
 ---
 
@@ -2276,7 +2276,7 @@ source ~/.bashrc
     pyenv global $PYVER
     ```
 
-    **注意：** ソースからPythonをコンパイルするため、`Installing Python-3.14.6...`のステップには通常10分程度かかります。途中で止めないでください！待ち時間の間は、新しいDirettaシステムから流れる素晴らしい音楽を聴いてリラックスしましょう。Host側でPythonのインストールが実行されている間も、音楽の再生は可能です。
+    **注意：** ソースからPythonをコンパイルするため、`Installing Python-3.14.7...`のステップには通常10分程度かかります。途中で止めないでください！待ち時間の間は、新しいDirettaシステムから流れる素晴らしい音楽を聴いてリラックスしましょう。Host側でPythonのインストールが実行されている間も、音楽の再生は可能です。
 
 7.  **Diretta HostへのAvahiおよびPython依存関係のインストール：**
 

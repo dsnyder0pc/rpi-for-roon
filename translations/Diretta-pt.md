@@ -9,7 +9,7 @@ O **Host Diretta** se conectará à sua rede principal (para acessar o seu servi
 Meu objetivo é manter este guia compatível com o link de download oficial atual do AudioLinux fornecido pelo Piero.
 
 **Validação Atual:**
-Estas instruções foram testadas pela última vez com o **AudioLinux V5** (Imagem: `audiolinux_pi4-pi5_520`, Versão do Menu: `538`).
+Estas instruções foram testadas pela última vez com o **AudioLinux V5** (Imagem: `audiolinux_pi4-pi5_530`, Versão do Menu: `544`).
 
 **Uma Nota sobre Atualizações:**
 Como o AudioLinux é baseado no Arch (um rolling release), uma instalação limpa sempre obterá a versão mais recente do software. Assim que seu sistema estiver soando de forma sublime, você tem duas opções:
@@ -337,25 +337,10 @@ Use o sistema de menus do AudioLinux para realizar todas as atualizações. Tenh
 
 1.  Execute `menu` no terminal.
 2.  Selecione **INSTALL/UPDATE menu**.
-    ```text
-    Verifying license...
-    Please enter the email address used at the time of purchase
-    (You will only be asked once)
-    ?
-    <endereço de e-mail usado para comprar o suporte do AudioLinux>
-    OK
-    OK
-
-    Please type your menu update user
-    ?
-    <AUDIOLINUX RASPBERRY "user:" do seu e-mail de licença)>
-    Please type your menu update password
-    ?
-    <AUDIOLINUX RASPBERRY "password:" do seu e-mail de licença)>
-    ```
-3.  Na próxima tela, selecione **UPDATE system** e deixe o processo ser concluído.
-4.  Após a conclusão da atualização do sistema, selecione **Update menu** na mesma tela para obter a versão mais recente dos scripts do AudioLinux. *Nota:* Você precisará do endereço de e-mail que usou para comprar o AudioLinux e de seu nome de usuário e senha de download.
-5.  Saia do sistema de menus para voltar ao terminal.
+3.  Na próxima tela, selecione **UPDATE system**, siga as instruções e deixe o processo ser concluído.
+4.  Após a conclusão da atualização do sistema, selecione **UPDATE menu** na mesma tela para obter a versão mais recente dos scripts do AudioLinux. *Nota:* Você precisará do endereço de e-mail que usou para comprar o AudioLinux e de seu nome de usuário e senha de download.
+5.  Selecione **SELECT/Update kernel**. Se a versão ao lado de "Your kernel" for diferente da versão listada após "Audiolinux LTS RT LTO", selecione a opção 1, **Audiolinux LTS RT LTO (default)**, para atualizar o kernel.
+6.  Saia do sistema de menus para voltar ao terminal.
 
 ### 4.5. Reiniciar
 Reinicie para carregar o kernel e outras atualizações:
@@ -897,6 +882,12 @@ Altere `#Storage=auto` para `Storage=volatile` em `/etc/systemd/journald.conf`
 sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 ```
 
+### 7.7. Reiniciar
+Reinicie (primeiro o Target, depois o Host) para atualizar o estado dos serviços shadow:
+```bash
+sudo sync && sudo reboot
+```
+
 ---
 
 ## 8. Instalação e Configuração do Software Diretta
@@ -1060,7 +1051,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 **Objective:** Se você for um assinante Roon, esta seção é para você. Você seguirá estas etapas para instalar o Roon Bridge, ativar sua nova Zona Diretta e reproduzir música do Roon.
 
-1.  Execute `menu` se você tiver saído para o terminal após a etapa anterior, caso contrário, vá para o **Main menu**.
+1.  Execute `menu` no Host se você tiver saído para o terminal após a etapa anterior, caso contrário, vá para o **Main menu**.
 
 2.  **Instalar o Roon Bridge (no Host):** Se você usa o Roon, execute as seguintes etapas no **Host Diretta**:
     * Execute `menu`.
@@ -1086,6 +1077,15 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 Seu link Diretta dedicado agora está totalmente configurado para uma reprodução de áudio pura e isolada.
 **Nota:** A zona "Limited" para teste do Diretta Target desaparecerá do Roon após seis minutos de reprodução de música em alta resolução. Isso é normal. Nesse ponto, você precisará adquirir uma licença para o Diretta Target. O custo atualmente é de €100 e a ativação pode levar até 48 horas para ser concluída. Você receberá dois e-mails da equipe do Diretta. O primeiro é o seu recibo; o segundo, a sua notificação de ativação. Assim que receber o e-mail de ativação, reinicie o computador Target para aplicar a ativação.
+
+> ---
+> ### ✅ Ponto de Controle: Verificar a Integração com o Roon
+>
+> Selecione sua nova zona Diretta no aplicativo de controle do Roon e reproduza alguma música.
+>
+> Agora é um bom momento para retornar ao [**Apêndice 5**](#18-appendix-5-system-health-checks) e executar o comando universal de **Verificação de Saúde do Sistema** tanto no Host quanto no Target para verificar a configuração.
+>
+> ---
 
 ---
 
@@ -1562,7 +1562,7 @@ fi
 pyenv global "$PYVER"
 ```
 
-**Nota:** É normal que a parte `Installing Python-3.14.6...` leve cerca de 10 minutos, pois compila o Python a partir do código-fonte. Não desista! Sinta-se à vontade para relaxar com uma bela música usando sua novo sistema Diretta enquanto espera. Ela deve estar disponível enquanto o Python está sendo instalado no Host.
+**Nota:** É normal que a parte `Installing Python-3.14.7...` leve cerca de 10 minutos, pois compila o Python a partir do código-fonte. Não desista! Sinta-se à vontade para relaxar com uma bela música usando sua novo sistema Diretta enquanto espera. Ela deve estar disponível enquanto o Python está sendo instalado no Host.
 
 ---
 
@@ -2276,7 +2276,7 @@ Agora, no **Host Diretta**, realizaremos todas as etapas para instalar e configu
     pyenv global $PYVER
     ```
 
-    **Nota:** É normal que a parte `Installing Python-3.14.6...` leve cerca de 10 minutos, pois compila o Python a partir do código-fonte. Não desista! Sinta-se à vontade para relaxar com uma bela música usando sua novo sistema Diretta enquanto espera. Ela deve estar disponível enquanto o Python está sendo instalado no Host.
+    **Nota:** É normal que a parte `Installing Python-3.14.7...` leve cerca de 10 minutos, pois compila o Python a partir do código-fonte. Não desista! Sinta-se à vontade para relaxar com uma bela música usando sua novo sistema Diretta enquanto espera. Ela deve estar disponível enquanto o Python está sendo instalado no Host.
 
 7.  **Instalar o Avahi e as Dependências do Python no Host Diretta:**
 

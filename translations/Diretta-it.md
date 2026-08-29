@@ -9,7 +9,7 @@ Il **Diretta Host** si collegherà alla rete principale (per accedere al server 
 L'obiettivo è mantenere questa guida compatibile con il link di download ufficiale di AudioLinux attualmente fornito da Piero.
 
 **Validazione attuale:**
-Queste istruzioni sono state testate l'ultima volta con **AudioLinux V5** (Immagine: `audiolinux_pi4-pi5_520`, Versione Menu: `538`).
+Queste istruzioni sono state testate l'ultima volta con **AudioLinux V5** (Immagine: `audiolinux_pi4-pi5_530`, Versione Menu: `544`).
 
 **Nota sugli aggiornamenti:**
 Poiché AudioLinux è basato su Arch (una rolling release), una nuova installazione scaricherà sempre l'ultima versione assoluta del software. Una volta che il sistema è configurato e funzionante, avete due scelte:
@@ -337,25 +337,10 @@ Utilizzate il sistema di menu di AudioLinux per eseguire tutti gli aggiornamenti
 
 1.  Eseguite `menu` nel terminale.
 2.  Selezionate **INSTALL/UPDATE menu**.
-    ```text
-    Verifying license...
-    Please enter the email address used at the time of purchase
-    (You will only be asked once)
-    ?
-    <email address used to purchase AudioLinux support>
-    OK
-    OK
-
-    Please type your menu update user
-    ?
-    <AUDIOLINUX RASPBERRY "user:" from your license email)>
-    Please type your menu update password
-    ?
-    <AUDIOLINUX RASPBERRY "password:" from your license email)>
-    ```
-3.  Nella schermata successiva, selezionate **UPDATE system** e lasciate che il processo si completi.
-4.  Al termine dell'aggiornamento del sistema, selezionate **Update menu** dalla stessa schermata per ottenere la versione più recente degli script di AudioLinux. *Nota:* Avrete bisogno dell'indirizzo e-mail utilizzato per acquistare AudioLinux e del vostro nome utente e password di download.
-5.  Uscite dal sistema di menu per tornare al terminale.
+3.  Nella schermata successiva, selezionate **UPDATE system**, seguite le istruzioni e lasciate che il processo si completi.
+4.  Al termine dell'aggiornamento del sistema, selezionate **UPDATE menu** dalla stessa schermata per ottenere la versione più recente degli script di AudioLinux. *Nota:* Avrete bisogno dell'indirizzo e-mail utilizzato per acquistare AudioLinux e del vostro nome utente e password di download.
+5.  Selezionate **SELECT/Update kernel**. Se la versione accanto a "Your kernel" è diversa da quella indicata dopo "Audiolinux LTS RT LTO", selezionate l'opzione 1, **Audiolinux LTS RT LTO (default)**, per aggiornare il kernel.
+6.  Uscite dal sistema di menu per tornare al terminale.
 
 ### 4.5. Riavvio
 Riavviate per caricare il kernel e altri aggiornamenti:
@@ -897,6 +882,12 @@ Modificate `#Storage=auto` in `Storage=volatile` in `/etc/systemd/journald.conf`
 sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 ```
 
+### 7.7. Riavvio
+Riavviate (prima il Target, poi l'Host) per aggiornare lo stato dei servizi shadow:
+```bash
+sudo sync && sudo reboot
+```
+
 ---
 
 ## 8. Installazione e configurazione del software Diretta
@@ -1060,7 +1051,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 **Objective:** Se sei un abbonato Roon, questa sezione fa al caso tuo. Seguirai questi passaggi per installare Roon Bridge, abilitare la tua nuova Zona Diretta e riprodurre musica da Roon.
 
-1.  Eseguite `menu` se siete tornati al terminale dopo il passaggio precedente, altrimenti andate al **Menu principale**.
+1.  Eseguite `menu` sull'Host se siete tornati al terminale dopo il passaggio precedente, altrimenti andate al **Menu principale**.
 
 2.  **Installare Roon Bridge (sull'Host):** Se utilizzate Roon, eseguite i seguenti passaggi sul **Diretta Host**:
     * Eseguite `menu`.
@@ -1086,6 +1077,15 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 Il vostro collegamento Diretta dedicato è ora completamente configurato per una riproduzione audio pura e isolata.
 **Nota:** La zona "Limited" per il test del Diretta Target scomparirà da Roon dopo sei minuti di riproduzione musicale ad alta risoluzione. Questo è normale. A quel punto, dovrete acquistare una licenza per il Diretta Target. Il costo è attualmente di €100 e possono essere necessarie fino a 48 ore per il completamento dell'attivazione. Riceverete due e-mail dal team Diretta. La prima è la ricevuta; la seconda è la notifica di attivazione. Una volta ricevuta l'e-mail di attivazione, riavviate il computer Target per rendere attiva la licenza.
+
+> ---
+> ### ✅ Checkpoint: Verificare l'integrazione con Roon
+>
+> Selezionate la vostra nuova zona Diretta nell'app di controllo Roon e riproducete un po' di musica.
+>
+> Questo è un buon momento per tornare all'[**Appendice 5**](#18-appendix-5-system-health-checks) ed eseguire il comando universale di **Verifica dello Stato del Sistema** sia sull'Host che sul Target per verificare la configurazione.
+>
+> ---
 
 ---
 
@@ -1562,7 +1562,7 @@ fi
 pyenv global "$PYVER"
 ```
 
-**Nota:** È normale che la fase `Installing Python-3.14.6...` richieda circa 10 minuti, poiché compila Python a partire dai sorgenti. Non arrendetevi! Nell'attesa, rilassatevi ascoltando dell'ottima musica utilizzando la vostra nuovo sistema Diretta. Dovrebbe essere disponibile mentre Python si installa sull'Host.
+**Nota:** È normale che la fase `Installing Python-3.14.7...` richieda circa 10 minuti, poiché compila Python a partire dai sorgenti. Non arrendetevi! Nell'attesa, rilassatevi ascoltando dell'ottima musica utilizzando la vostra nuovo sistema Diretta. Dovrebbe essere disponibile mentre Python si installa sull'Host.
 
 ---
 
@@ -2276,7 +2276,7 @@ Ora, sul **Diretta Host**, eseguiremo tutti i passaggi per installare e configur
     pyenv global $PYVER
     ```
 
-    **Nota:** È normale che la fase `Installing Python-3.14.6...` richieda circa 10 minuti, poiché compila Python a partire dai sorgenti. Non arrendetevi! Nell'attesa, rilassatevi ascoltando dell'ottima musica utilizzando la vostra nuovo sistema Diretta. Dovrebbe essere disponibile mentre Python si installa sull'Host.
+    **Nota:** È normale che la fase `Installing Python-3.14.7...` richieda circa 10 minuti, poiché compila Python a partire dai sorgenti. Non arrendetevi! Nell'attesa, rilassatevi ascoltando dell'ottima musica utilizzando la vostra nuovo sistema Diretta. Dovrebbe essere disponibile mentre Python si installa sull'Host.
 
 7.  **Installare Avahi e le dipendenze di Python sul Diretta Host:**
 

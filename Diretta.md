@@ -9,7 +9,7 @@ The **Diretta Host** will connect to your main network (to access your music ser
 I aim to keep this guide compatible with the current official AudioLinux download link provided by Piero.
 
 **Current Validation:**
-These instructions were last tested with **AudioLinux V5** (Image: `audiolinux_pi4-pi5_520`, Menu Version: `538`).
+These instructions were last tested with **AudioLinux V5** (Image: `audiolinux_pi4-pi5_530`, Menu Version: `544`).
 
 **A Note on Updates:**
 Because AudioLinux is based on Arch (a rolling release), a fresh install will always pull the absolute latest software. Once your system is singing, you have two choices:
@@ -337,25 +337,10 @@ Use the AudioLinux menu system to perform all updates. Have your email from Pier
 
 1.  Run `menu` in the terminal.
 2.  Select **INSTALL/UPDATE menu**.
-    ```text
-    Verifying license...
-    Please enter the email address used at the time of purchase
-    (You will only be asked once)
-    ?
-    <email address used to purchase AudioLinux support>
-    OK
-    OK
-
-    Please type your menu update user
-    ?
-    <AUDIOLINUX RASPBERRY "user:" from your license email)>
-    Please type your menu update password
-    ?
-    <AUDIOLINUX RASPBERRY "password:" from your license email)>
-    ```
-3.  On the next screen, select **UPDATE system** and let the process complete.
-4.  After the system update finishes, select **Update menu** from the same screen to get the latest version of the AudioLinux scripts. *Note:* You will need the email address you used to purchase AudioLinux and your download username and password.
-5.  Exit the menu system to get back to the terminal.
+3.  On the next screen, select **UPDATE system**, follow the prompts and let the process complete.
+4.  After the system update finishes, select **UPDATE menu** from the same screen to get the latest version of the AudioLinux scripts. *Note:* You will need the email address you used to purchase AudioLinux and your download username and password.
+5.  Select **SELECT/Update kernel**. If the version next to "Your kernel" is different from the version listed after "Audiolinux LTS RT LTO", select option 1, **Audiolinux LTS RT LTO (default)** to update the kernel.
+6.  Exit the menu system to get back to the terminal.
 
 ### 4.5. Reboot
 Reboot to load the kernel and other updates:
@@ -897,6 +882,12 @@ Change `#Storage=auto` to `Storage=volatile` in `/etc/systemd/journald.conf`
 sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 ```
 
+### 7.7. Reboot
+Reboot (Target first, then Host) to update shadow service state:
+```bash
+sudo sync && sudo reboot
+```
+
 ---
 
 ## 8. Diretta Software Installation & Configuration
@@ -1060,7 +1051,7 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 **Objective:** If you are a Roon Subscriber, this section is for you. You'll follow these steps to install Roon Bridge, enable your new Diretta Zone, and play music from Roon.
 
-1.  Run `menu` if you exited back to the terminal after the previous step, otherwise go to the **Main menu**.
+1.  Run `menu` on the Host if you exited back to the terminal after the previous step, otherwise go to the **Main menu**.
 
 2.  **Install Roon Bridge (on Host):** If you use Roon, perform the following steps on the **Diretta Host**:
     * Run `menu`.
@@ -1086,6 +1077,15 @@ sudo sed -i 's/^#Storage=auto/Storage=volatile/' /etc/systemd/journald.conf
 
 Your dedicated Diretta link is now fully configured for pristine, isolated audio playback.
 **Note:** The "Limited" zone for Diretta Target testing will disappear from Roon after six minutes of hi-res music playback. This is normal. At that point, you'll need to purchase a license for the Diretta Target. Cost is currently €100 and it can take up to 48 hours for activation to complete. You will receive two emails from the Diretta team. The first is your receipt; the second, your activation notification. Once you receive the activation email, restart your Target computer to pick up the activation.
+
+> ---
+> ### ✅ Checkpoint: Verify Roon Integration
+>
+> Select your new Diretta zone in the Roon control app and play some music.
+>
+> Now is a good time to return to [**Appendix 5**](#18-appendix-5-system-health-checks) and run the universal **System Health Check** command on both the Host and the Target to verify the configuration.
+>
+> ---
 
 ---
 
@@ -1562,7 +1562,7 @@ fi
 pyenv global "$PYVER"
 ```
 
-**Note:** It's normal for the `Installing Python-3.14.6...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta system while you wait. It should be available while Python is installing on the Host.
+**Note:** It's normal for the `Installing Python-3.14.7...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta system while you wait. It should be available while Python is installing on the Host.
 
 ---
 
@@ -2276,7 +2276,7 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     pyenv global $PYVER
     ```
 
-    **Note:** It's normal for the `Installing Python-3.14.6...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
+    **Note:** It's normal for the `Installing Python-3.14.7...` part to take ~10 minutes as it compiles Python from source. Don't give up! Feel free to relax to some beautiful music using your new Diretta zone in Roon while you wait. It should be available while Python is installing on the Host.
 
 7.  **Install Avahi and Python Dependencies on the Diretta Host:**
 
