@@ -193,14 +193,14 @@ run_appendix8_checks() {
 }
 run_appendix9_checks() {
     header "Appendix 9" "Optional: Jumbo Frames Optimization"
-    if ip link show end0 | grep -qE 'mtu (2032|9000)'; then
+    if ip link show end0 | grep -qE 'mtu (2032|3824|9000)'; then
         CURRENT_MTU=$(ip link show end0 | grep -o 'mtu [0-9]*' | awk '{print $2}')
         check "Interface end0 configured for Jumbo (MTU $CURRENT_MTU)" "true"
     else
-        check "Interface end0 configured for Jumbo (MTU 2032 or 9000)" "false"
+        check "Interface end0 configured for Jumbo (MTU 2032, 3824 or 9000)" "false"
         return
     fi
-    if grep -qE '^MTUBytes=(2032|9000)' /etc/systemd/network/end0.network; then
+    if grep -qE '^MTUBytes=(2032|3824|9000)' /etc/systemd/network/end0.network; then
         check "Systemd network config contains MTUBytes setting" "true"
     else
         check "Systemd network config contains MTUBytes setting" "false"
@@ -212,6 +212,10 @@ run_appendix9_checks() {
         check "Link passes Full Jumbo Ping (8972 bytes)" "ping -c 1 -w 1 -M do -s 8972 host"
         check "ExtEtherMTU is 9014" "grep -q '^ExtEtherMTU=9014' $CONFIG"
         check "EtherMTU is 9000" "grep -q '^EtherMTU=9000' $CONFIG"
+    elif [ "$CURRENT_MTU" -eq 3824 ]; then
+        check "Link passes Medium Jumbo Ping (3796 bytes)" "ping -c 1 -w 1 -M do -s 3796 host"
+        check "ExtEtherMTU is 3838" "grep -q '^ExtEtherMTU=3838' $CONFIG"
+        check "EtherMTU is 3824" "grep -q '^EtherMTU=3824' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
         check "Link passes Baby Jumbo Ping (2004 bytes)" "ping -c 1 -w 1 -M do -s 2004 host"
         check "ExtEtherMTU is 2046" "grep -q '^ExtEtherMTU=2046' $CONFIG"

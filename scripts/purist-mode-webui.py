@@ -26,6 +26,21 @@ ROON_CONFIG_PATH = os.path.expanduser("~/roon-ir-remote/app_info.json")
 DIRETTA_SETTING_PATH = "/opt/diretta-alsa/setting.inf"
 SUPER_PURIST_FLAG = os.path.expanduser("~/purist-mode-webui/super_purist.flag")
 
+# SSH to the Target fails transiently while the point-to-point link renegotiates
+# between 10 and 100 Mbps, in either direction. Those are transport-level
+# failures (exit 255) or timeouts, and they clear within a second or two, so
+# retry them rather than reporting the Target as unreachable.
+SSH_RETRY_ATTEMPTS = 3
+SSH_RETRY_DELAY = 2.0
+
+# The Target answers SSH well before purist-mode-auto.service has applied Purist
+# Mode, so an early poll reports purist off and derives as Standard. Acting on
+# that flips the Host to 100 Mbps/1300us, only to flip back once the Target
+# finishes booting. Background enforcement therefore waits out the Host's own
+# boot window and requires the derived state to hold before it acts.
+BOOT_SETTLE_SECONDS = 150
+STATE_SETTLE_SECONDS = 30
+
 app = Flask(__name__)
 # A secret key is required for flash messaging
 app.secret_key = os.urandom(24)
@@ -33,6 +48,8 @@ app.secret_key = os.urandom(24)
 # --- Global State ---
 ENFORCEMENT_STATE = {"last_time": 0}
 ENFORCEMENT_LOCK = threading.Lock()
+SETTLE_STATE = {"state": None, "since": 0.0}
+SETTLE_LOCK = threading.Lock()
 TRANSITION_STATE = {"active": False}
 STATUS_CACHE = {"data": None, "timestamp": 0.0}
 STATUS_CACHE_LOCK = threading.Lock()
@@ -358,8 +375,14 @@ def is_music_playing():
         return False
 
 
-def run_remote_command(command):
-    """Executes a command on the Diretta Target via SSH."""
+def run_remote_command(command, attempts=SSH_RETRY_ATTEMPTS):
+    """
+    Executes a command on the Diretta Target via SSH.
+
+    Transport-level failures (exit code 255) and timeouts are expected while the
+    link renegotiates speed, so they are retried. A non-255 exit code means the
+    remote command itself ran and failed, which is reported immediately.
+    """
     ssh_command = [
         "/usr/bin/ssh",
         "-i", SSH_KEY_PATH,
@@ -369,30 +392,47 @@ def run_remote_command(command):
         f"{REMOTE_USER}@{REMOTE_HOST}",
         command
     ]
-    try:
-        app.logger.info("Running remote command: %s", " ".join(ssh_command))
-        result = subprocess.run(
-            ssh_command,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=15
-        )
-        output = result.stdout.strip()
-        app.logger.info("Remote command successful. Output: %s", output)
-        return output
-    except subprocess.CalledProcessError as err:
-        app.logger.error(
-            "Remote command failed with return code %s: %s",
-            err.returncode, err.stderr
-        )
-        return None
-    except subprocess.TimeoutExpired:
-        app.logger.error("Remote command timed out after 15 seconds.")
-        return None
-    except OSError as err:
-        app.logger.error("OS Error executing remote command: %s", err)
-        return None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            app.logger.info("Running remote command: %s", " ".join(ssh_command))
+            result = subprocess.run(
+                ssh_command,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=15
+            )
+            output = result.stdout.strip()
+            app.logger.info("Remote command successful. Output: %s", output)
+            return output
+        except subprocess.CalledProcessError as err:
+            if err.returncode != 255:
+                app.logger.error(
+                    "Remote command failed with return code %s: %s",
+                    err.returncode, err.stderr
+                )
+                return None
+            reason = f"SSH transport error: {(err.stderr or '').strip()}"
+        except subprocess.TimeoutExpired:
+            reason = "Remote command timed out after 15 seconds"
+        except OSError as err:
+            app.logger.error("OS Error executing remote command: %s", err)
+            return None
+
+        if attempt < attempts:
+            app.logger.warning(
+                "%s (attempt %s of %s). Link may be renegotiating; "
+                "retrying in %ss.",
+                reason, attempt, attempts, SSH_RETRY_DELAY
+            )
+            time.sleep(SSH_RETRY_DELAY)
+        else:
+            app.logger.error(
+                "%s (attempt %s of %s). Giving up.", reason, attempt, attempts
+            )
+
+    return None
 
 
 def get_status_from_target(bypass_cache=False):
@@ -672,14 +712,19 @@ def get_target_speed(current_state, target_status):
 def get_target_profile(current_state):
     """Determines the exact CycleTime and InfoCycle parameters for the current state."""
     if current_state == "SuperPurist":
-        return 2000, 200000
+        # 10 Mbps link, highest supported formats are DSD64 and 32-bit/96 kHz.
+        # 32-bit/96 kHz binds at 0.768 B/us; 1800us keeps one packet per cycle
+        # even at the un-upgraded MTU of 1500 (Appendix 9 not run).
+        return 1800, 180000
 
     # Read the physical hardware environment first
     mtu = get_host_mtu()
     if mtu == 2032:
         return 700, 70000  # Baby Jumbo optimization layer
+    if mtu == 3824:
+        return 1300, 130000  # Medium Jumbo optimization layer
     if mtu >= 9000:
-        return 1000, 100000  # Full Jumbo optimization layer
+        return 1500, 150000  # Full Jumbo optimization layer
 
     # If we are on standard MTU, check if we have the green light for isolation timings
     if is_diretta_isolated() or _get_current_cycletime() == 514:
@@ -738,6 +783,54 @@ def _sync_hardware_transition(expected_speed, expected_ct, expected_ic, current_
         run_remote_command("/usr/local/bin/pm-toggle-mode --enforce")
 
 
+def _get_host_uptime():
+    """Returns the Host's uptime in seconds, or None if it cannot be read."""
+    try:
+        with open("/proc/uptime", "r", encoding="utf-8") as file_handle:
+            return float(file_handle.read().split()[0])
+    except (OSError, ValueError, IndexError) as err:
+        app.logger.error("Could not read Host uptime: %s", err)
+        return None
+
+
+def _record_state_hold(current_state):
+    """Tracks how long the derived state has read the same way, in seconds."""
+    now = time.time()
+    with SETTLE_LOCK:
+        if SETTLE_STATE["state"] != current_state:
+            SETTLE_STATE["state"] = current_state
+            SETTLE_STATE["since"] = now
+        return now - SETTLE_STATE["since"]
+
+
+def _enforcement_settled(current_state, held_for):
+    """
+    Decides whether a detected mismatch is stable enough to act on.
+
+    Guards against the boot race where the Target is reachable but has not yet
+    applied Purist Mode, which would otherwise derive as Standard and drive a
+    full profile flip that has to be undone moments later.
+    """
+    uptime = _get_host_uptime()
+    if uptime is not None and uptime < BOOT_SETTLE_SECONDS:
+        app.logger.info(
+            "Host uptime is %.0fs, inside the %ss boot window. Deferring "
+            "enforcement until the Target has finished starting up.",
+            uptime, BOOT_SETTLE_SECONDS
+        )
+        return False
+
+    if held_for < STATE_SETTLE_SECONDS:
+        app.logger.info(
+            "State has read as %s for only %.0fs of the %ss settling period. "
+            "Deferring enforcement.",
+            current_state, held_for, STATE_SETTLE_SECONDS
+        )
+        return False
+
+    return True
+
+
 def check_and_enforce_host_profile(target_status):
     """
     Intelligently compares current runtime variables against the target logic matrix.
@@ -764,26 +857,36 @@ def check_and_enforce_host_profile(target_status):
     current_ct = _get_current_cycletime()
 
     current_state = get_current_system_state(target_status)
+
+    # Track the hold time on every poll so the settling window reflects the
+    # Target's real history, not just the polls that happened to find a mismatch.
+    held_for = _record_state_hold(current_state)
+
     expected_speed = get_target_speed(current_state, target_status)
     expected_ct, expected_ic = get_target_profile(current_state)
 
-    if current_speed_val != expected_speed or current_ct != expected_ct:
-        with ENFORCEMENT_LOCK:
-            # Cooldown to prevent thread spamming during fast clicks or polling
-            if time.time() - ENFORCEMENT_STATE["last_time"] < 15:
-                return
-            ENFORCEMENT_STATE["last_time"] = time.time()
+    if current_speed_val == expected_speed and current_ct == expected_ct:
+        return
 
-        app.logger.info(
-            "Enforcement triggered. Speed: %s -> %s | CycleTime: %s -> %s",
-            current_speed_val, expected_speed, current_ct, expected_ct
-        )
+    if not _enforcement_settled(current_state, held_for):
+        return
 
-        threading.Thread(
-            target=_async_hardware_transition,
-            args=(expected_speed, expected_ct, expected_ic, current_state),
-            daemon=True
-        ).start()
+    with ENFORCEMENT_LOCK:
+        # Cooldown to prevent thread spamming during fast clicks or polling
+        if time.time() - ENFORCEMENT_STATE["last_time"] < 15:
+            return
+        ENFORCEMENT_STATE["last_time"] = time.time()
+
+    app.logger.info(
+        "Enforcement triggered. Speed: %s -> %s | CycleTime: %s -> %s",
+        current_speed_val, expected_speed, current_ct, expected_ct
+    )
+
+    threading.Thread(
+        target=_async_hardware_transition,
+        args=(expected_speed, expected_ct, expected_ic, current_state),
+        daemon=True
+    ).start()
 
 
 # --- FLASK ROUTES ---

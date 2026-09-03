@@ -2856,11 +2856,14 @@ fi
 Target（`diretta-target`）にSSH接続し、以下のブロックを貼り付けます。
 
 ```bash
-# 1. リンク制限の検出（Full vs Baby）
+# 1. リンク制限の検出（Full vs Medium vs Baby）
 echo "リンクの性能をテストしています..."
 if ping -c 1 -w 1 -M "do" -s 8972 host &>/dev/null; then
   NEW_MTU=9000
   echo "成功: 完全なジャンボフレーム (9000 MTU) がサポートされています。"
+elif ping -c 1 -w 1 -M "do" -s 3796 host &>/dev/null; then
+  NEW_MTU=3824
+  echo "成功: 中間ジャンボフレーム (3824 MTU) がサポートされています。"
 elif ping -c 1 -w 1 -M "do" -s 2004 host &>/dev/null; then
   NEW_MTU=2032
   echo "成功: ベビージャンボフレーム (2032 MTU) がサポートされています。"
@@ -2892,13 +2895,8 @@ EOF
   sudo sed -i '/^ExtEtherMTU=/d' $CONF
   sudo sed -i '/^EtherMTU=/d' $CONF
 
-  if [ "$NEW_MTU" -eq 9000 ]; then
-    echo "ExtEtherMTU=9014" | sudo tee -a $CONF
-    echo "EtherMTU=9000" | sudo tee -a $CONF
-  else
-    echo "ExtEtherMTU=2046" | sudo tee -a $CONF
-    echo "EtherMTU=2032" | sudo tee -a $CONF
-  fi
+  echo "ExtEtherMTU=$((NEW_MTU + 14))" | sudo tee -a $CONF
+  echo "EtherMTU=$NEW_MTU" | sudo tee -a $CONF
   sudo systemctl restart diretta_alsa_target
   echo "完了: ターゲットの最適化が完了しました。"
 }
@@ -2912,7 +2910,7 @@ EOF
 Host（`diretta-host`）にSSH接続し、以下のブロックを貼り付けます。これにより、リンクの調査、永続的なネットワーク設定の構成、およびDirettaのアップデートが行われます。
 
 ```bash
-# 1. リンク制限の検出（Full vs Baby）
+# 1. リンク制限の検出（Full vs Medium vs Baby）
 echo "リンクの性能をテストしています..."
 # 手動によるMTU変更後、リンクが落ち着くまで少し時間を与える
 sleep 2
@@ -2920,6 +2918,9 @@ sleep 2
 if ping -c 1 -w 1 -M "do" -s 8972 target &>/dev/null; then
   NEW_MTU=9000
   echo "成功: 完全なジャンボフレーム (9000 MTU) がサポートされています。"
+elif ping -c 1 -w 1 -M "do" -s 3796 target &>/dev/null; then
+  NEW_MTU=3824
+  echo "成功: 中間ジャンボフレーム (3824 MTU) がサポートされています。"
 elif ping -c 1 -w 1 -M "do" -s 2004 target &>/dev/null; then
   NEW_MTU=2032
   echo "成功: ベビージャンボフレーム (2032 MTU) がサポートされています。"
@@ -2951,9 +2952,13 @@ EOF
 
   # 条件付きのCycleTimeおよびInfoCycleの最適化
   if [ "$NEW_MTU" -eq 9000 ]; then
-    echo "最適化: 完全なジャンボフレームが検出されました。CycleTimeを1000usに緩和します。"
-    sudo sed -i 's/^CycleTime=.*/CycleTime=1000/' /opt/diretta-alsa/setting.inf
-    sudo sed -i 's/^InfoCycle=.*/InfoCycle=100000/' /opt/diretta-alsa/setting.inf
+    echo "最適化: 完全なジャンボフレームが検出されました。CycleTimeを1500usに緩和します。"
+    sudo sed -i 's/^CycleTime=.*/CycleTime=1500/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=150000/' /opt/diretta-alsa/setting.inf
+  elif [ "$NEW_MTU" -eq 3824 ]; then
+    echo "最適化: 中間ジャンボフレームが検出されました。CycleTimeを1300usに緩和します。"
+    sudo sed -i 's/^CycleTime=.*/CycleTime=1300/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=130000/' /opt/diretta-alsa/setting.inf
   else
     echo "最適化: ベビージャンボフレームが検出されました。CycleTimeを700usに設定します。"
     sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
@@ -2964,6 +2969,23 @@ EOF
   echo "完了: ホストの最適化が完了しました。"
 }
 ```
+
+***
+> **MTUの段階と`CycleTime`に関する注記：**
+> `CycleTime`は選ぶものではなく、算出されるものです。各値は、サポートされる最高フォーマットが**1サイクルあたり1回の送信**に収まる範囲で最も緩和された設定です。上限は`(MTU - 48) / 2.8224`で、2.8224バイト/µsはDSD256およびDXD（32ビット、352.8 kHz）のレートです。
+>
+> | リンクMTU | `CycleTime` | 上限 | 備考 |
+> | :--- | :--- | :--- | :--- |
+> | 2032（ベビー） | 700 µs | 703 µs | 上限どおり |
+> | 3824（中間） | 1300 µs | 1338 µs | 上限どおり |
+> | 9000（フル） | 1500 µs | 3172 µs | 意図的に制限。2000 µsを超えると効果は逓減します |
+>
+> MTUが大きいほど、サイクルは長く静かになります。9000では、制限は算術ではなく試聴上の好みの問題になります。
+>
+> **なぜ3824の段階が必要か：** Raspberry Pi 4の内蔵イーサネットは`mtu 9000`をエラーなく受け付けますが、3824バイトを超えるフレームは黙って破棄します。ステップ1はカーネルのサポートを確認しますが、それは必要条件であって十分条件ではありません。ハードウェアの限界はより低い場合があり、それはステップ2と3のpingラダーでしか判明しません。
+>
+> Super Puristモード（付録8）は、MTUにかかわらずこれらの値を1800 µsで上書きします。10 Mbpsのリンクにより、サポートされるフォーマットはDSD64と32ビット、96 kHzに制限されます。
+***
 
 #### **ステップ 4：** MTUの変更を反映するための再起動
 最初にTargetを再起動し、次にHostを再起動します：

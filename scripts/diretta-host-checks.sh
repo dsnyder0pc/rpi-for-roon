@@ -165,6 +165,15 @@ run_appendix8_checks() {
     check "'limit-speed-100m' service is active" "systemctl is-active limit-speed-100m.service"
     check "Link speed is optimized (10Mb/s or 100Mb/s)" "ethtool end0 | grep -qEe 'Speed: (10|100)Mb/s'"
     check "Duplex is Full" "ethtool end0 | grep -q 'Duplex: Full'"
+    # The flag and the negotiated speed are the two halves of Super Purist, and
+    # limit-speed-100m.service sets the link from the flag alone at boot. A
+    # lasting disagreement means a Super Purist session was interrupted, so the
+    # link and the Diretta profile no longer describe the same mode.
+    if [ -f /home/audiolinux/purist-mode-webui/super_purist.flag ]; then
+        check "Super Purist flag agrees with the 10Mb/s link" "ethtool end0 | grep -q 'Speed: 10Mb/s'"
+    else
+        check "Cleared Super Purist flag agrees with the 100Mb/s link" "ethtool end0 | grep -q 'Speed: 100Mb/s'"
+    fi
     if is_kernel_6_18_or_newer; then
         check "'disable-eee' service is enabled" "systemctl is-enabled disable-eee.service"
         check "'disable-eee' service is active" "systemctl is-active disable-eee.service"
@@ -173,14 +182,14 @@ run_appendix8_checks() {
 }
 run_appendix9_checks() {
     header "Appendix 9" "Optional: Jumbo Frames Optimization"
-    if ip link show end0 | grep -qE 'mtu (2032|9000)'; then
+    if ip link show end0 | grep -qE 'mtu (2032|3824|9000)'; then
         CURRENT_MTU=$(ip link show end0 | grep -o 'mtu [0-9]*' | awk '{print $2}')
         check "Interface end0 configured for Jumbo (MTU $CURRENT_MTU)" "true"
     else
-        check "Interface end0 configured for Jumbo (MTU 2032 or 9000)" "false"
+        check "Interface end0 configured for Jumbo (MTU 2032, 3824 or 9000)" "false"
         return
     fi
-    if grep -qE '^MTUBytes=(2032|9000)' /etc/systemd/network/end0.network; then
+    if grep -qE '^MTUBytes=(2032|3824|9000)' /etc/systemd/network/end0.network; then
         check "Systemd network config contains MTUBytes setting" "true"
     else
         check "Systemd network config contains MTUBytes setting" "false"
@@ -188,6 +197,8 @@ run_appendix9_checks() {
 
     if [ "$CURRENT_MTU" -eq 9000 ]; then
         check "Link passes Full Jumbo Ping (8972 bytes)" "ping -c 1 -w 1 -M do -s 8972 diretta-target"
+    elif [ "$CURRENT_MTU" -eq 3824 ]; then
+        check "Link passes Medium Jumbo Ping (3796 bytes)" "ping -c 1 -w 1 -M do -s 3796 diretta-target"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
         check "Link passes Baby Jumbo Ping (2004 bytes)" "ping -c 1 -w 1 -M do -s 2004 diretta-target"
     fi
@@ -201,10 +212,16 @@ run_appendix9_checks() {
             check "InfoCycle ($IC) is 100x CycleTime ($CT)" "[[ $((CT * 100)) -eq $IC ]]"
         fi
     fi
-    if [ -f /home/audiolinux/purist-mode-webui/super_purist.flag ]; then
-        check "CycleTime is optimized (2000us for Super Purist)" "grep -q '^CycleTime=2000' $CONFIG"
+    # Super Purist is the flag PLUS the enforced 10 Mbps link, matching
+    # get_current_system_state() in purist-mode-webui.py. A stale flag alone
+    # must not be read as Super Purist, or this asserts the wrong CycleTime.
+    if [ -f /home/audiolinux/purist-mode-webui/super_purist.flag ] \
+        && ethtool end0 2>/dev/null | grep -q 'Speed: 10Mb/s'; then
+        check "CycleTime is optimized (1800us for Super Purist)" "grep -q '^CycleTime=1800' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 9000 ]; then
-        check "CycleTime is optimized (1000us for Full Jumbo)" "grep -q '^CycleTime=1000' $CONFIG"
+        check "CycleTime is optimized (1500us for Full Jumbo)" "grep -q '^CycleTime=1500' $CONFIG"
+    elif [ "$CURRENT_MTU" -eq 3824 ]; then
+        check "CycleTime is optimized (1300us for Medium Jumbo)" "grep -q '^CycleTime=1300' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
         check "CycleTime is optimized (700us for Baby Jumbo)" "grep -q '^CycleTime=700' $CONFIG"
     else

@@ -2856,11 +2856,14 @@ fi
 Acesse o Target via SSH (`diretta-target`) e cole o seguinte bloco.
 
 ```bash
-# 1. Detectar Limite do Link (Full vs Baby)
+# 1. Detectar Limite do Link (Full vs Medium vs Baby)
 echo "Testando a Capacidade do Link..."
 if ping -c 1 -w 1 -M "do" -s 8972 host &>/dev/null; then
   NEW_MTU=9000
   echo "SUCESSO: Full Jumbo Frames (MTU 9000) suportados."
+elif ping -c 1 -w 1 -M "do" -s 3796 host &>/dev/null; then
+  NEW_MTU=3824
+  echo "SUCESSO: Medium Jumbo Frames (MTU 3824) suportados."
 elif ping -c 1 -w 1 -M "do" -s 2004 host &>/dev/null; then
   NEW_MTU=2032
   echo "SUCESSO: Baby Jumbo Frames (MTU 2032) suportados."
@@ -2892,13 +2895,8 @@ EOF
   sudo sed -i '/^ExtEtherMTU=/d' $CONF
   sudo sed -i '/^EtherMTU=/d' $CONF
 
-  if [ "$NEW_MTU" -eq 9000 ]; then
-    echo "ExtEtherMTU=9014" | sudo tee -a $CONF
-    echo "EtherMTU=9000" | sudo tee -a $CONF
-  else
-    echo "ExtEtherMTU=2046" | sudo tee -a $CONF
-    echo "EtherMTU=2032" | sudo tee -a $CONF
-  fi
+  echo "ExtEtherMTU=$((NEW_MTU + 14))" | sudo tee -a $CONF
+  echo "EtherMTU=$NEW_MTU" | sudo tee -a $CONF
   sudo systemctl restart diretta_alsa_target
   echo "CONCLUÍDO: Otimização do Target concluída."
 }
@@ -2912,7 +2910,7 @@ EOF
 Acesse o Host via SSH (`diretta-host`) e cole o seguinte bloco. Ele testará o link, configurará as definições permanentes de rede e atualizará o Diretta.
 
 ```bash
-# 1. Detectar Limite do Link (Full vs Baby)
+# 1. Detectar Limite do Link (Full vs Medium vs Baby)
 echo "Testando a Capacidade do Link..."
 # Dar um momento para o link se estabilizar após a alteração manual do MTU
 sleep 2
@@ -2920,6 +2918,9 @@ sleep 2
 if ping -c 1 -w 1 -M "do" -s 8972 target &>/dev/null; then
   NEW_MTU=9000
   echo "SUCESSO: Full Jumbo Frames (MTU 9000) suportados."
+elif ping -c 1 -w 1 -M "do" -s 3796 target &>/dev/null; then
+  NEW_MTU=3824
+  echo "SUCESSO: Medium Jumbo Frames (MTU 3824) suportados."
 elif ping -c 1 -w 1 -M "do" -s 2004 target &>/dev/null; then
   NEW_MTU=2032
   echo "SUCESSO: Baby Jumbo Frames (MTU 2032) suportados."
@@ -2951,9 +2952,13 @@ EOF
 
   # Otimização condicional do CycleTime e InfoCycle
   if [ "$NEW_MTU" -eq 9000 ]; then
-    echo "Otimização: Full Jumbo Frames detectados. Relaxando o CycleTime para 1000us."
-    sudo sed -i 's/^CycleTime=.*/CycleTime=1000/' /opt/diretta-alsa/setting.inf
-    sudo sed -i 's/^InfoCycle=.*/InfoCycle=100000/' /opt/diretta-alsa/setting.inf
+    echo "Otimização: Full Jumbo Frames detectados. Relaxando o CycleTime para 1500us."
+    sudo sed -i 's/^CycleTime=.*/CycleTime=1500/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=150000/' /opt/diretta-alsa/setting.inf
+  elif [ "$NEW_MTU" -eq 3824 ]; then
+    echo "Otimização: Medium Jumbo Frames detectados. Relaxando o CycleTime para 1300us."
+    sudo sed -i 's/^CycleTime=.*/CycleTime=1300/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=130000/' /opt/diretta-alsa/setting.inf
   else
     echo "Otimização: Baby Jumbo Frames detectados. Definindo o CycleTime para 700us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
@@ -2964,6 +2969,23 @@ EOF
   echo "CONCLUÍDO: Otimização do Host concluída."
 }
 ```
+
+***
+> **Nota sobre os níveis de MTU e o `CycleTime`:**
+> O `CycleTime` é derivado, não escolhido. Cada valor é a configuração mais relaxada em que o formato mais exigente suportado ainda cabe em uma **única transmissão por ciclo**. O teto é `(MTU - 48) / 2.8224`, onde 2,8224 bytes/µs é a taxa do DSD256 e do DXD (32 bits, 352,8 kHz).
+>
+> | MTU do link | `CycleTime` | Teto | Observações |
+> | :--- | :--- | :--- | :--- |
+> | 2032 (Baby) | 700 µs | 703 µs | No teto |
+> | 3824 (Médio) | 1300 µs | 1338 µs | No teto |
+> | 9000 (Full) | 1500 µs | 3172 µs | Limitado de propósito; além de 2000 µs os ganhos diminuem |
+>
+> Uma MTU maior permite um ciclo mais longo e silencioso. Em 9000, o limite deixa de ser aritmético e passa a ser preferência de escuta.
+>
+> **Por que um nível de 3824?** A Ethernet integrada do Raspberry Pi 4 aceita `mtu 9000` sem erro, mas descarta silenciosamente os quadros acima de 3824 bytes. O Passo 1 confirma o suporte do kernel, o que é necessário mas não suficiente: o limite do hardware pode ser menor, e apenas a escada de pings dos Passos 2 e 3 o encontra.
+>
+> O modo Super Purista (Apêndice 8) substitui esses valores por 1800 µs em qualquer MTU. Seu link de 10 Mbps limita os formatos suportados a DSD64 e 32 bits, 96 kHz.
+***
 
 #### **Passo 4:** Reiniciar para Aplicar as Alterações de MTU
 Reinicie primeiro o Target, depois o Host:

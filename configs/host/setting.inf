@@ -2,7 +2,7 @@
 Interface=end0
 TargetProfileLimitTime=0
 ThredMode=1
-InfoCycle=100000
+InfoCycle=80000
 FlexCycle=disable
 CycleTime=800
 CycleMinTime=
