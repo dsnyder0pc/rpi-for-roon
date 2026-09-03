@@ -106,6 +106,8 @@ run_appendix4_checks() {
     check "Web UI app file is up-to-date" "check_hash /home/audiolinux/purist-mode-webui/app.py https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py"
     check "Python has port binding capability" "getcap \$(readlink -f /home/audiolinux/.pyenv/versions/purist-webui/bin/python) | grep -q 'cap_net_bind_service.ep'"
     check "Web UI sudoers file exists" "[ -f /etc/sudoers.d/webui-restarts ]"
+    check "'pm-power' script exists" "[ -x /usr/local/bin/pm-power ]"
+    check "Web UI sudoers allows 'pm-power'" "grep -q 'NOPASSWD: /usr/local/bin/pm-power' /etc/sudoers.d/webui-restarts"
     check "'purist-webui' service is enabled" "systemctl is-enabled purist-webui.service"
     check "'purist-webui' service is active" "systemctl is-active purist-webui.service"
 }

@@ -1978,7 +1978,7 @@ Sul **Diretta Target** creeremo un nuovo utente con permessi molto limitati. Que
     ```
 
 3.  **Creare script di comando sicuri:**
-    Creeremo quattro piccoli script dedicati che sono le *uniche* azioni che l'app web è autorizzata a compiere. Questo è un passaggio fondamentale per la sicurezza.
+    Creeremo un insieme di piccoli script dedicati che sono le *uniche* azioni che l'app web è autorizzata a compiere. Questo è un passaggio fondamentale per la sicurezza.
     ```bash
     # Script per ottenere lo stato corrente, incluso lo stato della licenza
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
@@ -2002,8 +2002,11 @@ Sul **Diretta Target** creeremo un nuovo utente con permessi molto limitati. Que
       LICENSE_LIMITED="true"
     fi
 
+    # Segnala la nostra MTU affinché l'Host possa rilevare un collegamento con le due estremità discordanti
+    MTU=$(cat /sys/class/net/end0/mtu 2>/dev/null || echo 0)
+
     # Genera in output tutti i flag di stato come un singolo oggetto JSON
-    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED}"
+    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED, \"mtu\": $MTU}"
     EOT
 
     # Script per attivare/disattivare la modalità Purist
@@ -2080,12 +2083,30 @@ Sul **Diretta Target** creeremo un nuovo utente con permessi molto limitati. Que
     fi
     EOT
 
+    # Creare lo script per riavviare o spegnere questa macchina
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-power
+    #!/bin/bash
+    # Riavvia o spegne questa macchina per conto dell'interfaccia web.
+    # Il comando viene sganciato affinché il chiamante ritorni subito: sul Target
+    # la sessione SSH si chiude correttamente, e sull'Host il browser riceve la propria
+    # conferma prima che la macchina si spenga.
+
+    case "$1" in
+        reboot)   ACTION="reboot" ;;
+        poweroff) ACTION="poweroff" ;;
+        *) echo "Usage: $0 [reboot|poweroff]" >&2; exit 1 ;;
+    esac
+
+    echo "Scheduling ${ACTION}..."
+    /usr/bin/sh -c "sleep 2 && /usr/bin/systemctl ${ACTION}" >/dev/null 2>&1 < /dev/null &
+    EOT
+
     # Rende i nuovi script eseguibili
     sudo chmod -v +x /usr/local/bin/pm-*
     ```
 
 4.  **Concedere i permessi di Sudo:**
-    Questo passaggio consente all'utente `purist-app` di eseguire i nostri quattro nuovi script con privilegi di root e senza la necessità di un terminale interattivo.
+    Questo passaggio consente all'utente `purist-app` di eseguire quegli script con privilegi di root e senza la necessità di un terminale interattivo.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/purist-app
     # Indica a sudo di non richiedere una TTY per l'utente purist-app
@@ -2098,6 +2119,7 @@ Sul **Diretta Target** creeremo un nuovo utente con permessi molto limitati. Que
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-restart-target
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-license-url
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-set-link
+    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-power
     EOT
     ```
 
@@ -2346,8 +2368,30 @@ Ora, sul **Diretta Host**, eseguiremo tutti i passaggi per installare e configur
     sudo setcap 'cap_net_bind_service=+ep' "$PYTHON_EXEC"
     ```
 
-10. **Concedere i permessi di Sudo sull'Host:**
-    Questo passaggio è fondamentale per consentire all'applicazione web di riavviare i servizi necessari relativi a Roon senza inserire una password.
+10. **Installare lo script di alimentazione e concedere i permessi di Sudo sull'Host:**
+    L'Host necessita dello stesso script `pm-power` del Target, affinché l'interfaccia web possa spegnere entrambe le metà della coppia. Crearlo anche qui:
+    ```bash
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-power
+    #!/bin/bash
+    # Riavvia o spegne questa macchina per conto dell'interfaccia web.
+    # Il comando viene sganciato affinché il chiamante ritorni subito: sul Target
+    # la sessione SSH si chiude correttamente, e sull'Host il browser riceve la propria
+    # conferma prima che la macchina si spenga.
+
+    case "$1" in
+        reboot)   ACTION="reboot" ;;
+        poweroff) ACTION="poweroff" ;;
+        *) echo "Usage: $0 [reboot|poweroff]" >&2; exit 1 ;;
+    esac
+
+    echo "Scheduling ${ACTION}..."
+    /usr/bin/sh -c "sleep 2 && /usr/bin/systemctl ${ACTION}" >/dev/null 2>&1 < /dev/null &
+    EOT
+
+    sudo chmod -v +x /usr/local/bin/pm-power
+    ```
+
+    Quindi concedere i permessi di sudo. Questo passaggio è fondamentale per consentire all'applicazione web di riavviare i servizi Roon necessari, e di riavviare o spegnere l'Host, senza una password.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/webui-restarts
     # Consente alla webui (in esecuzione come audiolinux) di applicare i profili host e riavviare i servizi
@@ -2357,6 +2401,7 @@ Ora, sul **Diretta Host**, eseguiremo tutti i passaggi per installare e configur
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart diretta_alsa.service
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/ethtool -s end0 *
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/setting.inf.tmp /opt/diretta-alsa/setting.inf
+    audiolinux ALL=(ALL) NOPASSWD: /usr/local/bin/pm-power
     EOT
     sudo chmod 0440 /etc/sudoers.d/webui-restarts
     ```
@@ -2425,7 +2470,9 @@ Digitate `CTRL-C` una volta verificato che le cose funzionino come previsto.
 
 Dalla pagina principale, una barra di navigazione in alto vi guiderà ai diversi pannelli di controllo:
 
-* **Home:** La pagina principale con i collegamenti alle diverse applicazioni.
+* **Home:** La pagina iniziale principale con i collegamenti alle diverse applicazioni. Ospita anche il pannello **Point-to-Point Link**, che riporta la velocità del collegamento negoziata e la MTU insieme ai formati DSD e PCM più elevati che questi due valori supportano al `CycleTime` corrente. I valori dei formati derivano dalla regola di una trasmissione per ciclo descritta nell'[**Appendice 9**](#22-appendice-9-ottimizzazione-jumbo-frames-opzionale), quindi cambiano man mano che si procede attraverso i livelli di Jumbo Frames. Se Host e Target dovessero mai discordare sulla MTU, il pannello lo segnala in rosso — è il guasto silenzioso in cui il collegamento si attiva ma ogni frame di dimensione piena viene scartato.
+
+* **Pulsante di accensione:** Il pulsante rosso di accensione nell'angolo in alto a destra di ogni pagina offre **Reboot System** e **Power Off System**. Entrambi agiscono sulla coppia, spegnendo prima il Target e pochi secondi dopo l'Host, poiché il Target è raggiungibile solo attraverso l'Host. Ogni scelta richiede una conferma prima che accada qualcosa. Dopo uno spegnimento, entrambe le macchine devono essere riaccese a mano.
 
 * **Purist Mode App:** Questa pagina contiene i controlli per attivare/disattivare la modalità Purist e il suo comportamento di avvio automatico sul Diretta Target. Si aggiorna automaticamente ogni 30 secondi per mostrare lo stato corrente. Contiene anche il pulsante "Restart Services" da utilizzare dopo l'attivazione della licenza Diretta.
 

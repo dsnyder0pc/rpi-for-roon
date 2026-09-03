@@ -41,6 +41,37 @@ SSH_RETRY_DELAY = 2.0
 BOOT_SETTLE_SECONDS = 150
 STATE_SETTLE_SECONDS = 30
 
+# The point-to-point interface on both the Host and the Target.
+LINK_INTERFACE = "end0"
+
+# The Host waits this long before shutting itself down, so the Target reaches
+# its own shutdown first and the browser still receives the confirmation.
+HOST_POWER_DELAY_SECONDS = 10
+
+# --- Link capacity model ---
+# The whole design rests on one L2 transmission per cycle, so the usable payload
+# rate is whichever of two limits binds first:
+#   1. Frame limit: a cycle's payload must fit in a single packet, (MTU - 48)
+#      bytes, where 48 = 20 IP + 8 UDP + 20 Diretta.
+#   2. Wire limit: that packet plus its Ethernet framing must clear the link
+#      inside one cycle, where 86 = those 48 header bytes + 14 Ethernet header
+#      + 4 FCS + 20 preamble, SFD and interframe gap.
+# At every jumbo tier the frame limit binds. The wire limit only takes over on
+# the 10 Mbps Super Purist link, which is why that mode caps at DSD64 and
+# 32-bit/96 kHz no matter how large the MTU is.
+FRAME_HEADER_BYTES = 48
+WIRE_OVERHEAD_BYTES = 86
+
+# Payload rates are for stereo: DSD is 1 bit per channel, PCM a 32-bit container.
+DSD_TIERS = (
+    ("DSD64", 0.7056),
+    ("DSD128", 1.4112),
+    ("DSD256", 2.8224),
+    ("DSD512", 5.6448),
+    ("DSD1024", 11.2896),
+)
+PCM_RATES_KHZ = (44.1, 48, 88.2, 96, 176.4, 192, 352.8, 384, 705.6, 768)
+
 app = Flask(__name__)
 # A secret key is required for flash messaging
 app.secret_key = os.urandom(24)
@@ -52,6 +83,9 @@ SETTLE_STATE = {"state": None, "since": 0.0}
 SETTLE_LOCK = threading.Lock()
 TRANSITION_STATE = {"active": False}
 STATUS_CACHE = {"data": None, "timestamp": 0.0}
+# MTU only changes across a reboot, so the last value the Target reported stays
+# valid. Caching it lets the link panel refresh without any extra SSH traffic.
+TARGET_LINK_CACHE = {"mtu": None}
 STATUS_CACHE_LOCK = threading.Lock()
 STATUS_FETCH_LOCK = threading.Lock()
 
@@ -99,10 +133,50 @@ BASE_TEMPLATE = """
 </head>
 <body class="antialiased">
     <div class="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div class="text-center mb-6">
+        <div class="relative text-center mb-6 px-12">
             <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">AnCaolas Link</h1>
             <p class="text-lg text-gray-400">System Control</p>
+
+            <div class="absolute top-0 right-0">
+                <button type="button" onclick="togglePowerMenu(event)" aria-haspopup="true"
+                        aria-expanded="false" aria-label="Power options" id="power-button"
+                        class="flex items-center justify-center h-10 w-10 rounded-full bg-gray-800 text-red-500 ring-1 ring-white/10 hover:bg-red-600 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                        <path d="M12 3v9"></path>
+                        <path d="M6.6 6.6a8 8 0 1 0 10.8 0"></path>
+                    </svg>
+                </button>
+
+                <div id="power-menu" hidden
+                     class="absolute right-0 mt-2 w-56 origin-top-right rounded-xl bg-gray-800 p-1 shadow-lg ring-1 ring-white/10 z-20 text-left">
+                    <button hx-post="/power/reboot" hx-target="#power-message" hx-swap="innerHTML"
+                            hx-confirm="Reboot the Diretta Target and then this Host? Playback will stop and the link will be down for about a minute."
+                            onclick="closePowerMenu()"
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-200 rounded-lg hover:bg-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+                            <path d="M21 3v6h-6"></path>
+                        </svg>
+                        Reboot System
+                    </button>
+                    <button hx-post="/power/poweroff" hx-target="#power-message" hx-swap="innerHTML"
+                            hx-confirm="Power off the Diretta Target and then this Host? Both must be switched on by hand afterwards."
+                            onclick="closePowerMenu()"
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 rounded-lg hover:bg-red-600 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M12 3v9"></path>
+                            <path d="M6.6 6.6a8 8 0 1 0 10.8 0"></path>
+                        </svg>
+                        Power Off System
+                    </button>
+                </div>
+            </div>
         </div>
+
+        <div id="power-message" class="text-center text-sm text-yellow-400 empty:hidden mb-4"></div>
 
         <nav class="flex justify-center items-center mb-8 p-2 space-x-4">
             <a href="{{ url_for('landing_page') }}" class="nav-link {{ 'active' if active_page == 'home' else '' }}">Home</a>
@@ -127,19 +201,98 @@ BASE_TEMPLATE = """
             <p class="text-xs mt-1">Powered by AudioLinux</p>
         </div>
     </div>
+    <script>
+        function togglePowerMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('power-menu');
+            menu.hidden = !menu.hidden;
+            document.getElementById('power-button')
+                    .setAttribute('aria-expanded', String(!menu.hidden));
+        }
+
+        function closePowerMenu() {
+            const menu = document.getElementById('power-menu');
+            menu.hidden = true;
+            document.getElementById('power-button').setAttribute('aria-expanded', 'false');
+        }
+
+        // Dismiss on an outside click or Escape, the way a menu is expected to behave.
+        document.addEventListener('click', closePowerMenu);
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') { closePowerMenu(); }
+        });
+        document.getElementById('power-menu')
+                .addEventListener('click', function (event) { event.stopPropagation(); });
+    </script>
 </body>
 </html>
+"""
+
+# The card shell is stable and owns the refresh. The fragment endpoint returns
+# only the body below, swapped as innerHTML: a fragment that carried its own
+# hx-trigger="load" would re-fire the moment it was swapped in, looping forever.
+LINK_PANEL_CARD = """
+<div id="link-panel" hx-get="/link-status" hx-trigger="every 30s, visibilitychange from:document"
+     hx-swap="innerHTML" class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
+{{ link_body | safe }}
+</div>
+"""
+
+LINK_PANEL_TEMPLATE = """
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-xl text-white">Point-to-Point Link</h2>
+        {% if link.up %}
+            <span class="inline-flex items-center gap-2 text-xs font-semibold text-green-400">
+                <span class="h-2 w-2 rounded-full bg-green-400"></span>Up
+            </span>
+        {% else %}
+            <span class="inline-flex items-center gap-2 text-xs font-semibold text-red-400">
+                <span class="h-2 w-2 rounded-full bg-red-400"></span>Down
+            </span>
+        {% endif %}
+    </div>
+
+    <dl class="grid grid-cols-2 gap-px bg-gray-700/50 rounded-xl overflow-hidden border border-gray-700">
+        <div class="bg-gray-900/40 p-4">
+            <dt class="text-xs uppercase tracking-wide text-gray-500">Link Speed</dt>
+            <dd class="mt-1 text-lg font-semibold text-white">
+                {% if link.speed %}{{ link.speed }} Mb/s{% else %}&mdash;{% endif %}
+            </dd>
+        </div>
+        <div class="bg-gray-900/40 p-4">
+            <dt class="text-xs uppercase tracking-wide text-gray-500">MTU</dt>
+            <dd class="mt-1 text-lg font-semibold {{ 'text-red-400' if link.mtu_mismatch else 'text-white' }}">
+                {{ link.mtu }}
+            </dd>
+        </div>
+        <div class="bg-gray-900/40 p-4">
+            <dt class="text-xs uppercase tracking-wide text-gray-500">Max PCM</dt>
+            <dd class="mt-1 text-lg font-semibold text-white">
+                {% if link.max_pcm %}{{ link.max_pcm }}{% else %}&mdash;{% endif %}
+            </dd>
+        </div>
+        <div class="bg-gray-900/40 p-4">
+            <dt class="text-xs uppercase tracking-wide text-gray-500">Max DSD</dt>
+            <dd class="mt-1 text-lg font-semibold text-white">
+                {% if link.max_dsd %}{{ link.max_dsd }}{% else %}&mdash;{% endif %}
+            </dd>
+        </div>
+    </dl>
+
+    {% if link.mtu_mismatch %}
+    <div class="p-3 mt-4 text-xs text-red-400 bg-red-900/20 rounded-lg border border-red-700/30">
+        <strong>&#9888;&#65039; MTU mismatch:</strong> the Host is set to {{ link.mtu }} but the Target reports
+        {{ link.target_mtu }}. Re-run Appendix 9 on both machines.
+    </div>
+    {% endif %}
 """
 
 LANDING_PAGE_CONTENT = """
 <div class="space-y-6">
     <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 text-center space-y-6">
         <h2 class="text-2xl font-bold text-white">Welcome</h2>
-        <p class="text-gray-400">Please choose a control panel to continue.</p>
+        <p class="text-gray-400">Use the navigation above for system controls, or open an AudioLinux interface below.</p>
         <div class="flex flex-wrap justify-center gap-4">
-            <a href="{{ url_for('purist_app') }}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-                Purist Mode Control
-            </a>
             <a href="#" onclick="window.open('//' + window.location.hostname + ':5001', '_blank')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
                 Host AudioLinux UI
             </a>
@@ -154,14 +307,10 @@ LANDING_PAGE_CONTENT = """
                     Target AudioLinux UI
                 </a>
             {% endif %}
-
-            {% if roon_is_configured %}
-            <a href="{{ url_for('remote_app') }}" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-                IR Remote Control
-            </a>
-            {% endif %}
         </div>
     </div>
+
+    {{ link_panel | safe }}
 
     {% if status.license_needs_activation %}
     <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8 space-y-4">
@@ -472,6 +621,11 @@ def get_status_from_target(bypass_cache=False):
             else:
                 status_data["activation_url"] = ""
 
+            # Older Targets predate the mtu field; absent it, the link panel
+            # simply omits the agreement check rather than guessing.
+            if status_data.get("mtu"):
+                TARGET_LINK_CACHE["mtu"] = status_data["mtu"]
+
             with STATUS_CACHE_LOCK:
                 STATUS_CACHE["data"] = status_data
                 STATUS_CACHE["timestamp"] = now
@@ -504,7 +658,7 @@ def get_roon_zone_from_host():
         return "Error Reading Config"
 
 
-def get_host_mtu(interface="end0"):
+def get_host_mtu(interface=LINK_INTERFACE):
     """Reads the MTU of the specified network interface."""
     try:
         with open(f"/sys/class/net/{interface}/mtu", "r", encoding="utf-8") as file_handle:
@@ -515,6 +669,112 @@ def get_host_mtu(interface="end0"):
     except ValueError as err:
         app.logger.error("Invalid MTU value read for %s: %s", interface, err)
         return 1500
+
+
+def get_host_link_speed(interface=LINK_INTERFACE):
+    """
+    Reads the negotiated link speed in Mbps from sysfs.
+
+    Returns None while the link is down, when sysfs reports -1 and reading the
+    attribute can fail outright with EINVAL.
+    """
+    try:
+        with open(f"/sys/class/net/{interface}/speed", "r", encoding="utf-8") as file_handle:
+            speed = int(file_handle.read().strip())
+        return speed if speed > 0 else None
+    except (OSError, ValueError):
+        return None
+
+
+def get_host_link_up(interface=LINK_INTERFACE):
+    """Reports whether the point-to-point interface is currently carrying a link."""
+    try:
+        with open(f"/sys/class/net/{interface}/operstate", "r", encoding="utf-8") as file_handle:
+            return file_handle.read().strip() == "up"
+    except OSError:
+        return False
+
+
+def _pcm_payload_rate(rate_khz):
+    """Stereo 32-bit PCM payload rate in bytes per microsecond."""
+    return rate_khz * 1000.0 * 4.0 * 2.0 / 1_000_000.0
+
+
+def get_payload_budget(mtu, cycle_time, speed_mbps):
+    """
+    Returns the largest payload rate in bytes/us that still fits one L2
+    transmission per cycle, or None if the inputs are not yet known.
+    """
+    if not mtu or not cycle_time or cycle_time <= 0:
+        return None
+
+    budget = (mtu - FRAME_HEADER_BYTES) / cycle_time
+    if speed_mbps and speed_mbps > 0:
+        wire_limit = speed_mbps / 8.0 - WIRE_OVERHEAD_BYTES / cycle_time
+        budget = min(budget, wire_limit)
+    return budget
+
+
+def get_max_formats(budget):
+    """Returns the highest DSD tier and PCM sample rate that fit within a budget."""
+    if budget is None or budget <= 0:
+        return None, None
+
+    # A tolerance absorbs binary rounding where a tier lands exactly on the
+    # ceiling, as DSD256 does at CycleTime 514 and again at MTU 2032.
+    tolerance = 1e-9
+
+    max_dsd = None
+    for name, rate in DSD_TIERS:
+        if rate <= budget + tolerance:
+            max_dsd = name
+
+    max_pcm = None
+    for rate_khz in PCM_RATES_KHZ:
+        if _pcm_payload_rate(rate_khz) <= budget + tolerance:
+            max_pcm = f"{rate_khz:g} kHz"
+
+    return max_dsd, max_pcm
+
+
+def render_link_panel_body():
+    """Renders the link panel's inner content from the current link state."""
+    return render_template_string(LINK_PANEL_TEMPLATE, link=get_link_info())
+
+
+def get_link_info():
+    """
+    Assembles the point-to-point link panel data from Host-local sources only.
+
+    The Target's MTU comes from whatever the last status poll cached, so this
+    never adds SSH traffic of its own and stays quiet during playback.
+    """
+    mtu = get_host_mtu()
+    speed = get_host_link_speed()
+    cycle_time = _get_current_cycletime()
+    target_mtu = TARGET_LINK_CACHE["mtu"]
+    link_up = get_host_link_up()
+
+    # Without a negotiated speed the wire limit cannot be applied, and the frame
+    # limit alone would overstate the link: it would claim DSD256 on a 10 Mbps
+    # Super Purist connection. Report nothing rather than something unfounded.
+    if link_up and speed:
+        max_dsd, max_pcm = get_max_formats(get_payload_budget(mtu, cycle_time, speed))
+    else:
+        max_dsd, max_pcm = None, None
+
+    return {
+        "up": link_up,
+        "speed": speed,
+        "mtu": mtu,
+        "target_mtu": target_mtu,
+        # A silent MTU mismatch is the failure this panel most needs to surface:
+        # the link still comes up, but every full-size frame is discarded.
+        "mtu_mismatch": target_mtu is not None and target_mtu != mtu,
+        "cycle_time": cycle_time,
+        "max_dsd": max_dsd,
+        "max_pcm": max_pcm,
+    }
 
 
 def is_app8_enabled():
@@ -912,7 +1172,10 @@ def landing_page():
         roon_is_configured=roon_configured,
         status=target_status,
         music_playing=music_playing,
-        current_state=current_state
+        current_state=current_state,
+        link_panel=render_template_string(
+            LINK_PANEL_CARD, link_body=render_link_panel_body()
+        )
     )
     return render_template_string(
         BASE_TEMPLATE,
@@ -991,6 +1254,12 @@ def remote_app():
 
 
 # --- HTMX API Endpoints ---
+
+@app.route("/link-status")
+def link_status():
+    """Serves the link panel body for HTMX updates, swapped into the card shell."""
+    return render_link_panel_body()
+
 
 @app.route("/status")
 def status():
@@ -1207,6 +1476,57 @@ def restart_target():
     return (
         f"<span>Restart commands sent at {now}. "
         "Allow 10-15 seconds for backend initialization.</span>"
+    )
+
+
+@app.route("/power/<action>", methods=["POST"])
+def power(action):
+    """
+    Reboots or powers off the pair, Target first.
+
+    The Target is only reachable through the Host, so shutting the Host down
+    first would strand it. The Host's own command is deferred to a background
+    thread so this response reaches the browser before the machine goes down.
+    """
+    if action not in ("reboot", "poweroff"):
+        return '<span class="text-red-400">Unknown power action.</span>', 400
+
+    verb = "Reboot" if action == "reboot" else "Power off"
+    app.logger.info("%s requested for the Target and Host.", verb)
+
+    target_ok = run_remote_command(f"/usr/local/bin/pm-power {action}") is not None
+    if not target_ok:
+        app.logger.error("Target did not accept the %s command.", action)
+    invalidate_status_cache()
+
+    def _shutdown_host():
+        # Long enough for the Target to reach its own shutdown, and for this
+        # response to have been delivered.
+        time.sleep(HOST_POWER_DELAY_SECONDS)
+        app.logger.info("Issuing %s on the Host.", action)
+        try:
+            subprocess.run(
+                ["/usr/bin/sudo", "/usr/local/bin/pm-power", action],
+                check=False
+            )
+        except OSError as err:
+            app.logger.error("Failed to %s the Host: %s", action, err)
+
+    threading.Thread(target=_shutdown_host, daemon=True).start()
+
+    target_note = (
+        "Target is shutting down"
+        if target_ok
+        else "Target did not respond, continuing anyway"
+    )
+    tail = (
+        "Both machines will restart shortly."
+        if action == "reboot"
+        else "Both machines must be switched on by hand."
+    )
+    return (
+        f'<span>{verb} sequence started &mdash; {target_note}. '
+        f'The Host follows in {HOST_POWER_DELAY_SECONDS} seconds. {tail}</span>'
     )
 
 

@@ -1978,7 +1978,7 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
     ```
 
 3.  **Créer des scripts de commande sécurisés :**
-    Nous allons créer quatre petits scripts dédiés qui constituent les *seules* actions que l'application web est autorisée à effectuer. Il s'agit d'une étape de sécurité critique.
+    Nous allons créer un ensemble de petits scripts dédiés qui constituent les *seules* actions que l'application web est autorisée à effectuer. Il s'agit d'une étape de sécurité critique.
     ```bash
     # Script pour obtenir le statut actuel, y compris l'état de la licence
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
@@ -2002,8 +2002,11 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
       LICENSE_LIMITED="true"
     fi
 
+    # Signaler notre MTU afin que le Host puisse détecter un lien dont les deux extrémités divergent
+    MTU=$(cat /sys/class/net/end0/mtu 2>/dev/null || echo 0)
+
     # Renvoyer tous les indicateurs de statut sous forme d'un seul objet JSON
-    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED}"
+    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED, \"mtu\": $MTU}"
     EOT
 
     # Script pour basculer le Mode Puriste
@@ -2080,12 +2083,30 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
     fi
     EOT
 
+    # Créer le script pour redémarrer ou éteindre cette machine
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-power
+    #!/bin/bash
+    # Redémarre ou éteint cette machine pour le compte de l'interface web.
+    # La commande est détachée afin que l'appelant retourne immédiatement : sur le Target
+    # la session SSH se ferme proprement, et sur le Host le navigateur reçoit sa
+    # confirmation avant que la machine ne s'éteigne.
+
+    case "$1" in
+        reboot)   ACTION="reboot" ;;
+        poweroff) ACTION="poweroff" ;;
+        *) echo "Usage: $0 [reboot|poweroff]" >&2; exit 1 ;;
+    esac
+
+    echo "Scheduling ${ACTION}..."
+    /usr/bin/sh -c "sleep 2 && /usr/bin/systemctl ${ACTION}" >/dev/null 2>&1 < /dev/null &
+    EOT
+
     # Rendre les nouveaux scripts exécutables
     sudo chmod -v +x /usr/local/bin/pm-*
     ```
 
 4.  **Accorder des permissions sudo :**
-    Cette étape permet à l'utilisateur `purist-app` d'exécuter nos quatre nouveaux scripts avec des privilèges root et sans avoir besoin d'un terminal interactif.
+    Cette étape permet à l'utilisateur `purist-app` d'exécuter ces scripts avec des privilèges root et sans avoir besoin d'un terminal interactif.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/purist-app
     # Indiquer à sudo de ne pas requérir de TTY pour l'utilisateur purist-app
@@ -2098,6 +2119,7 @@ Sur le **Target Diretta**, nous allons créer un nouvel utilisateur avec des pri
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-restart-target
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-license-url
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-set-link
+    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-power
     EOT
     ```
 
@@ -2346,8 +2368,30 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
     sudo setcap 'cap_net_bind_service=+ep' "$PYTHON_EXEC"
     ```
 
-10. **Accorder des privilèges sudo sur le Host :**
-    Cette étape est essentielle pour permettre à l'application web de redémarrer les services liés à Roon requis sans mot de passe.
+10. **Installer le script d'alimentation et accorder les permissions sudo sur le Host :**
+    Le Host a besoin du même script `pm-power` que le Target, afin que l'interface web puisse arrêter les deux moitiés de la paire. Créez-le également ici :
+    ```bash
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-power
+    #!/bin/bash
+    # Redémarre ou éteint cette machine pour le compte de l'interface web.
+    # La commande est détachée afin que l'appelant retourne immédiatement : sur le Target
+    # la session SSH se ferme proprement, et sur le Host le navigateur reçoit sa
+    # confirmation avant que la machine ne s'éteigne.
+
+    case "$1" in
+        reboot)   ACTION="reboot" ;;
+        poweroff) ACTION="poweroff" ;;
+        *) echo "Usage: $0 [reboot|poweroff]" >&2; exit 1 ;;
+    esac
+
+    echo "Scheduling ${ACTION}..."
+    /usr/bin/sh -c "sleep 2 && /usr/bin/systemctl ${ACTION}" >/dev/null 2>&1 < /dev/null &
+    EOT
+
+    sudo chmod -v +x /usr/local/bin/pm-power
+    ```
+
+    Accordez ensuite les permissions sudo. Cette étape est essentielle pour permettre à l'application web de redémarrer les services Roon nécessaires, et de redémarrer ou d'éteindre le Host, sans mot de passe.
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/webui-restarts
     # Autoriser l'interface web (s'exécutant en tant qu'audiolinux) à appliquer les profils d'hôte et à redémarrer les services
@@ -2357,6 +2401,7 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart diretta_alsa.service
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/ethtool -s end0 *
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/setting.inf.tmp /opt/diretta-alsa/setting.inf
+    audiolinux ALL=(ALL) NOPASSWD: /usr/local/bin/pm-power
     EOT
     sudo chmod 0440 /etc/sudoers.d/webui-restarts
     ```
@@ -2425,7 +2470,9 @@ Vous y êtes presque ! Ouvrez un navigateur web sur votre téléphone, votre tab
 
 Depuis la page d'accueil, une barre de navigation en haut vous guidera vers les différents panneaux de contrôle :
 
-* **Home (Accueil) :** La page d'accueil principale avec des liens vers les différentes applications.
+* **Home :** La page d'accueil principale avec des liens vers les différentes applications. Elle comporte également le panneau **Point-to-Point Link**, qui indique la vitesse de lien négociée et la MTU, ainsi que les formats DSD et PCM les plus élevés que ces deux valeurs prennent en charge au `CycleTime` actuel. Les valeurs de format découlent de la règle d'une transmission par cycle décrite dans l'[**Annexe 9**](#22-annexe-9--optimisation-optionnelle-des-jumbo-frames), elles évoluent donc au fur et à mesure que vous progressez dans les paliers de Jumbo Frames. Si le Host et le Target venaient à diverger sur la MTU, le panneau le signale en rouge — c'est la panne silencieuse où le lien s'établit mais où chaque trame de taille maximale est rejetée.
+
+* **Bouton d'alimentation :** Le bouton d'alimentation rouge en haut à droite de chaque page propose **Reboot System** et **Power Off System**. Les deux agissent sur la paire, en arrêtant d'abord le Target puis le Host quelques secondes plus tard, car le Target n'est accessible qu'à travers le Host. Chaque choix demande confirmation avant toute action. Après une extinction, les deux machines doivent être rallumées à la main.
 
 * **Purist Mode App :** Cette page contient les commandes pour basculer le Mode Puriste et son comportement de démarrage automatique sur le Target Diretta. Elle se rafraîchit automatiquement toutes les 30 secondes pour afficher l'état actuel. Elle contient également le bouton « Restart Services » (Redémarrer les services) à utiliser après l'activation d'une licence Diretta.
 

@@ -1978,7 +1978,7 @@ source ~/.bashrc
     ```
 
 3.  **安全なコマンドスクリプトの作成：**
-    Webアプリの実行が許可される*唯一の*アクションとなる、4つの小さく専用のスクリプトを作成します。これは重要なセキュリティ対策のステップです。
+    Webアプリの実行が許可される*唯一の*アクションとなる、一連の小さく専用のスクリプトを作成します。これは重要なセキュリティ対策のステップです。
     ```bash
     # ライセンス状態を含む現在のステータスを取得するスクリプト
     cat <<'EOT' | sudo tee /usr/local/bin/pm-get-status
@@ -2002,8 +2002,11 @@ source ~/.bashrc
       LICENSE_LIMITED="true"
     fi
 
+    # 両端が食い違っているリンクをHostが検出できるよう、自身のMTUを報告する
+    MTU=$(cat /sys/class/net/end0/mtu 2>/dev/null || echo 0)
+
     # すべてのステータスフラグを単一のJSONオブジェクトとして出力する
-    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED}"
+    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED, \"mtu\": $MTU}"
     EOT
 
     # ピュリストモードを切り替えるスクリプト
@@ -2080,12 +2083,30 @@ source ~/.bashrc
     fi
     EOT
 
+    # このマシンを再起動または電源オフするスクリプトを作成
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-power
+    #!/bin/bash
+    # Web UIに代わってこのマシンを再起動または電源オフします。
+    # コマンドは切り離して実行されるため、呼び出し元はただちに復帰します。Targetでは
+    # SSHセッションが正常に閉じ、Hostではマシンが停止する前にブラウザが
+    # 確認応答を受け取ります。
+
+    case "$1" in
+        reboot)   ACTION="reboot" ;;
+        poweroff) ACTION="poweroff" ;;
+        *) echo "Usage: $0 [reboot|poweroff]" >&2; exit 1 ;;
+    esac
+
+    echo "Scheduling ${ACTION}..."
+    /usr/bin/sh -c "sleep 2 && /usr/bin/systemctl ${ACTION}" >/dev/null 2>&1 < /dev/null &
+    EOT
+
     # 作成した新しいスクリプトを実行可能にする
     sudo chmod -v +x /usr/local/bin/pm-*
     ```
 
 4.  **Sudo権限の付与：**
-    このステップにより、`purist-app`ユーザーが対話式ターミナルを使用せず、root権限で作成した4つの新しいスクリプトを実行できるようになります。
+    このステップにより、`purist-app`ユーザーが対話式ターミナルを使用せず、root権限でこれらのスクリプトを実行できるようになります。
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/purist-app
     # purist-appユーザーに対してTTY要件をsudoで不要に設定する
@@ -2098,6 +2119,7 @@ source ~/.bashrc
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-restart-target
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-get-license-url
     purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-set-link
+    purist-app ALL=(ALL) NOPASSWD: /usr/local/bin/pm-power
     EOT
     ```
 
@@ -2346,8 +2368,30 @@ source ~/.bashrc
     sudo setcap 'cap_net_bind_service=+ep' "$PYTHON_EXEC"
     ```
 
-10. **Host上でのSudo権限の付与：**
-    このステップは、Webアプリケーションがパスワードなしで必要なRoon関連サービスを再起動できるようにするために重要です。
+10. **電源スクリプトのインストールとHost上でのSudo権限の付与：**
+    Web UIがペアの両方をシャットダウンできるよう、HostにもTargetと同じ`pm-power`スクリプトが必要です。ここでも作成しましょう：
+    ```bash
+    cat <<'EOT' | sudo tee /usr/local/bin/pm-power
+    #!/bin/bash
+    # Web UIに代わってこのマシンを再起動または電源オフします。
+    # コマンドは切り離して実行されるため、呼び出し元はただちに復帰します。Targetでは
+    # SSHセッションが正常に閉じ、Hostではマシンが停止する前にブラウザが
+    # 確認応答を受け取ります。
+
+    case "$1" in
+        reboot)   ACTION="reboot" ;;
+        poweroff) ACTION="poweroff" ;;
+        *) echo "Usage: $0 [reboot|poweroff]" >&2; exit 1 ;;
+    esac
+
+    echo "Scheduling ${ACTION}..."
+    /usr/bin/sh -c "sleep 2 && /usr/bin/systemctl ${ACTION}" >/dev/null 2>&1 < /dev/null &
+    EOT
+
+    sudo chmod -v +x /usr/local/bin/pm-power
+    ```
+
+    続いてsudo権限を付与します。このステップは、WebアプリケーションがRoon関連の必要なサービスを再起動し、またパスワードなしでHostを再起動または電源オフできるようにするために不可欠です。
     ```bash
     cat <<'EOT' | sudo tee /etc/sudoers.d/webui-restarts
     # webui（audiolinuxとして実行）がホストプロファイルを強制し、サービスを再起動できるように許可する
@@ -2357,6 +2401,7 @@ source ~/.bashrc
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart diretta_alsa.service
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/ethtool -s end0 *
     audiolinux ALL=(ALL) NOPASSWD: /usr/bin/mv /tmp/setting.inf.tmp /opt/diretta-alsa/setting.inf
+    audiolinux ALL=(ALL) NOPASSWD: /usr/local/bin/pm-power
     EOT
     sudo chmod 0440 /etc/sudoers.d/webui-restarts
     ```
@@ -2425,7 +2470,9 @@ source ~/.bashrc
 
 トップページの上部にあるナビゲーションバーから、各コントロールパネルに移動できます：
 
-* **Home（ホーム）：** 各アプリケーションへのリンクが掲載されたメインのトップページ。
+* **Home:** 各アプリケーションへのリンクが並ぶメインのトップページです。**Point-to-Point Link（ポイント・ツー・ポイントリンク）**パネルもここにあり、ネゴシエートされたリンク速度とMTU、そして現在の`CycleTime`においてそれら2つの値がサポートするDSDおよびPCMの最高フォーマットを表示します。フォーマットの値は[**付録 9**](#22-appendix-9-optional-jumbo-frames-optimization)で説明されている「1サイクルにつき1回の送信」の原則から導かれるため、ジャンボフレームの各段階を進めるにつれて変化します。HostとTargetのMTUが食い違っている場合、パネルは赤色でそれを示します — これは、リンクは確立されているのにフルサイズのフレームがすべて破棄されるという、表面に現れない障害です。
+
+* **Power Button（電源ボタン）:** 各ページの右上にある赤い電源ボタンから、**Reboot System**と**Power Off System**を選択できます。どちらも2台1組に作用し、まずTargetを、その数秒後にHostをシャットダウンします。Targetの操作はHost経由でしか行えないためです。いずれの操作も、実行前に確認を求められます。電源オフの後は、両方のマシンを手動で電源投入する必要があります。
 
 * **Purist Mode App：** Diretta Target上のピュリストモードおよびその自動起動挙動を切り替えるためのコントロールです。現在のステータスを表示するために30秒ごとに自動更新されます。Direttaライセンスのアクティベーション完了後に使用する「Restart Services（サービスの再起動）」ボタンもこのページにあります。
 

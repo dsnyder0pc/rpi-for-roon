@@ -83,6 +83,8 @@ run_appendix4_checks() {
     check "'pm-toggle-mode' script exists" "[ -x /usr/local/bin/pm-toggle-mode ]"
     check "'pm-toggle-auto' script exists" "[ -x /usr/local/bin/pm-toggle-auto ]"
     check "'pm-restart-target' script exists" "[ -x /usr/local/bin/pm-restart-target ]"
+    check "'pm-set-link' script exists" "[ -x /usr/local/bin/pm-set-link ]"
+    check "'pm-power' script exists" "[ -x /usr/local/bin/pm-power ]"
     check "'create-diretta-cache.sh' script exists" "[ -x /usr/local/bin/create-diretta-cache.sh ]"
     check "'create-diretta-cache.sh' script is up-to-date" "check_hash /usr/local/bin/create-diretta-cache.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh"
     check "'diretta-cache' service file exists" "[ -f /etc/systemd/system/diretta-cache.service ]"
@@ -93,6 +95,8 @@ run_appendix4_checks() {
     check "'pm-get-license-url' returns cached license data" "/usr/local/bin/pm-get-license-url"
     check "Sudoers file for 'purist-app' exists" "[ -f /etc/sudoers.d/purist-app ]"
     check "Sudoers allows 'pm-get-license-url'" "grep -q 'NOPASSWD: /usr/local/bin/pm-get-license-url' /etc/sudoers.d/purist-app"
+    check "Sudoers allows 'pm-power'" "grep -q 'NOPASSWD: /usr/local/bin/pm-power' /etc/sudoers.d/purist-app"
+    check "'pm-get-status' reports the link MTU" "/usr/local/bin/pm-get-status | grep -q '\"mtu\"'"
     check "SSH authorized_keys for 'purist-app' exists" "[ -f /home/purist-app/.ssh/authorized_keys ]"
     check "SSH authorized_keys has security restrictions" "grep -q 'command=\"sudo' /home/purist-app/.ssh/authorized_keys"
 }
