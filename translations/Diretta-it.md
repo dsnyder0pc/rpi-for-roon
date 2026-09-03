@@ -2982,7 +2982,7 @@ EOF
 >
 > Una MTU più grande consente un ciclo più lungo e silenzioso. A 9000 il limite non è più aritmetico, ma diventa una preferenza di ascolto.
 >
-> **Perché un livello a 3824?** L'Ethernet integrata del Raspberry Pi 4 accetta `mtu 9000` senza errori, ma scarta silenziosamente i frame superiori a 3824 byte. Il Passaggio 1 conferma il supporto del kernel, che è necessario ma non sufficiente: il limite dell'hardware può essere inferiore, e solo la scala di ping dei Passaggi 2 e 3 lo trova.
+> **Perché 3824 e non 3840?** Sono lo stesso limite misurato su due livelli diversi. Il driver `bcmgenet` del Raspberry Pi 4 imposta la soglia di ricezione a `0xF0` in unità da 16 byte: un **buffer di ricezione da 3840 byte**. Sottraendo i 2 byte di riempimento per l'allineamento e i 14 byte dell'intestazione Ethernet si ottengono **3824**, la più grande MTU di livello 3 che vi rientra; il livello 2032 è la stessa aritmetica sul buffer originale da 2048 byte. Non impostate quindi `mtu 3840` a mano: il driver lo accetta — accetta anche `mtu 9000` — e poi scarta silenziosamente ogni frame di dimensione piena, lasciando un collegamento che sembra attivo ma non trasporta musica. Il Passaggio 1 conferma il supporto del kernel, che è necessario ma non sufficiente; solo la scala di ping dei Passaggi 2 e 3 trova il tetto reale. (Dettaglio a monte: [raspberrypi/linux#5561](https://github.com/raspberrypi/linux/issues/5561).)
 >
 > La modalità Super Purist (Appendice 8) sostituisce questi valori con 1800 µs a qualsiasi MTU. Il suo collegamento a 10 Mbps limita i formati supportati a DSD64 e 32 bit, 96 kHz.
 ***

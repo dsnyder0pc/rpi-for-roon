@@ -2982,7 +2982,7 @@ EOF
 >
 > Eine größere MTU ermöglicht einen längeren, ruhigeren Zyklus. Bei 9000 ist nicht mehr die Arithmetik, sondern der Höreindruck ausschlaggebend.
 >
-> **Warum eine 3824er-Stufe?** Das integrierte Ethernet des Raspberry Pi 4 akzeptiert `mtu 9000` ohne Fehlermeldung, verwirft aber Frames über 3824 Byte stillschweigend. Schritt 1 bestätigt die Kernel-Unterstützung, was notwendig, aber nicht hinreichend ist — die Hardware-Grenze kann niedriger liegen, und nur die Ping-Leiter in Schritt 2 und 3 findet sie.
+> **Warum 3824 und nicht 3840?** Das ist dieselbe Grenze, nur auf zwei verschiedenen Schichten gemessen. Der `bcmgenet`-Treiber des Raspberry Pi 4 setzt seine RX-Ready-Schwelle auf `0xF0` in Einheiten zu 16 Byte — also einen **3840 Byte großen Empfangspuffer**. Zieht man die 2 Byte Ausrichtungs-Padding und die 14 Byte des Ethernet-Headers ab, bleiben **3824**, die größte hineinpassende L3-MTU; die 2032er-Stufe ist dieselbe Rechnung mit dem serienmäßigen 2048-Byte-Puffer. Setzen Sie `mtu 3840` daher nicht von Hand: Der Treiber akzeptiert es — er akzeptiert auch `mtu 9000` — und verwirft dann stillschweigend jeden Frame voller Größe, sodass die Verbindung zwar aktiv aussieht, aber keine Musik überträgt. Schritt 1 bestätigt die Kernel-Unterstützung, was notwendig, aber nicht hinreichend ist; nur die Ping-Leiter in Schritt 2 und 3 findet die tatsächliche Obergrenze. (Details stromaufwärts: [raspberrypi/linux#5561](https://github.com/raspberrypi/linux/issues/5561).)
 >
 > Der Super-Purist-Modus (Anhang 8) überschreibt diese Werte bei jeder MTU mit 1800 µs. Seine 10-Mbit/s-Verbindung beschränkt die unterstützten Formate auf DSD64 und 32 Bit, 96 kHz.
 ***
