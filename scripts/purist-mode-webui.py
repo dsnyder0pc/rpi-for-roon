@@ -152,8 +152,8 @@ BASE_TEMPLATE = """
             <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">AnCaolas Link</h1>
             <p class="text-lg text-gray-400">System Control</p>
 
-            <div class="absolute top-0 right-0">
-                <button type="button" onclick="togglePowerMenu(event)" aria-haspopup="true"
+            <div id="power-control" class="absolute top-0 right-0">
+                <button type="button" onclick="togglePowerMenu()" aria-haspopup="true"
                         aria-expanded="false" aria-label="Power options" id="power-button"
                         class="flex items-center justify-center h-10 w-10 rounded-full bg-gray-800 text-red-500 ring-1 ring-white/10 hover:bg-red-600 hover:text-white transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
@@ -217,8 +217,7 @@ BASE_TEMPLATE = """
         </div>
     </div>
     <script>
-        function togglePowerMenu(event) {
-            event.stopPropagation();
+        function togglePowerMenu() {
             const menu = document.getElementById('power-menu');
             menu.hidden = !menu.hidden;
             document.getElementById('power-button')
@@ -288,23 +287,44 @@ BASE_TEMPLATE = """
             watchForReboot(document.getElementById('power-message'));
         });
 
-        // Dismiss on an outside click or Escape, the way a menu is expected to behave.
-        document.addEventListener('click', closePowerMenu);
+        // Dismiss on an outside tap, click or Escape, the way a menu is expected to
+        // behave. iOS Safari does not deliver click to document for taps on
+        // non-interactive elements, so touchstart is needed for the menu to be
+        // dismissable on iPhone and iPad at all.
+        //
+        // Both listeners test containment rather than relying on stopPropagation
+        // inside the control: on a touch device a tap on the button fires
+        // touchstart before click, so a blanket document handler would close the
+        // menu and let the click immediately reopen it, leaving it stuck open.
+        function handleOutsidePointer(event) {
+            const control = document.getElementById('power-control');
+            if (control && control.contains(event.target)) { return; }
+            closePowerMenu();
+        }
+
+        document.addEventListener('click', handleOutsidePointer);
+        document.addEventListener('touchstart', handleOutsidePointer, {passive: true});
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') { closePowerMenu(); }
         });
-        document.getElementById('power-menu')
-                .addEventListener('click', function (event) { event.stopPropagation(); });
     </script>
 </body>
 </html>
 """
 
+# A phone freezes JS timers while its screen is off, so the 30s poll stops and
+# the panel holds a stale reading until something wakes it. visibilitychange is
+# the documented signal for that, but it is not reliably delivered across mobile
+# browsers, so window focus is listened for as a second, independent recovery
+# path. A refresh costs one 1.4 KB response built from three local file reads,
+# far less than the page reload it replaces, so firing twice on wake is cheap.
+#
 # The card shell is stable and owns the refresh. The fragment endpoint returns
 # only the body below, swapped as innerHTML: a fragment that carried its own
 # hx-trigger="load" would re-fire the moment it was swapped in, looping forever.
 LINK_PANEL_CARD = """
-<div id="link-panel" hx-get="/link-status" hx-trigger="every 30s, visibilitychange from:document"
+<div id="link-panel" hx-get="/link-status"
+     hx-trigger="every 30s, visibilitychange from:document, focus from:window"
      hx-swap="innerHTML" class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
 {{ link_body | safe }}
 </div>
@@ -413,7 +433,9 @@ LANDING_PAGE_CONTENT = """
 """
 
 PURIST_APP_TEMPLATE = """
-<div id="control-panel" hx-get="/status" hx-trigger="load, every 30s, visibilitychange from:document" hx-swap="innerHTML">
+<div id="control-panel" hx-get="/status"
+     hx-trigger="load, every 30s, visibilitychange from:document, focus from:window"
+     hx-swap="innerHTML">
     <div class="p-8 text-center text-gray-400">
         <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
         <p class="mt-2">Connecting to Diretta Target...</p>
@@ -1016,12 +1038,39 @@ def _get_current_cycletime():
     return 0
 
 
+def _pending_boot_state(target_status):
+    """
+    Returns the state the system is booting into, or None if it has arrived.
+
+    purist-mode-auto waits 60 seconds after boot so the Target can set its clock
+    and fetch its license, so the Target honestly reports Purist Mode inactive
+    for that window. The Host meanwhile clamped the link from the flag the
+    moment it booted, which is deliberate: coming up at 100 Mbps and
+    renegotiating down to 10 a minute later would halt any playback already in
+    progress, whereas the Target enabling Purist Mode in the background is
+    invisible. Reporting Standard through that window would therefore label the
+    system with a mode whose link speed does not match the one on display.
+    """
+    # An explicit user action is judged on what is, not on what boot intended.
+    if TRANSITION_STATE["active"]:
+        return None
+
+    if not target_status.get("auto_start_enabled", False):
+        return None
+
+    uptime = _get_host_uptime()
+    if uptime is None or uptime >= BOOT_SETTLE_SECONDS:
+        return None
+
+    return "SuperPurist" if os.path.exists(SUPER_PURIST_FLAG) else "Purist"
+
+
 def get_current_system_state(target_status):
     """Derives the friendly UI state name based on Target flags and Host flags."""
     if not target_status:
         return "Standard"
     if not target_status.get("purist_mode_active", False):
-        return "Standard"
+        return _pending_boot_state(target_status) or "Standard"
     if os.path.exists(SUPER_PURIST_FLAG):
         return "SuperPurist"
     return "Purist"
@@ -1135,16 +1184,24 @@ def _record_state_hold(current_state):
         return now - SETTLE_STATE["since"]
 
 
-def _enforcement_settled(current_state, held_for):
+def _enforcement_settled(current_state, held_for, auto_start_pending):
     """
     Decides whether a detected mismatch is stable enough to act on.
 
     Guards against the boot race where the Target is reachable but has not yet
     applied Purist Mode, which would otherwise derive as Standard and drive a
     full profile flip that has to be undone moments later.
+
+    That race only exists while purist-mode-auto is still going to fire. With
+    activate-on-boot disabled the Target reverts on boot and then stays put, so
+    its first stable reading is already final. Waiting out the full boot window
+    anyway would leave a stale Super Purist flag clamping the link to 10 Mbps
+    for two and a half minutes while the UI correctly reads Standard. The
+    settling period below still covers the opposite race, where the Target
+    briefly reports leftover Purist Mode before revert-on-boot completes.
     """
     uptime = _get_host_uptime()
-    if uptime is not None and uptime < BOOT_SETTLE_SECONDS:
+    if auto_start_pending and uptime is not None and uptime < BOOT_SETTLE_SECONDS:
         app.logger.info(
             "Host uptime is %.0fs, inside the %ss boot window. Deferring "
             "enforcement until the Target has finished starting up.",
@@ -1208,7 +1265,9 @@ def check_and_enforce_host_profile(target_status):
     if profile_matches and not flag_stale:
         return
 
-    if not _enforcement_settled(current_state, held_for):
+    if not _enforcement_settled(
+        current_state, held_for, target_status.get("auto_start_enabled", False)
+    ):
         return
 
     if flag_stale:
