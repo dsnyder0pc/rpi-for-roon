@@ -48,6 +48,16 @@ LINK_INTERFACE = "end0"
 # its own shutdown first and the browser still receives the confirmation.
 HOST_POWER_DELAY_SECONDS = 10
 
+# A successful poll is cheap to repeat, so it is cached only long enough to
+# collapse the burst of requests one page load makes. A failed poll is not: it
+# costs a full round of SSH timeouts, and the panels poll on a timer, so an
+# uncached failure has every poll and every page load paying that cost again,
+# each one serialized behind STATUS_FETCH_LOCK. Requests then arrive faster
+# than they drain and the queue grows without bound, which is indistinguishable
+# from the UI having hung. Caching the failure too keeps the queue empty.
+STATUS_CACHE_TTL = 3.0
+STATUS_FAILURE_CACHE_TTL = 10.0
+
 # --- Link capacity model ---
 # The whole design rests on one L2 transmission per cycle, so the usable payload
 # rate is whichever of two limits binds first:
@@ -97,7 +107,7 @@ ENFORCEMENT_LOCK = threading.Lock()
 SETTLE_STATE = {"state": None, "since": 0.0}
 SETTLE_LOCK = threading.Lock()
 TRANSITION_STATE = {"active": False}
-STATUS_CACHE = {"data": None, "timestamp": 0.0}
+STATUS_CACHE = {"data": None, "timestamp": 0.0, "valid": False}
 # MTU only changes across a reboot, so the last value the Target reported stays
 # valid. Caching it lets the link panel refresh without any extra SSH traffic.
 TARGET_LINK_CACHE = {"mtu": None}
@@ -625,7 +635,19 @@ def run_remote_command(command, attempts=SSH_RETRY_ATTEMPTS):
     Transport-level failures (exit code 255) and timeouts are expected while the
     link renegotiates speed, so they are retried. A non-255 exit code means the
     remote command itself ran and failed, which is reported immediately.
+
+    A Target that is switched off or unplugged is a different case: it leaves
+    end0 without a carrier, so no attempt can reach it and retrying only spends
+    ConnectTimeout three times over, inside a request the browser is waiting
+    on. That is reported immediately instead.
     """
+    if not get_host_link_up():
+        app.logger.warning(
+            "%s has no carrier; reporting the Target unreachable without "
+            "attempting SSH: %s", LINK_INTERFACE, command
+        )
+        return None
+
     ssh_command = [
         "/usr/bin/ssh",
         "-i", SSH_KEY_PATH,
@@ -678,33 +700,56 @@ def run_remote_command(command, attempts=SSH_RETRY_ATTEMPTS):
     return None
 
 
+def _read_status_cache(now):
+    """
+    Returns (hit, data) for the status cache under its per-outcome lifetime.
+
+    A cached failure is a hit like any other, so the "valid" flag rather than
+    the data itself decides whether an entry exists.
+    """
+    with STATUS_CACHE_LOCK:
+        if not STATUS_CACHE["valid"]:
+            return False, None
+        lifetime = (
+            STATUS_CACHE_TTL if STATUS_CACHE["data"] is not None
+            else STATUS_FAILURE_CACHE_TTL
+        )
+        if (now - STATUS_CACHE["timestamp"]) < lifetime:
+            return True, STATUS_CACHE["data"]
+    return False, None
+
+
+def _write_status_cache(data, now):
+    """Records a poll outcome, success or failure alike."""
+    with STATUS_CACHE_LOCK:
+        STATUS_CACHE["data"] = data
+        STATUS_CACHE["timestamp"] = now
+        STATUS_CACHE["valid"] = True
+
+
 def get_status_from_target(bypass_cache=False):
     """Gets the current status from the Diretta Target, using a brief cache."""
-    now = time.time()
-
     if not bypass_cache:
-        with STATUS_CACHE_LOCK:
-            if (
-                STATUS_CACHE["data"] is not None
-                and (now - STATUS_CACHE["timestamp"]) < 3.0
-            ):
-                app.logger.info("Returning cached Target status.")
-                return STATUS_CACHE["data"]
+        hit, cached = _read_status_cache(time.time())
+        if hit:
+            app.logger.info("Returning cached Target status.")
+            return cached
 
     # Use a lock to ensure only one thread performs the slow SSH fetch at a time
     with STATUS_FETCH_LOCK:
         now = time.time()
+        # Whoever held the lock has just refreshed the cache, and a failure
+        # refreshes it too, so a queue that built up behind an unreachable
+        # Target drains at once rather than each waiter starting its own poll.
         if not bypass_cache:
-            with STATUS_CACHE_LOCK:
-                if (
-                    STATUS_CACHE["data"] is not None
-                    and (now - STATUS_CACHE["timestamp"]) < 3.0
-                ):
-                    app.logger.info("Returning cached Target status (after lock).")
-                    return STATUS_CACHE["data"]
+            hit, cached = _read_status_cache(now)
+            if hit:
+                app.logger.info("Returning cached Target status (after lock).")
+                return cached
 
         raw_status = run_remote_command("/usr/local/bin/pm-get-status")
         if not raw_status:
+            _write_status_cache(None, now)
             return None
 
         try:
@@ -720,15 +765,14 @@ def get_status_from_target(bypass_cache=False):
             if status_data.get("mtu"):
                 TARGET_LINK_CACHE["mtu"] = status_data["mtu"]
 
-            with STATUS_CACHE_LOCK:
-                STATUS_CACHE["data"] = status_data
-                STATUS_CACHE["timestamp"] = now
+            _write_status_cache(status_data, now)
             return status_data
         except json.JSONDecodeError:
             app.logger.error(
                 "Failed to decode JSON status from remote host. Received: %s",
                 raw_status
             )
+            _write_status_cache(None, now)
             return None
 
 
@@ -737,6 +781,7 @@ def invalidate_status_cache():
     with STATUS_CACHE_LOCK:
         STATUS_CACHE["data"] = None
         STATUS_CACHE["timestamp"] = 0.0
+        STATUS_CACHE["valid"] = False
 
 
 def get_roon_zone_from_host():
