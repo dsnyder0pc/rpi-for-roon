@@ -8,6 +8,7 @@ durations, packet throughput, steady-state interval jitter, startup stability,
 and background noise floor.
 """
 import argparse
+import csv
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,7 +23,11 @@ def load_and_preprocess_data(csv_file):
     """
     print(f"Loading {csv_file}...")
     try:
-        df = pd.read_csv(csv_file)
+        # tshark joins multi-valued fields with an escaped separator (e.g. an
+        # ICMP error carrying an inner IP header exports ip.proto as "1\\,17").
+        # Nothing is quoted, so parse with QUOTE_NONE + escapechar to keep the
+        # column count stable instead of aborting on those rows.
+        df = pd.read_csv(csv_file, escapechar='\\', quoting=csv.QUOTE_NONE)
         df.columns = df.columns.str.strip().str.lower()
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"Error loading CSV: {e}")

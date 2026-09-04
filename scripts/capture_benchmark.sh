@@ -87,10 +87,13 @@ echo "⚙️  Exporting data for Python analysis..."
 # We extract specific fields to identify Audio vs. Noise
 # eth.type: To distinguish IPv4/IPv6/ARP/Diretta
 # ip.proto: To distinguish TCP/UDP/ICMP
+# occurrence=f: Emit only the first value per field. Without it, packets that
+#   repeat a field (an ICMP error quoting an inner IP header) export an escaped
+#   comma inside the field and break the CSV column count.
 # SC2086 Fix: Quoted input and output filenames
 tshark -r "${OUTPUT_PCAP}" \
     -T fields \
-    -E header=y -E separator=, \
+    -E header=y -E separator=, -E occurrence=f \
     -e frame.time_relative \
     -e frame.len \
     -e eth.src \
