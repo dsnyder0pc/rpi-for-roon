@@ -1830,13 +1830,13 @@ echo ""
 echo "- 遅延自動有効化サービスを作成しています"
 cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
 [Unit]
-Description=Activate Purist Mode 60 seconds after boot
+Description=Activate Purist Mode once the Target clock is set
 After=diretta-cache.service
 
 [Service]
 Type=oneshot
 TimeoutStartSec=infinity
-ExecStart=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done && sleep 60 && /usr/local/bin/purist-mode"
+ExecStart=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done; chronyc waitsync 12 0.1 0 5 &>/dev/null; /usr/local/bin/purist-mode"
 
 [Install]
 WantedBy=multi-user.target
@@ -1921,7 +1921,7 @@ source ~/.bashrc
 
 1.  **起動時の強制復元：** シャットダウン時の状態にかかわらず、Diretta Targetは起動時には**必ず**最初に**スタンダードモード**で立ち上がります。これは、ネットワーク時刻同期などの必須サービスを正常に実行させるための重要な仕様です。
 
-2.  **オプションの自動有効化：** 自動起動機能を有効にした場合、システムは起動後60秒間待機した後に、自動的に**ピュリストモード**に切り替わります。これにより、常に最適化された状態でリスニングを楽しみたいユーザーに「設定したら後は任せるだけ」の使い勝手を提供します。
+2.  **オプションの自動有効化：** 自動起動機能を有効にした場合、システムは起動後最大60秒間待機した後に、自動的に**ピュリストモード**に切り替わります。これにより、常に最適化された状態でリスニングを楽しみたいユーザーに「設定したら後は任せるだけ」の使い勝手を提供します。
 
 #### 手動制御（対話式の利用）
 
@@ -1942,7 +1942,7 @@ source ~/.bashrc
   * **起動時の自動有効化挙動**を制御するには、Diretta Target上の便利なエイリアスを使用します：
 
     ```bash
-    # 次回起動時に60秒後の自動有効化を有効にする
+    # 次回起動時に時刻設定後の自動有効化を有効にする
     purist-mode-auto-enable
 
     # 次回起動時の自動有効化を無効にする
@@ -2124,7 +2124,7 @@ source ~/.bashrc
     ```
 
 5.  **起動時のDirettaライセンスキャッシュファイルへの書き込み**
-    DirettaライセンスURLの取得にはインターネット接続が必要です。デフォルトでピュリストモードが有効になっている場合、Targetはインターネットと通信できないためURLを取得できません。しかし、起動時には時刻設定とDirettaライセンスのアクティベーションチェックを行うため、60秒間ピュリストモードが無効化されています。この時間枠（タイムウィンドウ）を利用して、同時にURLを取得することができます。
+    DirettaライセンスURLの取得にはインターネット接続が必要です。デフォルトでピュリストモードが有効になっている場合、Targetはインターネットと通信できないためURLを取得できません。しかし、起動時には時刻設定とDirettaライセンスのアクティベーションチェックを行うため、最大60秒間ピュリストモードが無効化されています。この時間枠（タイムウィンドウ）を利用して、同時にURLを取得することができます。
     ```bash
     # スクリプトをダウンロードして適切な権限を設定し、システムパスに配置する
     curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh

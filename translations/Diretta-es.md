@@ -1830,13 +1830,13 @@ echo ""
 echo "- Creando el servicio de autoactivación retrasada"
 cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
 [Unit]
-Description=Activate Purist Mode 60 seconds after boot
+Description=Activate Purist Mode once the Target clock is set
 After=diretta-cache.service
 
 [Service]
 Type=oneshot
 TimeoutStartSec=infinity
-ExecStart=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done && sleep 60 && /usr/local/bin/purist-mode"
+ExecStart=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done; chronyc waitsync 12 0.1 0 5 &>/dev/null; /usr/local/bin/purist-mode"
 
 [Install]
 WantedBy=multi-user.target
@@ -1921,7 +1921,7 @@ El proceso de arranque está diseñado para ser seguro y predecible, con un camb
 
 1.  **Reversión obligatoria en el arranque:** Independientemente del estado en el que se encontrara al apagarse, el Diretta Target **siempre** arranca primero en **Modo Estándar**. Esta es una característica crítica que garantiza que los servicios esenciales, como la sincronización de la hora de la red, puedan ejecutarse correctamente.
 
-2.  **Autoactivación opcional:** Si ha habilitado la función automática, el sistema esperará 60 segundos después del arranque y luego cambiará automáticamente al **Modo Purista**. Esto proporciona una experiencia de "configurar y olvidar" para los usuarios que siempre prefieren escuchar en el estado optimizado.
+2.  **Autoactivación opcional:** Si ha habilitado la función automática, el sistema esperará hasta 60 segundos después del arranque y luego cambiará automáticamente al **Modo Purista**. Esto proporciona una experiencia de "configurar y olvidar" para los usuarios que siempre prefieren escuchar en el estado optimizado.
 
 #### Manual Control (Interactive Use)
 
@@ -1942,7 +1942,7 @@ Tiene control interactivo completo sobre el sistema en cualquier momento.
   * Para controlar el **comportamiento de arranque automático**, utilice los alias de conveniencia en el Diretta Target:
 
     ```bash
-    # Esto habilita la autoactivación de 60 segundos en el próximo arranque
+    # Esto habilita la autoactivación tras ajustar el reloj en el próximo arranque
     purist-mode-auto-enable
 
     # Esto deshabilita la autoactivación en el próximo arranque
@@ -2124,7 +2124,7 @@ En el **Diretta Target**, crearemos un nuevo usuario con permisos muy limitados.
     ```
 
 5.  **Rellenar el archivo de caché de la licencia de Diretta en el arranque**
-    Obtener la URL de la licencia de Diretta requiere una conexión a Internet. Si tenemos el Modo Purista habilitado de forma predeterminada, el Target nunca podrá obtener la URL. Sin embargo, en el momento del arranque, tenemos el Modo Purista deshabilitado durante 60 segundos para poder configurar el reloj y comprobar la activación de la licencia de Diretta. También podemos utilizar esa ventana de tiempo para obtener la URL.
+    Obtener la URL de la licencia de Diretta requiere una conexión a Internet. Si tenemos el Modo Purista habilitado de forma predeterminada, el Target nunca podrá obtener la URL. Sin embargo, en el momento del arranque, tenemos el Modo Purista deshabilitado durante un máximo de 60 segundos para poder configurar el reloj y comprobar la activación de la licencia de Diretta. También podemos utilizar esa ventana de tiempo para obtener la URL.
     ```bash
     # Descargar el script, establecer los permisos correctos y colocarlo en la ruta del sistema
     curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh

@@ -58,6 +58,14 @@ HOST_POWER_DELAY_SECONDS = 10
 STATUS_CACHE_TTL = 3.0
 STATUS_FAILURE_CACHE_TTL = 10.0
 
+# Every elapsed-time measurement below uses time.monotonic(), never time.time().
+# Neither machine has a battery-backed clock: both boot at the fake-hwclock time
+# and chronyd steps them forward by weeks a minute or two later, which is inside
+# the very window these timers police. Measured on the wall clock, a settling
+# period that began before the step reads as weeks long and passes instantly,
+# and a step backwards would stall a timer for just as long. Wall-clock time is
+# still correct for anything displayed to a person.
+
 # --- Link capacity model ---
 # The whole design rests on one L2 transmission per cycle, so the usable payload
 # rate is whichever of two limits binds first:
@@ -102,7 +110,9 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
 # --- Global State ---
-ENFORCEMENT_STATE = {"last_time": 0}
+# Monotonic time starts near zero at boot, so a literal 0 here would read as
+# "15 seconds ago" rather than "never" and could swallow the first enforcement.
+ENFORCEMENT_STATE = {"last_time": float("-inf")}
 ENFORCEMENT_LOCK = threading.Lock()
 SETTLE_STATE = {"state": None, "since": 0.0}
 SETTLE_LOCK = threading.Lock()
@@ -241,16 +251,37 @@ BASE_TEMPLATE = """
         }
 
         // The power notice lives outside every auto-refreshing region, so nothing
-        // would otherwise clear it: after a reboot the page keeps showing a stale
-        // "sequence started" line. Detection compares the server's instance token
-        // rather than watching for the Host to disappear -- a backgrounded tab has
-        // its timers throttled to about once a minute and would miss a 30-second
-        // outage entirely, never noticing the reboot it was waiting for.
-        // A power off is deliberately not watched: it is not coming back.
+        // would otherwise clear it: after the machines come back the page keeps
+        // showing a stale "sequence started" line. Detection compares the server's
+        // instance token rather than watching for the Host to disappear -- a
+        // backgrounded tab has its timers throttled to about once a minute and
+        // would miss a 30-second outage entirely, never noticing the restart it
+        // was waiting for.
+        //
+        // A power off is watched too. It was once treated as never coming back,
+        // but the notice itself tells the user to switch both machines on by
+        // hand, so it is precisely the case that does come back -- just on a
+        // human's schedule rather than a reboot's. It therefore gets a long
+        // window and a slow tick instead of a short, fast one.
         var INSTANCE_TOKEN = "{{ instance_token }}";
-        var rebootWatchDeadline = 0;
+        var POWER_WATCHES = {
+            'reboot': {
+                windowMs: 600000,
+                intervalMs: 3000,
+                offline: 'Host is restarting. This page will refresh when it returns.',
+                expired: 'The Host has not come back yet. Reload this page once it does.'
+            },
+            'poweroff': {
+                windowMs: 43200000,
+                intervalMs: 30000,
+                offline: 'Both machines are off. Switch them on by hand \u2014 ' +
+                         'this page will refresh once the Host is back.',
+                expired: 'Reload this page once the machines are switched back on.'
+            }
+        };
+        var powerWatch = null;
 
-        function probeForRestart(messageEl) {
+        function probeForRestart(messageEl, offlineMessage) {
             return fetch('/alive', {cache: 'no-store'})
                 .then(function (response) {
                     if (!response.ok) { throw new Error('not ready'); }
@@ -262,39 +293,46 @@ BASE_TEMPLATE = """
                     }
                 })
                 .catch(function () {
-                    messageEl.textContent =
-                        'Host is restarting. This page will refresh when it returns.';
+                    messageEl.textContent = offlineMessage;
                 });
         }
 
-        function watchForReboot(messageEl) {
-            rebootWatchDeadline = Date.now() + 600000;
+        function watchForReturn(messageEl, watch) {
+            powerWatch = {deadline: Date.now() + watch.windowMs, watch: watch};
             var tick = function () {
-                if (Date.now() > rebootWatchDeadline) {
-                    messageEl.textContent =
-                        'The Host has not come back yet. Reload this page once it does.';
+                if (!powerWatch) { return; }
+                if (Date.now() > powerWatch.deadline) {
+                    messageEl.textContent = watch.expired;
+                    powerWatch = null;
                     return;
                 }
-                probeForRestart(messageEl).then(function () {
-                    setTimeout(tick, 3000);
+                probeForRestart(messageEl, watch.offline).then(function () {
+                    setTimeout(tick, watch.intervalMs);
                 });
             };
-            setTimeout(tick, 3000);
+            setTimeout(tick, watch.intervalMs);
         }
 
         // Returning to a throttled background tab is the moment we are most likely
         // to be showing a stale notice, so probe immediately rather than waiting
-        // for the next slow tick.
+        // for the next slow tick. That matters most after a power off, whose tick
+        // is deliberately slow.
         document.addEventListener('visibilitychange', function () {
-            if (document.hidden || !rebootWatchDeadline) { return; }
-            probeForRestart(document.getElementById('power-message'));
+            if (document.hidden || !powerWatch) { return; }
+            probeForRestart(document.getElementById('power-message'),
+                            powerWatch.watch.offline);
         });
 
         document.body.addEventListener('htmx:afterRequest', function (event) {
             var config = event.detail.requestConfig;
             if (!config || !event.detail.successful) { return; }
-            if ((config.path || '').indexOf('/power/reboot') === -1) { return; }
-            watchForReboot(document.getElementById('power-message'));
+            var path = config.path || '';
+            var action = null;
+            if (path.indexOf('/power/reboot') !== -1) { action = 'reboot'; }
+            else if (path.indexOf('/power/poweroff') !== -1) { action = 'poweroff'; }
+            if (!action) { return; }
+            watchForReturn(document.getElementById('power-message'),
+                           POWER_WATCHES[action]);
         });
 
         // Dismiss on an outside tap, click or Escape, the way a menu is expected to
@@ -584,7 +622,7 @@ MUSIC_PLAYING_TEMPLATE = """
 def ping_target(timeout=1, blocking=False, block_timeout=15):
     """Pings the Diretta Target to check reachability, optionally blocking."""
     cmd = ["ping", "-c", "1", "-W", str(timeout), REMOTE_HOST]
-    start_time = time.time()
+    start_time = time.monotonic()
     while True:
         try:
             result = subprocess.run(
@@ -598,7 +636,7 @@ def ping_target(timeout=1, blocking=False, block_timeout=15):
         except (subprocess.CalledProcessError, OSError):
             pass
 
-        if not blocking or (time.time() - start_time >= block_timeout):
+        if not blocking or (time.monotonic() - start_time >= block_timeout):
             break
         time.sleep(1)
     return False
@@ -730,14 +768,14 @@ def _write_status_cache(data, now):
 def get_status_from_target(bypass_cache=False):
     """Gets the current status from the Diretta Target, using a brief cache."""
     if not bypass_cache:
-        hit, cached = _read_status_cache(time.time())
+        hit, cached = _read_status_cache(time.monotonic())
         if hit:
             app.logger.info("Returning cached Target status.")
             return cached
 
     # Use a lock to ensure only one thread performs the slow SSH fetch at a time
     with STATUS_FETCH_LOCK:
-        now = time.time()
+        now = time.monotonic()
         # Whoever held the lock has just refreshed the cache, and a failure
         # refreshes it too, so a queue that built up behind an unreachable
         # Target drains at once rather than each waiter starting its own poll.
@@ -1221,7 +1259,7 @@ def _get_host_uptime():
 
 def _record_state_hold(current_state):
     """Tracks how long the derived state has read the same way, in seconds."""
-    now = time.time()
+    now = time.monotonic()
     with SETTLE_LOCK:
         if SETTLE_STATE["state"] != current_state:
             SETTLE_STATE["state"] = current_state
@@ -1321,9 +1359,9 @@ def check_and_enforce_host_profile(target_status):
     if not profile_matches:
         with ENFORCEMENT_LOCK:
             # Cooldown to prevent thread spamming during fast clicks or polling
-            if time.time() - ENFORCEMENT_STATE["last_time"] < 15:
+            if time.monotonic() - ENFORCEMENT_STATE["last_time"] < 15:
                 return
-            ENFORCEMENT_STATE["last_time"] = time.time()
+            ENFORCEMENT_STATE["last_time"] = time.monotonic()
 
         app.logger.info(
             "Enforcement triggered. Speed: %s -> %s | CycleTime: %s -> %s",

@@ -1830,13 +1830,13 @@ echo ""
 echo "- Creazione del servizio di attivazione automatica ritardata"
 cat <<'EOT' | sudo tee /etc/systemd/system/purist-mode-auto.service
 [Unit]
-Description=Activate Purist Mode 60 seconds after boot
+Description=Activate Purist Mode once the Target clock is set
 After=diretta-cache.service
 
 [Service]
 Type=oneshot
 TimeoutStartSec=infinity
-ExecStart=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done && sleep 60 && /usr/local/bin/purist-mode"
+ExecStart=/bin/bash -c "until ping -c 1 -q 172.20.0.1 &>/dev/null; do sleep 2; done; chronyc waitsync 12 0.1 0 5 &>/dev/null; /usr/local/bin/purist-mode"
 
 [Install]
 WantedBy=multi-user.target
@@ -1921,7 +1921,7 @@ Il processo di avvio è progettato per essere sicuro e prevedibile, con un passa
 
 1.  **Ripristino obbligatorio all'avvio:** Indipendentemente dallo stato in cui si trovava al momento dello spegnimento, il Diretta Target si avvia **sempre** prima in **Standard Mode**. Questa è una caratteristica fondamentale che garantisce il corretto funzionamento di servizi essenziali come la sincronizzazione dell'ora di rete.
 
-2.  **Attivazione automatica opzionale:** Se avete abilitato la funzione automatica, il sistema attenderà 60 secondi dopo l'avvio e passerà automaticamente a **Purist Mode**. Questo offre un'esperienza immediata per gli utenti che preferiscono ascoltare sempre nello stato ottimizzato.
+2.  **Attivazione automatica opzionale:** Se avete abilitato la funzione automatica, il sistema attenderà fino a 60 secondi dopo l'avvio e passerà automaticamente a **Purist Mode**. Questo offre un'esperienza immediata per gli utenti che preferiscono ascoltare sempre nello stato ottimizzato.
 
 #### Controllo manuale (Uso interattivo)
 
@@ -1942,7 +1942,7 @@ Avete il pieno controllo interattivo del sistema in qualsiasi momento.
   * Per controllare il **comportamento di avvio automatico**, utilizzate gli alias di utilità sul Diretta Target:
 
     ```bash
-    # Abilita l'attivazione automatica dopo 60 secondi al prossimo avvio
+    # Abilita l'attivazione automatica dopo l'impostazione dell'orologio al prossimo avvio
     purist-mode-auto-enable
 
     # Disabilita l'attivazione automatica al prossimo avvio
@@ -2124,7 +2124,7 @@ Sul **Diretta Target** creeremo un nuovo utente con permessi molto limitati. Que
     ```
 
 5.  **Popolare il file di cache della licenza Diretta all'avvio**
-    Il recupero dell'URL della licenza Diretta richiede una connessione a Internet. Se la modalità Purist è abilitata per impostazione predefinita, il Target non sarà mai in grado di recuperare l'URL. Tuttavia, all'avvio, la modalità Purist viene disabilitata per 60 secondi al fine di impostare l'orologio e verificare l'attivazione della licenza Diretta. Possiamo sfruttare questa finestra temporale anche per recuperare l'URL.
+    Il recupero dell'URL della licenza Diretta richiede una connessione a Internet. Se la modalità Purist è abilitata per impostazione predefinita, il Target non sarà mai in grado di recuperare l'URL. Tuttavia, all'avvio, la modalità Purist viene disabilitata per un massimo di 60 secondi al fine di impostare l'orologio e verificare l'attivazione della licenza Diretta. Possiamo sfruttare questa finestra temporale anche per recuperare l'URL.
     ```bash
     # Scarica lo script, imposta i permessi corretti e lo posiziona nel percorso di sistema
     curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh
