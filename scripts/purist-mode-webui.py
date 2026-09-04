@@ -393,25 +393,37 @@ LINK_PANEL_TEMPLATE = """
     </div>
 
     <dl class="grid grid-cols-2 gap-px bg-gray-700/50 rounded-xl overflow-hidden border border-gray-700">
-        <div class="bg-gray-900/40 p-4">
+        <div class="bg-gray-900/40 p-4 cursor-help" title="The Ethernet speed the Host and Target negotiated on the point-to-point cable between them.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Link Speed</dt>
             <dd class="mt-1 text-lg font-semibold text-white">
                 {% if link.speed %}{{ link.speed }} Mb/s{% else %}&mdash;{% endif %}
             </dd>
         </div>
-        <div class="bg-gray-900/40 p-4">
+        <div class="bg-gray-900/40 p-4 cursor-help" title="The largest Ethernet payload this link will carry.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">MTU</dt>
             <dd class="mt-1 text-lg font-semibold {{ 'text-red-400' if link.mtu_mismatch else 'text-white' }}">
-                {{ link.mtu }}
+                {{ link.mtu }} bytes
             </dd>
         </div>
-        <div class="bg-gray-900/40 p-4">
+        <div class="bg-gray-900/40 p-4 cursor-help" title="How often the Host transmits audio to the Target.">
+            <dt class="text-xs uppercase tracking-wide text-gray-500">Cycle Time</dt>
+            <dd class="mt-1 text-lg font-semibold text-white">
+                {% if link.cycle_time %}{{ link.cycle_time }} &micro;s{% else %}&mdash;{% endif %}
+            </dd>
+        </div>
+        <div class="bg-gray-900/40 p-4 cursor-help" title="Diretta's information interval, set alongside CycleTime in setting.inf.">
+            <dt class="text-xs uppercase tracking-wide text-gray-500">Info Cycle</dt>
+            <dd class="mt-1 text-lg font-semibold text-white">
+                {% if link.info_cycle_ms %}{{ link.info_cycle_ms }} ms{% else %}&mdash;{% endif %}
+            </dd>
+        </div>
+        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest 32-bit stereo PCM rate that still fits in one transmission per cycle at this MTU and link speed.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Max PCM</dt>
             <dd class="mt-1 text-lg font-semibold text-white">
                 {% if link.max_pcm %}{{ link.max_pcm }}{% else %}&mdash;{% endif %}
             </dd>
         </div>
-        <div class="bg-gray-900/40 p-4">
+        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest DSD rate that still fits in one transmission per cycle at this MTU and link speed.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Max DSD</dt>
             <dd class="mt-1 text-lg font-semibold text-white">
                 {% if link.max_dsd %}{{ link.max_dsd }}{% else %}&mdash;{% endif %}
@@ -914,6 +926,20 @@ def get_max_formats(budget):
     return max_dsd, max_pcm
 
 
+def _us_to_ms(microseconds):
+    """
+    Renders a microsecond period as milliseconds, trimming trailing zeros.
+
+    InfoCycle is far longer than CycleTime, so setting.inf tends to hold
+    six-figure microsecond values that read more easily as 180 ms than as
+    180000 us. Trailing zeros are trimmed, leaving a decimal only when set.
+    """
+    if not microseconds or microseconds <= 0:
+        return None
+
+    return f"{microseconds / 1000.0:g}"
+
+
 def render_link_panel_body():
     """Renders the link panel's inner content from the current link state."""
     return render_template_string(LINK_PANEL_TEMPLATE, link=get_link_info())
@@ -929,6 +955,7 @@ def get_link_info():
     mtu = get_host_mtu()
     speed = get_host_link_speed()
     cycle_time = _get_current_cycletime()
+    info_cycle = _get_current_infocycle()
     target_mtu = TARGET_LINK_CACHE["mtu"]
     link_up = get_host_link_up()
 
@@ -948,7 +975,11 @@ def get_link_info():
         # A silent MTU mismatch is the failure this panel most needs to surface:
         # the link still comes up, but every full-size frame is discarded.
         "mtu_mismatch": target_mtu is not None and target_mtu != mtu,
+        # Both cycle figures come straight from setting.inf, as periods rather
+        # than as a packet rate: InfoCycle's transport is not the L2 stream, so
+        # a frames-per-second reading would be speculation.
         "cycle_time": cycle_time,
+        "info_cycle_ms": _us_to_ms(info_cycle),
         "max_dsd": max_dsd,
         "max_pcm": max_pcm,
     }
@@ -1109,16 +1140,26 @@ def _get_current_speed():
     return None
 
 
-def _get_current_cycletime():
-    """Parses the current CycleTime from setting.inf."""
+def _get_setting_int(key):
+    """Parses an integer setting from setting.inf, or 0 when it is unreadable."""
     try:
         with open(DIRETTA_SETTING_PATH, "r", encoding="utf-8") as file_handle:
             for line in file_handle:
-                if line.startswith("CycleTime="):
+                if line.startswith(f"{key}="):
                     return int(line.strip().split("=")[1])
     except (OSError, ValueError, IndexError):
         pass
     return 0
+
+
+def _get_current_cycletime():
+    """Parses the current CycleTime from setting.inf."""
+    return _get_setting_int("CycleTime")
+
+
+def _get_current_infocycle():
+    """Parses the current InfoCycle from setting.inf."""
+    return _get_setting_int("InfoCycle")
 
 
 def _pending_boot_state(target_status):
