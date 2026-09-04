@@ -67,6 +67,20 @@ for cmd in tcpdump tshark; do
     fi
 done
 
+# Prefer nanosecond timestamps. At the default microsecond resolution the
+# inter-packet intervals quantize to whole microseconds, which floors the
+# jitter statistics: once most intervals land in one 1us bin the IQR reads
+# 0.00us by construction rather than because the stream is perfect.
+# Not every tcpdump build offers the option, so probe before relying on it.
+if tcpdump -h 2>&1 | grep -q -- '--time-stamp-precision'; then
+    TSTAMP_OPT="--time-stamp-precision=nano"
+    echo "✓ Nanosecond timestamps enabled."
+else
+    TSTAMP_OPT=""
+    echo "⚠ tcpdump lacks --time-stamp-precision; falling back to microseconds."
+    echo "  Jitter (IQR) may read 0.00us because of timestamp quantization."
+fi
+
 echo "▶️  Starting ${CAPTURE_DURATION}-second Benchmark Capture on ${CAPTURE_INTERFACE}..."
 echo "    (Capturing ALL traffic headers to analyze noise)"
 
@@ -74,7 +88,9 @@ echo "    (Capturing ALL traffic headers to analyze noise)"
 # -s 128: Snaplen 128 bytes (Headers only, saves space)
 # not port 22: Exclude your SSH session from the "Noise" analysis
 # SC2086 Fix: Quoted all variables
-timeout "${CAPTURE_DURATION}" sudo tcpdump -i "${CAPTURE_INTERFACE}" -s 128 -w "${OUTPUT_PCAP}" -n 'not port 22' &
+# SC2086: $TSTAMP_OPT is intentionally unquoted so an empty value expands away.
+# shellcheck disable=SC2086
+timeout "${CAPTURE_DURATION}" sudo tcpdump -i "${CAPTURE_INTERFACE}" -s 128 ${TSTAMP_OPT} -w "${OUTPUT_PCAP}" -n 'not port 22' &
 
 PID=$!
 echo "    Capture running (PID $PID). Waiting ${CAPTURE_DURATION}s..."

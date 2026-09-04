@@ -1058,41 +1058,72 @@ def _set_link_speed(speed, _autoneg):
         app.logger.error("Failed to execute ethtool: %s", err)
 
 
-def update_setting_inf(cycle_time, info_cycle):
-    """Reads setting.inf, updates CycleTime and InfoCycle, and writes it back."""
-    if not os.path.exists(DIRETTA_SETTING_PATH):
-        return
+def _apply_settings(lines, wanted):
+    """Rewrites the wanted keys in setting.inf, adding any the file lacks.
 
+    A key the installer never wrote has to be added rather than skipped: the
+    old behaviour left it out silently, so Diretta kept running the previous
+    profile behind a UI reporting the new one.
+    """
+    new_lines = []
+    seen = set()
+    for line in lines:
+        key = line.split("=", 1)[0].strip() if "=" in line else None
+        if key in wanted:
+            new_lines.append(f"{key}={wanted[key]}\n")
+            seen.add(key)
+        else:
+            new_lines.append(line)
+
+    missing = [key for key in wanted if key not in seen]
+    if missing:
+        app.logger.warning("setting.inf was missing %s; adding.", ", ".join(missing))
+        # Keys belong under the section header, not after an unrelated section.
+        insert_at = next(
+            (i + 1 for i, ln in enumerate(new_lines) if ln.lstrip().startswith("[")),
+            len(new_lines),
+        )
+        for key in missing:
+            new_lines.insert(insert_at, f"{key}={wanted[key]}\n")
+
+    return new_lines
+
+
+def update_setting_inf(cycle_time, info_cycle):
+    """Reads setting.inf, updates CycleTime and InfoCycle, and writes it back.
+
+    Returns:
+        bool: True once the file holds the requested values. Callers must not
+            restart Diretta on a False return -- the running config is then
+            unchanged, and a restart would present the previous profile as a
+            completed mode switch, which is invisible from the UI.
+    """
+    if not os.path.exists(DIRETTA_SETTING_PATH):
+        app.logger.error("Cannot update %s: file does not exist.", DIRETTA_SETTING_PATH)
+        return False
+
+    wanted = {"CycleTime": str(cycle_time), "InfoCycle": str(info_cycle)}
     try:
         with open(DIRETTA_SETTING_PATH, "r", encoding="utf-8") as file_handle:
             lines = file_handle.readlines()
 
-        changed = False
-        new_lines = []
-        for line in lines:
-            if line.startswith("CycleTime="):
-                new_lines.append(f"CycleTime={cycle_time}\n")
-                changed = True
-            elif line.startswith("InfoCycle="):
-                new_lines.append(f"InfoCycle={info_cycle}\n")
-                changed = True
-            else:
-                new_lines.append(line)
+        new_lines = _apply_settings(lines, wanted)
 
-        if changed:
-            app.logger.info("Writing new Diretta config: CycleTime=%s, InfoCycle=%s",
-                            cycle_time, info_cycle)
-            tmp_file = "/tmp/setting.inf.tmp"
-            with open(tmp_file, "w", encoding="utf-8") as file_handle:
-                file_handle.writelines(new_lines)
+        app.logger.info("Writing new Diretta config: CycleTime=%s, InfoCycle=%s",
+                        cycle_time, info_cycle)
+        tmp_file = "/tmp/setting.inf.tmp"
+        with open(tmp_file, "w", encoding="utf-8") as file_handle:
+            file_handle.writelines(new_lines)
 
-            mv_cmd = ["/usr/bin/sudo", "/usr/bin/mv", tmp_file, DIRETTA_SETTING_PATH]
-            subprocess.run(mv_cmd, check=True)
+        mv_cmd = ["/usr/bin/sudo", "/usr/bin/mv", tmp_file, DIRETTA_SETTING_PATH]
+        subprocess.run(mv_cmd, check=True)
+        return True
 
     except OSError as err:
         app.logger.error("File operation error while updating setting.inf: %s", err)
     except subprocess.CalledProcessError as err:
         app.logger.error("Sudo mv failed when updating setting.inf: %s", err)
+    return False
 
 
 def restart_diretta_services():
@@ -1250,9 +1281,17 @@ def _async_hardware_transition(expected_speed, expected_ct, expected_ic, current
     app.logger.info("Waiting for physical layer to settle...")
     ping_target(blocking=True, block_timeout=15)
 
-    # 3. Apply settings and restart
-    update_setting_inf(cycle_time=expected_ct, info_cycle=expected_ic)
-    restart_diretta_services()
+    # 3. Apply settings and restart. Restarting after a failed write would
+    #    report a mode switch that did not happen; leaving the profile visibly
+    #    wrong instead lets the next enforcement pass retry it.
+    if update_setting_inf(cycle_time=expected_ct, info_cycle=expected_ic):
+        restart_diretta_services()
+    else:
+        app.logger.error(
+            "Skipping service restart: setting.inf still holds the previous "
+            "profile (wanted CycleTime=%s, InfoCycle=%s).",
+            expected_ct, expected_ic
+        )
 
     # 4. Give the Target up to 10 seconds to recover its SSH/Systemd stack
     app.logger.info("Waiting for Target to recover after service restarts...")
@@ -1275,9 +1314,17 @@ def _sync_hardware_transition(expected_speed, expected_ct, expected_ic, current_
     app.logger.info("Waiting for physical layer to settle...")
     ping_target(blocking=True, block_timeout=15)
 
-    # 3. Apply settings and restart
-    update_setting_inf(cycle_time=expected_ct, info_cycle=expected_ic)
-    restart_diretta_services()
+    # 3. Apply settings and restart. Restarting after a failed write would
+    #    report a mode switch that did not happen; leaving the profile visibly
+    #    wrong instead lets the next enforcement pass retry it.
+    if update_setting_inf(cycle_time=expected_ct, info_cycle=expected_ic):
+        restart_diretta_services()
+    else:
+        app.logger.error(
+            "Skipping service restart: setting.inf still holds the previous "
+            "profile (wanted CycleTime=%s, InfoCycle=%s).",
+            expected_ct, expected_ic
+        )
 
     # 4. Give the Target up to 10 seconds to recover its SSH/Systemd stack
     app.logger.info("Waiting for Target to recover after service restarts...")

@@ -9,17 +9,177 @@ and background noise floor.
 """
 import argparse
 import csv
+from typing import NamedTuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 
+# Thresholds for telling control packets from audio payload. Both are ratios,
+# so they adapt to whatever payload size the stream actually uses.
+#
+# A fully unsupervised split (Otsu, largest-gap clustering) is NOT safe here:
+# on a clean flow that carries no control packets at all, those methods cannot
+# tell "no second population exists" from "the second population is subtle", and
+# happily carve the audio cluster in half. Excluding real audio corrupts the
+# very statistics we are computing, while missing a stray control packet costs
+# almost nothing, so the split deliberately errs toward keeping packets.
+#
+# A size is treated as control only if it is clearly undersized, or if it is
+# both rare and outside the payload band. Requiring two weak signals in
+# conjunction keeps the degenerate no-control case from splitting anything.
+# The band matters: a fragmented format spreads its payload over an 8-byte
+# ladder of sizes, and the outermost rungs can be rare enough to look like
+# control traffic while sitting a fraction of a percent below the mode.
+CONTROL_SIZE_RATIO = 0.5    # under half the modal size is not an audio payload
+CONTROL_RARE_SHARE = 0.001  # under 0.1% of the flow is not part of the cadence
+CONTROL_BAND_RATIO = 0.9    # payload sizes sit within this much of the mode
+
+ETHERNET_HEADER = 14  # bytes of L2 header in front of each frame's payload
+
+# Wire byte rates, in bytes per microsecond, for the formats this link carries:
+# PCM as 32-bit stereo, DSD as 1-bit stereo. Several rates collide exactly --
+# DSD64 and 88.2 kHz both sit at 0.7056 -- so those share a label. The capture
+# cannot tell them apart, and it does not need to: the implied cycle is
+# identical either way.
+KNOWN_STREAM_RATES = {
+    0.3528: "44.1 kHz",
+    0.3840: "48 kHz",
+    0.7056: "88.2 kHz / DSD64",
+    0.7680: "96 kHz",
+    1.4112: "176.4 kHz / DSD128",
+    1.5360: "192 kHz",
+    2.8224: "352.8 kHz (DXD) / DSD256",
+    3.0720: "384 kHz",
+    5.6448: "705.6 kHz / DSD512",
+    6.1440: "768 kHz",
+}
+RATE_MATCH_TOLERANCE = 0.02  # fractional distance still counted as a match
+
+
+class Capture(NamedTuple):
+    """A parsed benchmark capture, split by packet role.
+
+    cycle_df carries the delta_s/delta_us interval columns and is what the
+    timing analysis runs on: one row per transmission cycle, which is the same
+    thing as one row per packet unless the payload is fragmented. audio_df is
+    the raw per-packet view; control_df and noise_df are kept for reporting.
+    """
+
+    audio_df: pd.DataFrame
+    cycle_df: pd.DataFrame
+    control_df: pd.DataFrame
+    noise_df: pd.DataFrame
+    time_col: str
+    len_col: str
+    total_packets: int
+    resolution_us: float
+    packets_per_cycle: float
+
+
+def split_audio_and_control(stream_df, len_col):
+    """Splits a Diretta flow into audio payload packets and control packets.
+
+    The Host sends small protocol packets (roughly 42-90 bytes) to the Target on
+    the same MAC pair as the audio payload. Left in place, each one lands between
+    two audio packets and splits a single cycle interval into two short ones,
+    which inflates the interval standard deviation without reflecting any real
+    timing instability.
+
+    The classification is derived from the flow itself rather than a fixed size
+    window, so it follows whatever payload size the sample rate happens to use.
+    See CONTROL_SIZE_RATIO for why it is deliberately conservative.
+
+    Returns:
+        tuple: (audio_df, control_df)
+    """
+    sizes = stream_df[len_col]
+    modal_len = sizes.mode().iloc[0]
+    share = sizes.map(sizes.value_counts() / len(sizes))
+
+    undersized = sizes < modal_len * CONTROL_SIZE_RATIO
+    outside_band = sizes < modal_len * CONTROL_BAND_RATIO
+    is_control = undersized | ((share < CONTROL_RARE_SHARE) & outside_band)
+
+    return stream_df[~is_control].copy(), stream_df[is_control].copy()
+
+
+def group_into_cycles(audio_df, time_col, len_col):
+    """Collapses each multi-frame transmission into a single cycle row.
+
+    Diretta sends one transmission per cycle, but a format whose payload
+    exceeds the link MTU is split across several frames sent back to back
+    (DXD at a 2000 us cycle needs ~5.7 KB, so a 3824-byte MTU carries it as
+    two frames ~10 us apart). Timing those fragments against each other
+    measures the NIC's back-to-back rate, not the cycle, and drags the median
+    interval to half its true value.
+
+    The split point is derived from the data: while a cycle holds at most a
+    handful of frames, an upper percentile of the intervals is always a real
+    cycle gap, so half of it separates fragments from cycles at any burst size.
+    On a stream that already sends one frame per cycle every packet lands in
+    its own group and the data passes through untouched.
+
+    Returns:
+        tuple: (cycle_df, packets_per_cycle)
+    """
+    gaps = audio_df[time_col].diff() * 1e6
+    boundary = np.nanpercentile(gaps, 90) / 2.0
+    cycle_id = (gaps > boundary).cumsum()
+
+    cycle_df = audio_df.groupby(cycle_id).agg(
+        **{time_col: (time_col, 'first'), len_col: (len_col, 'sum')}
+    )
+    return cycle_df, len(audio_df) / len(cycle_df)
+
+
+def timestamp_resolution_us(time_series):
+    """Infers the capture's timestamp resolution, in microseconds.
+
+    Returns the coarsest grid every timestamp falls on. This matters because a
+    capture taken at microsecond precision cannot resolve jitter finer than 1
+    microsecond: once most intervals share a single bin, the quartiles collapse
+    onto it and the IQR reads 0.00 by construction rather than because the
+    stream is jitter-free.
+    """
+    nanos = (time_series * 1e9).round().astype('int64')
+    for grid_ns, res_us in ((1_000_000, 1000.0), (1_000, 1.0)):
+        if (nanos % grid_ns == 0).all():
+            return res_us
+    return 0.001
+
+
+def split_stream_and_noise(df, src_col, dst_col):
+    """Splits a capture into the dominant MAC-pair flow and everything else.
+
+    Returns:
+        tuple: (stream_df, noise_df), or None if no traffic was found.
+    """
+    if src_col not in df.columns:
+        print("Warning: MAC address columns not found. Assuming single stream.")
+        return df.copy(), pd.DataFrame()
+
+    flow_counts = df.groupby([src_col, dst_col]).size().reset_index(name='count')
+    if flow_counts.empty:
+        print("Error: No traffic found.")
+        return None
+
+    dominant_flow = flow_counts.loc[flow_counts['count'].idxmax()]
+    host_mac = dominant_flow[src_col]
+    target_mac = dominant_flow[dst_col]
+    is_stream = (df[src_col] == host_mac) & (df[dst_col] == target_mac)
+
+    print("\n--- Stream Summary ---")
+    print(f"Flow:                  {host_mac} -> {target_mac}")
+    return df[is_stream].copy(), df[~is_stream].copy()
+
+
 def load_and_preprocess_data(csv_file):
     """Loads and preprocesses packet capture CSV data.
 
     Returns:
-        tuple: (stream_df, noise_df, time_col, len_col, total_packets)
+        Capture: the parsed capture, or None if the file is unusable.
     """
     print(f"Loading {csv_file}...")
     try:
@@ -42,53 +202,139 @@ def load_and_preprocess_data(csv_file):
         print("Error: Could not find a timestamp column (frame.time_relative or time).")
         return None
 
-    total_packets = len(df)
+    split = split_stream_and_noise(df, src_col, dst_col)
+    if split is None:
+        return None
+    stream_df, noise_df = split
 
-    # Find Dominant Flow
-    if src_col in df.columns:
-        flow_counts = df.groupby([src_col, dst_col]).size().reset_index(name='count')
-        if flow_counts.empty:
-            print("Error: No traffic found.")
-            return None
-        dominant_flow = flow_counts.loc[flow_counts['count'].idxmax()]
-        host_mac = dominant_flow[src_col]
-        target_mac = dominant_flow[dst_col]
+    # Separate audio payload from control traffic before timing the intervals,
+    # so an interleaved control packet cannot masquerade as a short cycle.
+    audio_df, control_df = split_audio_and_control(stream_df, len_col)
 
-        # Split Data: Stream vs Noise
-        stream_df = df[(df[src_col] == host_mac) & (df[dst_col] == target_mac)].copy()
-        noise_df = df[~((df[src_col] == host_mac) & (df[dst_col] == target_mac))].copy()
+    # Fold fragmented transmissions together, then time cycle to cycle.
+    cycle_df, packets_per_cycle = group_into_cycles(audio_df, time_col, len_col)
+    cycle_df['delta_s'] = cycle_df[time_col].diff()
+    cycle_df['delta_us'] = cycle_df['delta_s'] * 1e6
+    cycle_df = cycle_df.iloc[1:].copy()  # Drop first NaN
 
-        print("\n--- Stream Summary ---")
-        print(f"Flow:                  {host_mac} -> {target_mac}")
-    else:
-        stream_df = df.copy()
-        noise_df = pd.DataFrame()
-        print("Warning: MAC address columns not found. Assuming single stream.")
-
-    # Calculate Deltas on the Stream only
-    stream_df['delta_s'] = stream_df[time_col].diff()
-    stream_df['delta_us'] = stream_df['delta_s'] * 1e6
-    stream_df = stream_df.iloc[1:].copy()  # Drop first NaN
-
-    return stream_df, noise_df, time_col, len_col, total_packets
+    return Capture(
+        audio_df=audio_df,
+        cycle_df=cycle_df,
+        control_df=control_df,
+        noise_df=noise_df,
+        time_col=time_col,
+        len_col=len_col,
+        total_packets=len(df),
+        resolution_us=timestamp_resolution_us(df[time_col]),
+        packets_per_cycle=packets_per_cycle,
+    )
 
 
-def calculate_and_print_metrics(stream_df, noise_df, time_col, len_col, total_packets):
+def print_stream_identity(capture, detected_cycle):
+    """Cross-checks the measured cycle against the payload each cycle carries.
+
+    Frame size is set by how much audio one cycle has to carry, so the payload
+    and the packet timing are two independent routes to the same number. If
+    they disagree the capture is missing frames, or the cycle reading is being
+    thrown by fragmentation that was not folded together correctly.
+    """
+    frames = capture.packets_per_cycle
+    bytes_per_cycle = capture.cycle_df[capture.len_col].median()
+    payload = bytes_per_cycle - frames * ETHERNET_HEADER
+    rate = payload / detected_cycle
+
+    nominal = min(KNOWN_STREAM_RATES, key=lambda known: abs(known - rate))
+    drift = abs(rate - nominal) / nominal
+
+    print(f"Payload/Cycle:         {payload:,.0f} bytes over {frames:.2f} frame(s)")
+    if drift > RATE_MATCH_TOLERANCE:
+        print(f"Stream Rate:           {rate:.4f} B/µs      (no known format matches)")
+        return
+
+    implied_cycle = payload / nominal
+    print(f"Stream Format:         {KNOWN_STREAM_RATES[nominal]} "
+          f"({nominal:.4f} B/µs)")
+    print(f"Implied CycleTime:     {implied_cycle:.2f} µs       "
+          f"(from payload; measured {detected_cycle:.2f} µs)")
+
+    # A real divergence means the two routes disagree, which the timing figures
+    # below would not reveal on their own.
+    if abs(implied_cycle - detected_cycle) / detected_cycle > 0.01:
+        print("  ⚠ Payload and packet timing disagree by more than 1%. The capture "
+              "may be\n    missing frames, or the cycle grouping is wrong.")
+
+
+def print_timing_precision(steady_df, detected_cycle, resolution_us):
+    """Prints the steady-state interval statistics."""
+    intervals = steady_df['delta_us']
+    jitter_iqr = np.diff(np.percentile(intervals, [25, 75]))[0]
+    p1, p99 = np.percentile(intervals, [1, 99])
+
+    print("\n--- Timing Precision (Steady State) ---")
+    print(f"Mean Interval:         {intervals.mean():.2f} µs")
+    print(f"Median Interval:       {detected_cycle:.2f} µs")
+    print(f"Standard Deviation:    {intervals.std():.2f} µs")
+    print(f"Jitter (IQR):          {jitter_iqr:.2f} µs          (Core Stability)")
+    print(f"Spread (P1-P99):       {p99 - p1:.2f} µs          (Robust)")
+
+    # Compare against the capture resolution rather than exactly 0.0: percentile
+    # interpolation leaves float dust (~1e-08) even when both quartiles sit in
+    # the same timestamp bin.
+    if jitter_iqr < resolution_us:
+        in_bin = (intervals - detected_cycle).abs() < (resolution_us / 2.0)
+        print("  ⚠ IQR of 0.00 µs is the capture's resolution floor, not zero jitter:")
+        print(f"    {in_bin.mean() * 100.0:.1f}% of intervals share one "
+              f"{resolution_us:g} µs timestamp bin, so both")
+        print("    quartiles land on it. Re-capture with nanosecond timestamps to "
+              "resolve further.")
+
+
+def print_stability_events(steady_df, detected_cycle, gap_threshold):
+    """Prints gap and stability counters for the steady-state window."""
+    intervals = steady_df['delta_us']
+    major_gaps = (intervals > gap_threshold).sum()
+    stable = intervals.between(detected_cycle * 0.8, detected_cycle * 1.2).sum()
+
+    print("\n--- Stability Events (Steady State) ---")
+    print(f"Stability Score:       {stable / len(steady_df) * 100.0:.5f} %")
+    print(f"Max Pause:             {intervals.max() / 1000.0:.2f} ms")
+    print(f"Major Gaps:            {major_gaps:<8} (Packets > {gap_threshold:.0f}µs)")
+
+
+def print_isolation(capture):
+    """Prints the control-traffic and background-noise breakdown."""
+    total = capture.total_packets
+    control_pct = (len(capture.control_df) / total * 100.0) if total > 0 else 0.0
+    noise_pct = (len(capture.noise_df) / total * 100.0) if total > 0 else 0.0
+
+    print("\n--- Isolation / Noise (Full Run) ---")
+    print(f"Control Packets:       {len(capture.control_df):<8} "
+          f"({control_pct:.2f}%, same flow)")
+    if not capture.control_df.empty:
+        control_sizes = sorted(int(v) for v in capture.control_df[capture.len_col].unique())
+        audio_sizes = sorted(int(v) for v in capture.audio_df[capture.len_col].unique())
+        print(f"  Audio sizes:         {audio_sizes} bytes")
+        print(f"  Control sizes:       {control_sizes} bytes")
+    print(f"Noise Packets:         {len(capture.noise_df):<8} ({noise_pct:.2f}%)")
+    if not capture.noise_df.empty and 'eth.type' in capture.noise_df.columns:
+        print("\nTop Noise Sources (EtherType):")
+        print(capture.noise_df['eth.type'].value_counts().head(3).to_string())
+
+
+def calculate_and_print_metrics(capture):
     """Calculates metrics and prints the benchmark summary.
 
     Returns:
         tuple: (steady_df, detected_cycle, gap_threshold)
     """
     # --- PASS 1: Detect CycleTime (Steady State) ---
-    steady_df = stream_df[stream_df[time_col] > 1.0].copy()
+    steady_df = capture.cycle_df[capture.cycle_df[capture.time_col] > 1.0].copy()
 
     if steady_df.empty:
         print("Warning: Recording too short to detect steady state (>1.0s). Using all data.")
-        steady_df = stream_df
+        steady_df = capture.cycle_df
 
     detected_cycle = steady_df['delta_us'].median()
-
-    # Dynamic Thresholds
     gap_threshold = detected_cycle * 1.5
 
     print("Mode:                  Auto-Detected Cycle")
@@ -96,43 +342,24 @@ def calculate_and_print_metrics(stream_df, noise_df, time_col, len_col, total_pa
     print(f"Dynamic Gap Threshold: > {gap_threshold:.2f} µs (1.5x Cycle)")
 
     # --- PASS 2: Analysis ---
+    times = capture.audio_df[capture.time_col]
+    duration = times.max() - times.min()
+    throughput = (capture.audio_df[capture.len_col].sum() * 8) / (duration * 1e6)
 
-    # Duration and Throughput
-    duration = stream_df[time_col].max() - stream_df[time_col].min()
-    throughput = (stream_df[len_col].sum() * 8) / (duration * 1e6)
     print(f"Duration (Total):      {duration:.2f} s")
-    print(f"Packets (Total):       {len(stream_df):,}")
+    print(f"Packets (Audio):       {len(capture.audio_df):,}")
+    print(f"Packets (Control):     {len(capture.control_df):,}       "
+          "(excluded from timing)")
+    if capture.packets_per_cycle > 1.01:
+        print(f"Transmission Cycles:   {len(capture.cycle_df) + 1:,}       "
+              f"({capture.packets_per_cycle:.2f} frames/cycle, payload exceeds MTU)")
     print(f"Throughput:            {throughput:.2f} Mbps")
+    print(f"Timestamp Resolution:  {capture.resolution_us:g} µs")
+    print_stream_identity(capture, detected_cycle)
 
-    # Timing Stats
-    jitter_iqr = np.diff(np.percentile(steady_df['delta_us'], [25, 75]))[0]
-
-    print("\n--- Timing Precision (Steady State) ---")
-    print(f"Mean Interval:         {steady_df['delta_us'].mean():.2f} µs")
-    print(f"Median Interval:       {detected_cycle:.2f} µs")
-    print(f"Standard Deviation:    {steady_df['delta_us'].std():.2f} µs")
-    print(f"Jitter (IQR):          {jitter_iqr:.2f} µs          (Core Stability)")
-
-    # Startup & Stability
-    major_gaps = steady_df[steady_df['delta_us'] > gap_threshold]
-    stable_packets = steady_df[
-        (steady_df['delta_us'] >= detected_cycle * 0.8) &
-        (steady_df['delta_us'] <= detected_cycle * 1.2)
-    ]
-    stability_score = (len(stable_packets) / len(steady_df)) * 100.0
-
-    print("\n--- Stability Events (Steady State) ---")
-    print(f"Stability Score:       {stability_score:.5f} %")
-    print(f"Max Pause:             {steady_df['delta_us'].max() / 1000.0:.2f} ms")
-    print(f"Major Gaps:            {len(major_gaps):<8} (Packets > {gap_threshold:.0f}µs)")
-
-    # Noise Analysis
-    print("\n--- Isolation / Noise (Full Run) ---")
-    noise_pct = (len(noise_df) / total_packets * 100.0) if total_packets > 0 else 0.0
-    print(f"Noise Packets:         {len(noise_df):<8} ({noise_pct:.2f}%)")
-    if not noise_df.empty and 'eth.type' in noise_df.columns:
-        print("\nTop Noise Sources (EtherType):")
-        print(noise_df['eth.type'].value_counts().head(3).to_string())
+    print_timing_precision(steady_df, detected_cycle, capture.resolution_us)
+    print_stability_events(steady_df, detected_cycle, gap_threshold)
+    print_isolation(capture)
 
     return steady_df, detected_cycle, gap_threshold
 
@@ -223,13 +450,9 @@ def analyze_capture(csv_file):
     if data is None:
         return
 
-    stream_df, noise_df, time_col, len_col, total_packets = data
+    steady_df, _, _ = calculate_and_print_metrics(data)
 
-    steady_df, _, _ = calculate_and_print_metrics(
-        stream_df, noise_df, time_col, len_col, total_packets
-    )
-
-    plot_results(stream_df, steady_df, noise_df, csv_file)
+    plot_results(data.cycle_df, steady_df, data.noise_df, csv_file)
 
 
 def main():
