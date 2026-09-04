@@ -72,6 +72,21 @@ DSD_TIERS = (
 )
 PCM_RATES_KHZ = (44.1, 48, 88.2, 96, 176.4, 192, 352.8, 384, 705.6, 768)
 
+def _read_boot_id():
+    """Returns the kernel's boot id, which changes on every reboot."""
+    try:
+        with open("/proc/sys/kernel/random/boot_id", "r", encoding="utf-8") as file_handle:
+            return file_handle.read().strip()
+    except OSError:
+        return "unknown"
+
+
+# Identifies this boot of this app process. A browser compares it against the
+# value its page was served with; any change means the Host rebooted, or the
+# service restarted under it. Comparing state this way is immune to a
+# backgrounded tab missing the brief window when the Host was unreachable.
+INSTANCE_TOKEN = f"{_read_boot_id()}:{int(time.time())}"
+
 app = Flask(__name__)
 # A secret key is required for flash messaging
 app.secret_key = os.urandom(24)
@@ -215,6 +230,63 @@ BASE_TEMPLATE = """
             menu.hidden = true;
             document.getElementById('power-button').setAttribute('aria-expanded', 'false');
         }
+
+        // The power notice lives outside every auto-refreshing region, so nothing
+        // would otherwise clear it: after a reboot the page keeps showing a stale
+        // "sequence started" line. Detection compares the server's instance token
+        // rather than watching for the Host to disappear -- a backgrounded tab has
+        // its timers throttled to about once a minute and would miss a 30-second
+        // outage entirely, never noticing the reboot it was waiting for.
+        // A power off is deliberately not watched: it is not coming back.
+        var INSTANCE_TOKEN = "{{ instance_token }}";
+        var rebootWatchDeadline = 0;
+
+        function probeForRestart(messageEl) {
+            return fetch('/alive', {cache: 'no-store'})
+                .then(function (response) {
+                    if (!response.ok) { throw new Error('not ready'); }
+                    return response.text();
+                })
+                .then(function (token) {
+                    if (token.trim() !== INSTANCE_TOKEN) {
+                        window.location.reload();
+                    }
+                })
+                .catch(function () {
+                    messageEl.textContent =
+                        'Host is restarting. This page will refresh when it returns.';
+                });
+        }
+
+        function watchForReboot(messageEl) {
+            rebootWatchDeadline = Date.now() + 600000;
+            var tick = function () {
+                if (Date.now() > rebootWatchDeadline) {
+                    messageEl.textContent =
+                        'The Host has not come back yet. Reload this page once it does.';
+                    return;
+                }
+                probeForRestart(messageEl).then(function () {
+                    setTimeout(tick, 3000);
+                });
+            };
+            setTimeout(tick, 3000);
+        }
+
+        // Returning to a throttled background tab is the moment we are most likely
+        // to be showing a stale notice, so probe immediately rather than waiting
+        // for the next slow tick.
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden || !rebootWatchDeadline) { return; }
+            probeForRestart(document.getElementById('power-message'));
+        });
+
+        document.body.addEventListener('htmx:afterRequest', function (event) {
+            var config = event.detail.requestConfig;
+            if (!config || !event.detail.successful) { return; }
+            if ((config.path || '').indexOf('/power/reboot') === -1) { return; }
+            watchForReboot(document.getElementById('power-message'));
+        });
 
         // Dismiss on an outside click or Escape, the way a menu is expected to behave.
         document.addEventListener('click', closePowerMenu);
@@ -1125,28 +1197,40 @@ def check_and_enforce_host_profile(target_status):
     expected_speed = get_target_speed(current_state, target_status)
     expected_ct, expected_ic = get_target_profile(current_state)
 
-    if current_speed_val == expected_speed and current_ct == expected_ct:
+    profile_matches = (
+        current_speed_val == expected_speed and current_ct == expected_ct
+    )
+    flag_stale = _super_purist_flag_is_stale(target_status)
+
+    # A stale flag is worth acting on even when the live profile already looks
+    # right: nothing else would ever clear it, and it would clamp the link at
+    # the next boot.
+    if profile_matches and not flag_stale:
         return
 
     if not _enforcement_settled(current_state, held_for):
         return
 
-    with ENFORCEMENT_LOCK:
-        # Cooldown to prevent thread spamming during fast clicks or polling
-        if time.time() - ENFORCEMENT_STATE["last_time"] < 15:
-            return
-        ENFORCEMENT_STATE["last_time"] = time.time()
+    if flag_stale:
+        reconcile_super_purist_flag(target_status)
 
-    app.logger.info(
-        "Enforcement triggered. Speed: %s -> %s | CycleTime: %s -> %s",
-        current_speed_val, expected_speed, current_ct, expected_ct
-    )
+    if not profile_matches:
+        with ENFORCEMENT_LOCK:
+            # Cooldown to prevent thread spamming during fast clicks or polling
+            if time.time() - ENFORCEMENT_STATE["last_time"] < 15:
+                return
+            ENFORCEMENT_STATE["last_time"] = time.time()
 
-    threading.Thread(
-        target=_async_hardware_transition,
-        args=(expected_speed, expected_ct, expected_ic, current_state),
-        daemon=True
-    ).start()
+        app.logger.info(
+            "Enforcement triggered. Speed: %s -> %s | CycleTime: %s -> %s",
+            current_speed_val, expected_speed, current_ct, expected_ct
+        )
+
+        threading.Thread(
+            target=_async_hardware_transition,
+            args=(expected_speed, expected_ct, expected_ic, current_state),
+            daemon=True
+        ).start()
 
 
 # --- FLASK ROUTES ---
@@ -1255,6 +1339,18 @@ def remote_app():
 
 # --- HTMX API Endpoints ---
 
+@app.context_processor
+def inject_instance_token():
+    """Makes the instance token available to every rendered template."""
+    return {"instance_token": INSTANCE_TOKEN}
+
+
+@app.route("/alive")
+def alive():
+    """Identifies the running instance so a browser can spot a completed reboot."""
+    return INSTANCE_TOKEN
+
+
 @app.route("/link-status")
 def link_status():
     """Serves the link panel body for HTMX updates, swapped into the card shell."""
@@ -1300,6 +1396,40 @@ def _clear_super_purist_flag():
             app.logger.error("Failed to remove Super Purist flag file: %s", err)
 
 
+def _super_purist_flag_is_stale(target_status):
+    """
+    Reports whether the flag on disk contradicts the Target.
+
+    Super Purist is a layer on top of Purist Mode, so the flag is only
+    meaningful while the Target actually has Purist Mode active.
+    """
+    if not target_status or target_status.get("purist_mode_active", False):
+        return False
+    return os.path.exists(SUPER_PURIST_FLAG)
+
+
+def reconcile_super_purist_flag(target_status):
+    """
+    Drops a Super Purist flag that no longer reflects reality.
+
+    The flag alone drives the Host's boot-time link clamp in set-link-speed.sh,
+    so one left behind by a failed transition silently pins end0 to 10 Mbps at
+    every boot while the UI still derives Standard.
+
+    Callers on the background path must only invoke this once the derived state
+    has settled: inside the boot window the Target reads as not-purist before
+    purist-mode-auto has engaged, and acting then would delete a legitimate flag.
+    """
+    if not _super_purist_flag_is_stale(target_status):
+        return
+
+    app.logger.warning(
+        "Stale Super Purist flag found while the Target is not in Purist "
+        "Mode. Clearing it so the boot-time clamp cannot pin end0 to 10 Mbps."
+    )
+    _clear_super_purist_flag()
+
+
 def _transition_to_standard(is_currently_purist):
     """Handles down-transition back to Standard operational mode."""
     _clear_super_purist_flag()
@@ -1332,6 +1462,15 @@ def _transition_to_super_purist(is_currently_purist):
 def set_state(state_name):
     """HTMX endpoint to transition the system explicitly between operational states."""
     TRANSITION_STATE["active"] = True
+
+    # The flag is what the Host's boot script reads to clamp the link, so it has
+    # to record the user's intent, not merely a request that may abort below.
+    # Every path out of Super Purist clears it immediately: the reachability and
+    # status checks that follow can return early, and previously did so without
+    # ever reaching _transition_to_standard, stranding the flag on disk.
+    if state_name != "SuperPurist":
+        _clear_super_purist_flag()
+
     try:
         # Condition 1: Verify Target is reachable initially
         app.logger.info(
@@ -1368,6 +1507,10 @@ def set_state(state_name):
         # Check if a hardware link profile adjustment is necessary based on the new target state
         updated_status = get_status_from_target(bypass_cache=True)
         if updated_status:
+            # A Super Purist request that failed to engage Purist Mode on the
+            # Target must not leave its flag behind to clamp the next boot.
+            reconcile_super_purist_flag(updated_status)
+
             current_speed_str = _get_current_speed()
             if current_speed_str and "Unknown" not in current_speed_str:
                 current_speed_val = current_speed_str.replace("Mb/s", "").strip()
