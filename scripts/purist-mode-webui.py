@@ -96,6 +96,12 @@ WIRE_OVERHEAD_BYTES = 40
 # does not.
 TX_BYTES_OVERHEAD = 20
 
+ALSA_STATUS_PATH = "/proc/asound/card0/pcm0p/sub0/status"
+
+# The width to reckon PCM capacity in when nothing is playing: the widest
+# container Diretta offers, so an idle panel quotes the conservative ceiling.
+PCM_DEFAULT_SAMPLE_BYTES = 4
+
 # Payload rates are for stereo: DSD is 1 bit per channel, PCM a 32-bit container.
 DSD_TIERS = (
     ("DSD64", 0.7056),
@@ -454,17 +460,23 @@ LINK_PANEL_TEMPLATE = """
                 {% if link.info_cycle_ms %}{{ link.info_cycle_ms }} ms{% else %}&mdash;{% endif %}
             </dd>
         </div>
-        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest 32-bit stereo PCM rate that still fits in one transmission per cycle at this MTU and link speed.">
-            <dt class="text-xs uppercase tracking-wide text-gray-500">Max PCM</dt>
+        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest stereo PCM rate that still fits in one transmission per cycle at this MTU and link speed, for the container width in the heading. The link pays for the container rather than the word size, so a 16-bit stream reaches twice the rate a 32-bit one does. The width follows whatever is playing, and reverts to 32-bit when nothing is.">
+            <dt class="text-xs uppercase tracking-wide text-gray-500">Max PCM ({{ link.pcm_width }}-bit)</dt>
             <dd class="mt-1 text-lg font-semibold text-white">
                 {% if link.max_pcm %}{{ link.max_pcm }}{% else %}&mdash;{% endif %}
             </dd>
+            {% if link.playing_pcm %}
+            <dd class="mt-0.5 text-xs text-gray-400">playing {{ link.playing_pcm }}</dd>
+            {% endif %}
         </div>
-        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest DSD rate that still fits in one transmission per cycle at this MTU and link speed.">
-            <dt class="text-xs uppercase tracking-wide text-gray-500">Max DSD</dt>
+        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest DSD rate that still fits in one transmission per cycle at this MTU and link speed. Native because DoP carries DSD inside PCM frames, so a DoP stream is counted against Max PCM instead and never appears here.">
+            <dt class="text-xs uppercase tracking-wide text-gray-500">Max DSD (Native)</dt>
             <dd class="mt-1 text-lg font-semibold text-white">
                 {% if link.max_dsd %}{{ link.max_dsd }}{% else %}&mdash;{% endif %}
             </dd>
+            {% if link.playing_dsd %}
+            <dd class="mt-0.5 text-xs text-gray-400">playing {{ link.playing_dsd }}</dd>
+            {% endif %}
         </div>
     </dl>
 
@@ -693,7 +705,7 @@ def ping_target(timeout=1, blocking=False, block_timeout=15):
 
 def is_music_playing():
     """Checks if music is actively playing by inspecting /proc/asound/."""
-    status_file_path = "/proc/asound/card0/pcm0p/sub0/status"
+    status_file_path = ALSA_STATUS_PATH
     try:
         with open(status_file_path, "r", encoding="utf-8") as file_handle:
             status_content = file_handle.read()
@@ -713,6 +725,107 @@ def is_music_playing():
     except OSError as err:
         app.logger.error("OS Error checking playback status via /proc: %s", err)
         return False
+
+
+def _container_bits(format_name):
+    """Width of an ALSA format's sample container, from its name.
+
+    The first run of digits is the container width in every name that carries
+    one: S32_LE and DSD_U32_LE are 32, S24_3LE is 24 (packed into 3 bytes, but
+    still a 24-bit sample), S16_LE is 16. Names without digits, such as
+    FLOAT_LE, return None rather than a guess.
+    """
+    digits = ""
+    for char in format_name:
+        if char.isdigit():
+            digits += char
+        elif digits:
+            break
+    return int(digits) if digits else None
+
+
+def _container_bytes(format_name, bits):
+    """Bytes each sample occupies on the wire, which is not always bits / 8.
+
+    ALSA distinguishes a packed 24-bit sample (S24_3LE, three bytes) from one
+    sitting in a four-byte slot (S24_LE), and the link pays for the slot. This
+    device offers only the packed form, but the distinction is the whole reason
+    a 24-bit stream can cost either three bytes or four.
+    """
+    if "_3" in format_name:
+        return 3
+    if bits <= 8:
+        return 1
+    return 2 if bits <= 16 else 4
+
+
+def get_playing_format():
+    """Names the format ALSA is currently handing the Diretta bridge.
+
+    Read from hw_params, the sibling of the status file is_music_playing()
+    uses. It only holds values while the device is open, so a return of None
+    also means nothing is playing.
+
+    This reports the container, which is what the link actually carries, and
+    deliberately not the word size the player thinks it is sending. The two
+    differ: Roon set to 24 bits opens an S32_LE container and pads each sample
+    into it, and Diretta transmits that container verbatim rather than repacking
+    it. Measured on this link at 96 kHz, Roon logged `pcm 96000/24/2` while the
+    daemon sent `size=1384` -- 173 samples x 2 channels x 4 bytes. Three bytes
+    per sample would have been 1038. The Target agrees, logging `set PCM 32`.
+
+    So 24-bit and 32-bit at the same rate are the same stream to this panel,
+    because they are the same stream on the wire. Reporting the player's word
+    size here would describe what the Host received, not what it sent, on a
+    panel whose subject is the point-to-point link. It would also tie a link
+    reading to one player's log, when AudioLinux feeds this bridge from several.
+
+    Returns:
+        dict: {"label", "is_dsd", "bits", "sample_bytes"}, where label reads
+            like "DSD64" or "44.1 kHz". The width is reported separately
+            because it belongs to the ceiling rather than to the stream: it
+            names which Max PCM figure applies. None when the device is closed
+            or the format is not one we can name.
+    """
+    hw_params_path = "/proc/asound/card0/pcm0p/sub0/hw_params"
+    try:
+        with open(hw_params_path, "r", encoding="utf-8") as file_handle:
+            # A closed device reports a single word rather than key: value
+            # lines, which leaves nothing to unpack and reads as "not playing".
+            params = {}
+            for line in file_handle:
+                key, separator, value = line.partition(":")
+                if separator:
+                    params[key.strip()] = value.strip()
+    except OSError:
+        return None
+
+    format_name = params.get("format", "")
+    bits = _container_bits(format_name)
+    try:
+        rate = int(params.get("rate", "").split()[0])
+    except (ValueError, IndexError):
+        return None
+    if not bits or rate <= 0:
+        return None
+
+    if not format_name.startswith("DSD"):
+        # Prefer the word size Roon reports over the container it was padded
+        # into, but only where Roon's line agrees with the device about what is
+        # playing. A stale or rotated-away line then costs nothing: the label
+        # falls back to the container, which is what it said before.
+        return {"label": f"{rate / 1000:g} kHz", "is_dsd": False,
+                "bits": bits, "sample_bytes": _container_bytes(format_name, bits)}
+
+    # DSD arrives packed into PCM-shaped words, so its real bit rate is the
+    # container rate times the container width: DSD_U32_LE at 88200 is
+    # 2.8224 Mbit/s, which is DSD64. Naming the multiple means dividing by
+    # whichever base family the rate belongs to.
+    base = 44100 if rate % 44100 == 0 else 48000 if rate % 48000 == 0 else None
+    if not base:
+        return None
+    return {"label": f"DSD{round(rate * bits / base)}", "is_dsd": True,
+            "bits": bits, "sample_bytes": _container_bytes(format_name, bits)}
 
 
 def run_remote_command(command, attempts=SSH_RETRY_ATTEMPTS):
@@ -921,9 +1034,15 @@ def get_host_link_up(interface=LINK_INTERFACE):
         return False
 
 
-def _pcm_payload_rate(rate_khz):
-    """Stereo 32-bit PCM payload rate in bytes per microsecond."""
-    return rate_khz * 1000.0 * 4.0 * 2.0 / 1_000_000.0
+def _pcm_payload_rate(rate_khz, sample_bytes=PCM_DEFAULT_SAMPLE_BYTES):
+    """Stereo PCM payload rate in bytes per microsecond.
+
+    The link pays for the container, not the word size, so a 16-bit stream
+    costs half what a 32-bit one does at the same rate and a packed 24-bit
+    stream costs three quarters. That is a factor of two across the widths
+    Diretta offers, which is why this is a parameter rather than a constant.
+    """
+    return rate_khz * 1000.0 * float(sample_bytes) * 2.0 / 1_000_000.0
 
 
 def _read_tx_counters():
@@ -1117,8 +1236,13 @@ def get_payload_budget(mtu, cycle_time, speed_mbps):
     return budget
 
 
-def get_max_formats(budget):
-    """Returns the highest DSD tier and PCM sample rate that fit within a budget."""
+def get_max_formats(budget, sample_bytes=PCM_DEFAULT_SAMPLE_BYTES):
+    """Returns the highest DSD tier and PCM sample rate that fit within a budget.
+
+    `sample_bytes` is the width of the PCM container currently on the wire, so
+    the PCM ceiling describes the stream actually playing rather than a 32-bit
+    one that may not be.
+    """
     if budget is None or budget <= 0:
         return None, None
 
@@ -1133,7 +1257,7 @@ def get_max_formats(budget):
 
     max_pcm = None
     for rate_khz in PCM_RATES_KHZ:
-        if _pcm_payload_rate(rate_khz) <= budget + tolerance:
+        if _pcm_payload_rate(rate_khz, sample_bytes) <= budget + tolerance:
             max_pcm = f"{rate_khz:g} kHz"
 
     return max_dsd, max_pcm
@@ -1172,11 +1296,22 @@ def get_link_info():
     target_mtu = TARGET_LINK_CACHE["mtu"]
     link_up = get_host_link_up()
 
+    # The PCM ceiling is quoted for the container actually on the wire, since a
+    # 16-bit stream costs half what a 32-bit one does and would otherwise be
+    # measured against a limit that does not apply to it. With nothing playing
+    # there is no container to speak of, so the widest one stands as the
+    # conservative default.
+    playing = get_playing_format()
+    pcm_playing = playing if playing and not playing["is_dsd"] else None
+    sample_bytes = pcm_playing["sample_bytes"] if pcm_playing else PCM_DEFAULT_SAMPLE_BYTES
+
     # Without a negotiated speed the wire limit cannot be applied, and the frame
     # limit alone would overstate the link: it would claim DSD256 on a 10 Mbps
     # Super Purist connection. Report nothing rather than something unfounded.
     if link_up and speed:
-        max_dsd, max_pcm = get_max_formats(get_payload_budget(mtu, cycle_time, speed))
+        max_dsd, max_pcm = get_max_formats(
+            get_payload_budget(mtu, cycle_time, speed), sample_bytes
+        )
     else:
         max_dsd, max_pcm = None, None
 
@@ -1203,6 +1338,14 @@ def get_link_info():
         "info_cycle_ms": _us_to_ms(info_cycle),
         "max_dsd": max_dsd,
         "max_pcm": max_pcm,
+        # Filed under whichever ceiling it belongs beneath, so the reader sees
+        # what is playing against the limit that applies to it. Both are None
+        # while the bridge is closed, which is how the panel learns that
+        # nothing is playing. The width names the ceiling rather than the
+        # stream, so it sits in the heading instead of on this line.
+        "playing_pcm": pcm_playing["label"] if pcm_playing else None,
+        "playing_dsd": playing["label"] if playing and playing["is_dsd"] else None,
+        "pcm_width": sample_bytes * 8 if not pcm_playing else pcm_playing["bits"],
     }
 
 
