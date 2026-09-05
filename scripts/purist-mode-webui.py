@@ -67,18 +67,34 @@ STATUS_FAILURE_CACHE_TTL = 10.0
 # still correct for anything displayed to a person.
 
 # --- Link capacity model ---
+# Diretta ALSA runs raw L2 on ethertype 0xcb4b: no IP, no UDP, and a 2-byte
+# header of its own. Measured from two 3-minute captures and confirmed at five
+# payload sizes (464, 920, 1840, 2000 and 2664 bytes), every audio frame is
+# exactly payload + 16 on the wire, and payload + 20 as sysfs counts it.
+#
+# The same overhead therefore reads as three different numbers, and which one
+# is correct depends entirely on where the byte count came from:
+#   - 2 bytes against the MTU, which already excludes the Ethernet header.
+#   - 16 bytes in a capture, where tshark's frame.len omits the FCS.
+#   - 20 bytes in tx_bytes, which counts the Ethernet header and the FCS.
+# Subtracting the wrong one is a quiet 18-byte error, so the two constants below
+# are deliberately separate rather than one value used on both bases.
+#
 # The whole design rests on one L2 transmission per cycle, so the usable payload
 # rate is whichever of two limits binds first:
-#   1. Frame limit: a cycle's payload must fit in a single packet, (MTU - 48)
-#      bytes, where 48 = 20 IP + 8 UDP + 20 Diretta.
+#   1. Frame limit: a cycle's payload must fit in a single packet, (MTU - 2).
 #   2. Wire limit: that packet plus its Ethernet framing must clear the link
-#      inside one cycle, where 86 = those 48 header bytes + 14 Ethernet header
-#      + 4 FCS + 20 preamble, SFD and interframe gap.
+#      inside one cycle, where 40 = 2 Diretta + 14 Ethernet header + 4 FCS
+#      + 20 preamble, SFD and interframe gap.
 # At every jumbo tier the frame limit binds. The wire limit only takes over on
 # the 10 Mbps Super Purist link, which is why that mode caps at DSD64 and
 # 32-bit/96 kHz no matter how large the MTU is.
-FRAME_HEADER_BYTES = 48
-WIRE_OVERHEAD_BYTES = 86
+FRAME_HEADER_BYTES = 2
+WIRE_OVERHEAD_BYTES = 40
+# What a packet costs in tx_bytes beyond its payload: the 2-byte Diretta header
+# plus the 14-byte Ethernet header and 4-byte FCS that sysfs counts and the MTU
+# does not.
+TX_BYTES_OVERHEAD = 20
 
 # Payload rates are for stereo: DSD is 1 bit per channel, PCM a 32-bit container.
 DSD_TIERS = (
@@ -985,7 +1001,9 @@ def _cycle_from_rate(pps, bytes_per_packet, cycle_time, mtu):
     # Diretta splits a cycle's payload across the fewest frames that fit the
     # MTU, so a frame no larger than half the usable payload cannot have been
     # split: one frame per cycle, and the cycle is just the packet interval.
-    payload = bytes_per_packet - FRAME_HEADER_BYTES
+    # bytes_per_packet comes from tx_bytes and usable from the MTU, so the two
+    # need different overheads subtracted to be comparable at all.
+    payload = bytes_per_packet - TX_BYTES_OVERHEAD
     usable = mtu - FRAME_HEADER_BYTES if mtu else 0
     if usable > 0 and payload * 2 <= usable:
         elected = 1e6 / pps
@@ -1001,6 +1019,11 @@ def _cycle_from_rate(pps, bytes_per_packet, cycle_time, mtu):
 
     frames = pps * cycle_time / 1e6
     nearest = round(frames)
+    # Reporting no divergence here is not an assumption, it is the same 5%
+    # threshold _diverges() applies, expressed in frames: at N frames per cycle
+    # a ratio within 0.05 of N is a cycle within 5%/N of the configured one. So
+    # a stream that lands inside this tolerance would pass _diverges() too. Real
+    # 32-bit 768 kHz measures 2.998 against 3 and reports honestly.
     if nearest >= 1 and abs(frames - nearest) <= 0.05:
         return {"us": nearest * 1e6 / pps, "frames": nearest, "diverges": False}
     return {"us": None, "frames": None, "diverges": True}
