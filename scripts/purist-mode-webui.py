@@ -864,6 +864,11 @@ def run_remote_command(command, attempts=SSH_RETRY_ATTEMPTS):
         )
         return None
 
+    # Status polls and a user's transition run on separate threads, so their
+    # log lines interleave. Tagging every line with the remote script's name
+    # keeps a command and its output readable as a pair.
+    label = command.rsplit("/", 1)[-1].split()[0] if command.strip() else command
+
     ssh_command = [
         "/usr/bin/ssh",
         "-i", SSH_KEY_PATH,
@@ -876,7 +881,9 @@ def run_remote_command(command, attempts=SSH_RETRY_ATTEMPTS):
 
     for attempt in range(1, attempts + 1):
         try:
-            app.logger.info("Running remote command: %s", " ".join(ssh_command))
+            app.logger.info(
+                "[%s] Running remote command: %s", label, " ".join(ssh_command)
+            )
             result = subprocess.run(
                 ssh_command,
                 capture_output=True,
@@ -885,7 +892,7 @@ def run_remote_command(command, attempts=SSH_RETRY_ATTEMPTS):
                 timeout=15
             )
             output = result.stdout.strip()
-            app.logger.info("Remote command successful. Output: %s", output)
+            app.logger.info("[%s] Remote command successful. Output: %s", label, output)
             return output
         except subprocess.CalledProcessError as err:
             if err.returncode != 255:
@@ -1439,6 +1446,20 @@ def is_app8_enabled():
         return False
 
 
+def core_isolation_configured():
+    """Reports whether Appendix 6 has reserved cores 2-3 for audio.
+
+    Without it, a wide affinity is the expected state rather than a fault, and
+    saying so at WARNING on every status poll buries the real regression: the
+    isolation is configured but the running process is not on those cores.
+    """
+    try:
+        with open("/opt/configuration/isolated.conf", "r", encoding="utf-8") as file_handle:
+            return 'ISOLATED1="2,3"' in file_handle.read()
+    except OSError:
+        return False
+
+
 def is_diretta_isolated():
     """
     Checks if the running diretta_alsa service is bound to isolated audio cores (2 or 3)
@@ -1472,10 +1493,16 @@ def is_diretta_isolated():
                 )
                 return True
 
-            app.logger.warning(
-                "Diretta running on non-isolated cores. Actual affinity: %s",
-                affinity_list
-            )
+            if core_isolation_configured():
+                app.logger.warning(
+                    "Diretta running on non-isolated cores though Appendix 6 "
+                    "reserves 2-3. Actual affinity: %s", affinity_list
+                )
+            else:
+                app.logger.info(
+                    "Core isolation not configured (Appendix 6 not applied); "
+                    "using the baseline profile. Affinity: %s", affinity_list
+                )
 
     except OSError as err:
         app.logger.error("OS Error checking real-time taskset isolation: %s", err)
