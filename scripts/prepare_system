@@ -212,8 +212,28 @@ if [ -d "/opt/diretta-alsa-target" ]; then
 
     ISO_CONF="/opt/configuration/isolated.conf"
     if [ -f "$ISO_CONF" ]; then
-        update_config_key "$ISO_CONF" "IRQ1" '"134 129 104"'
-        update_config_key "$ISO_CONF" "DEVICES1" '"end0 xhci-hcd:usb1 xhci-hcd:usb3"'
+        # Both USB 2.0 ports are listed because a customer may connect their
+        # DAC to either one. DEVICES1 is the real input: AudioLinux's
+        # isolated_app.sh resolves these names against /proc/interrupts at
+        # every boot and rewrites IRQ1 from what it finds.
+        ISO_DEVICES="end0 xhci-hcd:usb1 xhci-hcd:usb3"
+        update_config_key "$ISO_CONF" "DEVICES1" "\"${ISO_DEVICES}\""
+
+        # IRQ numbers are assigned by the kernel and move between releases
+        # (end0 was 104 on one kernel and 103 on the next), so resolve them
+        # here instead of baking in numbers that were true on one board.
+        ISO_IRQS=""
+        for ISO_DEV in $ISO_DEVICES; do
+            ISO_FOUND=$(grep "$ISO_DEV" /proc/interrupts | awk '{print $1}' | tr -d ':')
+            [ -n "$ISO_FOUND" ] && ISO_IRQS="${ISO_IRQS} ${ISO_FOUND}"
+        done
+        ISO_IRQS=$(echo "$ISO_IRQS" | xargs)
+
+        if [ -n "$ISO_IRQS" ]; then
+            update_config_key "$ISO_CONF" "IRQ1" "\"${ISO_IRQS}\""
+        else
+            echo "   - ⚠️  Warning: No IRQs matched '${ISO_DEVICES}'; leaving IRQ1 as is."
+        fi
     else
         echo "   - ⚠️  Warning: Isolated config file not found at $ISO_CONF"
     fi
