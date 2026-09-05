@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.25.0
-# (Re-run summary + Purist Mode aware skips + /run license cache checks)
+# Diretta Target QA Check Script v1.26.0
+# (USB IRQs discovered by bus name + re-run summary + Purist Mode aware skips)
 #
 
 # --- Colors and Formatting ---
@@ -194,7 +194,26 @@ run_appendix7_checks() {
     fi
 
     # 2. Static Config Check (RPi5 Only)
-    check "USB IRQs are pinned in config (IRQ1)" "grep -E 'IRQ1=\".*(129|134).*\"' /opt/configuration/isolated.conf"
+    # xhci IRQ numbers are not stable across boards or kernels: one Target
+    # reports 133 for usb3 where another reported 134, so matching literal
+    # numbers called a correct config broken. Discover them by bus name, the
+    # way usb-isolation.sh does when it writes IRQ1.
+    USB_IRQS=$(awk -F: '/xhci-hcd:usb[0-9]/ {gsub(/ /, "", $1); print $1}' /proc/interrupts)
+    CONFIGURED_IRQS=$(awk -F'"' '/^IRQ1=/ {print $2}' /opt/configuration/isolated.conf)
+
+    if [ -z "$USB_IRQS" ]; then
+        echo -e "  ${C_YELLOW}* Skipping check: no xhci USB interrupts present.${C_RESET}"
+        return
+    fi
+
+    PINNED_IRQS=""
+    for IRQ in $USB_IRQS; do
+        for CONFIGURED in $CONFIGURED_IRQS; do
+            [ "$IRQ" = "$CONFIGURED" ] && PINNED_IRQS="$PINNED_IRQS $IRQ"
+        done
+    done
+
+    check "USB IRQs are pinned in config (IRQ1)" "[ -n '$PINNED_IRQS' ]"
     check "USB Device identified in config (xhci)" "grep -E 'DEVICES1=\".*xhci[-_]hcd.*\"' /opt/configuration/isolated.conf"
 
     # 3. DAC Presence Check (Gate #1)
@@ -206,7 +225,7 @@ run_appendix7_checks() {
     # 4. Runtime Kernel Check (Gate #2: Traffic Threshold)
     USB_IRQS_FOUND=0
     ALL_AFFINITY_OK=true
-    for IRQ in 129 134; do
+    for IRQ in $USB_IRQS; do
         if grep -q "^[[:space:]]*$IRQ:" /proc/interrupts; then
             # Get total interrupts for this IRQ across all CPUs
             HIT_COUNT=$(grep "^[[:space:]]*$IRQ:" /proc/interrupts | awk '{sum=0; for(i=2;i<=5;i++) sum+=$i; print sum}')
@@ -230,7 +249,7 @@ run_appendix7_checks() {
         check "Runtime: Active USB IRQs are pinned to cores 2-3 (affinity 'c')" "$ALL_AFFINITY_OK"
         if [ "$ALL_AFFINITY_OK" = false ]; then
              # Print details AFTER the check to keep the flow clean
-             for IRQ in 129 134; do
+             for IRQ in $USB_IRQS; do
                  if [ -f "/proc/irq/$IRQ/smp_affinity" ]; then
                      CURRENT_AFFINITY=$(cat "/proc/irq/$IRQ/smp_affinity")
                      if [[ ! "$CURRENT_AFFINITY" =~ c$ ]]; then
