@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-#         Remote System Preparation & Shutdown Script (v7 - with Cleanup)
+#     Remote System Preparation & Shutdown Script (v8 - Medium Jumbo Frames)
 #
 # Meant to be run with a command that first clears the calling user's history:
 # history -c; rm -f ~/.bash_history; export HISTSIZE=0; curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/prepare_system | sudo bash
@@ -194,8 +194,12 @@ if [ -d "/opt/diretta-alsa-target" ]; then
     echo "   - Target system detected."
     TARGET_CONF="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
     if [ -f "$TARGET_CONF" ]; then
-        update_config_key "$TARGET_CONF" "ExtEtherMTU" "2046"
-        update_config_key "$TARGET_CONF" "EtherMTU" "2032"
+        # Medium Jumbo (Appendix 9). 3824 is the largest MTU the Raspberry Pi
+        # 4's bcmgenet driver can actually receive: its 3840-byte RX buffer
+        # less the 2-byte pad and the 14-byte Ethernet header. ExtEtherMTU is
+        # the same figure plus that header.
+        update_config_key "$TARGET_CONF" "ExtEtherMTU" "3838"
+        update_config_key "$TARGET_CONF" "EtherMTU" "3824"
         update_config_key "$TARGET_CONF" "TrgetName" "AnCaolas Link"
         update_config_key "$TARGET_CONF" "VolumeCtl" "disable"
         update_config_key "$TARGET_CONF" "AlsaLatency" "30"
@@ -204,7 +208,7 @@ if [ -d "/opt/diretta-alsa-target" ]; then
     else
         echo "   - ⚠️  Warning: Target config file not found at $TARGET_CONF"
     fi
-    update_network_mtu "2032"
+    update_network_mtu "3824"
 
     ISO_CONF="/opt/configuration/isolated.conf"
     if [ -f "$ISO_CONF" ]; then
@@ -220,12 +224,18 @@ if [ -d "/opt/diretta-alsa" ]; then
     echo "   - Host system detected."
     HOST_CONF="/opt/diretta-alsa/setting.inf"
     if [ -f "$HOST_CONF" ]; then
-        update_config_key "$HOST_CONF" "InfoCycle" "70000"
-        update_config_key "$HOST_CONF" "CycleTime" "700"
+        # CycleTime only reaches the wire when the Host uses its own profile.
+        # AudioLinux ships TargetProfileLimitTime=200, and at any non-zero
+        # value Diretta's automatic target profile elects the cycle instead,
+        # silently ignoring the values below.
+        update_config_key "$HOST_CONF" "TargetProfileLimitTime" "0"
+        update_config_key "$HOST_CONF" "FlexCycle" "enable"
+        update_config_key "$HOST_CONF" "InfoCycle" "130000"
+        update_config_key "$HOST_CONF" "CycleTime" "1300"
     else
         echo "   - ⚠️  Warning: Host config file not found at $HOST_CONF"
     fi
-    update_network_mtu "2032"
+    update_network_mtu "3824"
 fi
 
 echo "------------------------------------------------"
