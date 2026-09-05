@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.24.0
-# (Diretta license cache moved to /run; adds cache-path consistency checks)
+# Diretta Target QA Check Script v1.25.0
+# (Re-run summary + Purist Mode aware skips + /run license cache checks)
 #
 
 # --- Colors and Formatting ---
@@ -13,14 +13,40 @@ C_BLUE=$'\033[0;34m'
 C_BOLD=$'\033[1m'
 
 # --- State Variables ---
+# Every check belongs to a section of the guide, and every section is safe to
+# re-run from the top. header() records which section we are in so that a
+# failure can be traced back to the one thing the user has to re-run.
+CURRENT_SECTION=""
+FAILED_SECTIONS=()
+
+record_failure() {
+    local where=$1
+    [ -z "$where" ] && return
+    local seen
+    for seen in "${FAILED_SECTIONS[@]}"; do
+        [ "$seen" == "$where" ] && return
+    done
+    FAILED_SECTIONS+=("$where")
+}
+
+# A check that cannot be evaluated is not a failure. check_hash returns this
+# code when the guide is unreachable, which is normal on a Purist Mode Target
+# where DNS is off by design, and says nothing about whether the file is stale.
+CHECK_SKIP_CODE=97
 
 # --- Helper Functions ---
 check() {
+    local rc
     printf "  ${C_BLUE}*${C_RESET} %-68s" "$1"
-    if eval "$2" &>/dev/null; then
+    eval "$2" &>/dev/null
+    rc=$?
+    if [ $rc -eq 0 ]; then
         printf '[%sPASS%s]\n' "$C_GREEN" "$C_RESET"
+    elif [ $rc -eq $CHECK_SKIP_CODE ]; then
+        printf '[%sSKIP%s]\n' "$C_YELLOW" "$C_RESET"
     else
         printf '[%sFAIL%s]\n' "$C_RED" "$C_RESET"
+        record_failure "$CURRENT_SECTION"
     fi
 }
 check_status() {
@@ -31,14 +57,44 @@ check_status() {
         printf '[%s%s%s]\n' "$C_YELLOW" "$4" "$C_RESET"
     fi
 }
-header() { echo -e "\n${C_BOLD}${C_YELLOW}--- $1: $2 ---${C_RESET}"; }
+header() {
+    CURRENT_SECTION="$1: ${2#Optional: }"
+    echo -e "\n${C_BOLD}${C_YELLOW}--- $1: $2 ---${C_RESET}"
+}
+print_rerun_summary() {
+    if [ ${#FAILED_SECTIONS[@]} -eq 0 ]; then
+        echo -e "\n${C_GREEN}No failures. Nothing to re-run.${C_RESET}"
+        return
+    fi
+    echo -e "\n${C_BOLD}${C_YELLOW}--- What to Re-run ---${C_RESET}"
+    echo -e "  Each section below is safe to re-run from the top, and doing so"
+    echo -e "  fixes the failures reported above it. Re-run these in order, then"
+    echo -e "  run this QA check again:"
+    local where
+    for where in "${FAILED_SECTIONS[@]}"; do
+        echo -e "    ${C_BLUE}*${C_RESET} ${C_BOLD}${where}${C_RESET}"
+    done
+}
 check_optional_section() {
     if eval "$1" &>/dev/null; then eval "$2"; else echo -e "\n${C_BOLD}${C_YELLOW}--- Skipping QA for $3 (Not Detected) ---\033[0m"; fi
 }
 check_hash() {
     local file=$1
     local url=$2
-    [ -f "$file" ] && [[ $(md5sum "$file" | awk '{print $1}') == $(curl -sL "$url" | md5sum | awk '{print $1}') ]]
+    local tmp rc
+    [ -f "$file" ] || return 1
+    tmp=$(mktemp)
+    # A failed download says the guide is unreachable, not that the file is
+    # stale, so report it as a skip instead of sending the user to re-run a
+    # section that is already correct.
+    if ! curl -fsL --max-time 15 -o "$tmp" "$url" || [ ! -s "$tmp" ]; then
+        rm -f "$tmp"
+        return $CHECK_SKIP_CODE
+    fi
+    rc=1
+    [[ $(md5sum "$file" | awk '{print $1}') == $(md5sum "$tmp" | awk '{print $1}') ]] && rc=0
+    rm -f "$tmp"
+    return $rc
 }
 is_kernel_6_18_or_newer() {
     local kver
@@ -231,6 +287,16 @@ run_appendix9_checks() {
 if [ "$EUID" -ne 0 ]; then echo -e "${C_RED}Please run this script with sudo or as root.${C_RESET}"; exit 1; fi
 echo -e "${C_BOLD}Starting Diretta Target Configuration Quality Assurance Check...${C_RESET}"
 
+# Purist Mode drops nsswitch.conf to "files myhostname" and stops chronyd, so
+# DNS-dependent checks cannot run and chronyd is inactive on purpose. Report
+# both as skips rather than sending the user off to re-run a working section.
+PURIST_MODE_ACTIVE=0
+if grep -qE '^hosts:[[:space:]]+files[[:space:]]+myhostname[[:space:]]*$' /etc/nsswitch.conf; then
+    PURIST_MODE_ACTIVE=1
+    echo -e "${C_YELLOW}Purist Mode is active: DNS and chronyd are off by design.${C_RESET}"
+    echo -e "${C_YELLOW}Checks that need the network are skipped, not failed.${C_RESET}"
+fi
+
 header "Section 3" "Core System Configuration"
 check "Hostname is 'diretta-target'" "[[ \$(hostname) == 'diretta-target' ]]"
 check "/etc/machine-id is not empty" "[ -s /etc/machine-id ]"
@@ -238,7 +304,11 @@ check "/etc/machine-id is not empty" "[ -s /etc/machine-id ]"
 header "Section 4" "System Updates & Time"
 check "'chrony' package is installed" "pacman -Q chrony"
 check "'chronyd' service is enabled" "systemctl is-enabled chronyd.service"
-check "'chronyd' service is active" "systemctl is-active chronyd.service"
+if [ "$PURIST_MODE_ACTIVE" -eq 1 ]; then
+    check "'chronyd' service is active" "(exit $CHECK_SKIP_CODE)"
+else
+    check "'chronyd' service is active" "systemctl is-active chronyd.service"
+fi
 check "Timezone is configured" "[ -e /etc/localtime ] && [[ \$(readlink /etc/localtime) == ../usr/share/zoneinfo/* ]]"
 check "'dnsutils' package is installed (for menu updates)" "pacman -Q dnsutils"
 
@@ -311,6 +381,8 @@ check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.
 check_optional_section "grep -q 'DEVICES1=.*xhci-hcd' /opt/configuration/isolated.conf" "run_appendix7_checks" "Appendix 7 (USB Isolation)"
 check_optional_section "[ -f /etc/diretta-100m ]" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 check_optional_section "grep -q '^ExtEtherMTU=' /opt/diretta-alsa-target/diretta_app_target_setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
+
+print_rerun_summary
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}"
 

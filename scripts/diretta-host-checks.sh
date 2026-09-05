@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.25.0
-# (IR remote bound to Roon Bridge + hardware gating + exact awk PID parsing)
+# Diretta Host QA Check Script v1.26.0
+# (Re-run summary + skip unreachable hash checks + IR remote follows Roon Bridge)
 #
 
 # --- Colors and Formatting ---
@@ -13,24 +13,80 @@ C_BLUE=$'\033[0;34m'
 C_BOLD=$'\033[1m'
 
 # --- State Variables ---
+# Every check belongs to a section of the guide, and every section is safe to
+# re-run from the top. header() records which section we are in so that a
+# failure can be traced back to the one thing the user has to re-run.
+CURRENT_SECTION=""
+FAILED_SECTIONS=()
+
+record_failure() {
+    local where=$1
+    [ -z "$where" ] && return
+    local seen
+    for seen in "${FAILED_SECTIONS[@]}"; do
+        [ "$seen" == "$where" ] && return
+    done
+    FAILED_SECTIONS+=("$where")
+}
+
+# A check that cannot be evaluated is not a failure. check_hash returns this
+# code when the guide is unreachable, which is normal on a Purist Mode Target
+# where DNS is off by design, and says nothing about whether the file is stale.
+CHECK_SKIP_CODE=97
 
 # --- Helper Functions ---
 check() {
+    local rc
     printf "  ${C_BLUE}*${C_RESET} %-68s" "$1"
-    if eval "$2" &>/dev/null; then
+    eval "$2" &>/dev/null
+    rc=$?
+    if [ $rc -eq 0 ]; then
         printf '[%sPASS%s]\n' "$C_GREEN" "$C_RESET"
+    elif [ $rc -eq $CHECK_SKIP_CODE ]; then
+        printf '[%sSKIP%s]\n' "$C_YELLOW" "$C_RESET"
     else
         printf '[%sFAIL%s]\n' "$C_RED" "$C_RESET"
+        record_failure "$CURRENT_SECTION"
     fi
 }
-header() { echo -e "\n${C_BOLD}${C_YELLOW}--- $1: $2 ---${C_RESET}"; }
+header() {
+    CURRENT_SECTION="$1: ${2#Optional: }"
+    echo -e "\n${C_BOLD}${C_YELLOW}--- $1: $2 ---${C_RESET}"
+}
+print_rerun_summary() {
+    if [ ${#FAILED_SECTIONS[@]} -eq 0 ]; then
+        echo -e "\n${C_GREEN}No failures. Nothing to re-run.${C_RESET}"
+        return
+    fi
+    echo -e "\n${C_BOLD}${C_YELLOW}--- What to Re-run ---${C_RESET}"
+    echo -e "  Each section below is safe to re-run from the top, and doing so"
+    echo -e "  fixes the failures reported above it. Re-run these in order, then"
+    echo -e "  run this QA check again:"
+    local where
+    for where in "${FAILED_SECTIONS[@]}"; do
+        echo -e "    ${C_BLUE}*${C_RESET} ${C_BOLD}${where}${C_RESET}"
+    done
+}
 check_optional_section() {
     if eval "$1" &>/dev/null; then eval "$2"; else echo -e "\n${C_BOLD}${C_YELLOW}--- Skipping QA for $3 (Not Detected) ---\033[0m"; fi
 }
 check_hash() {
     local file=$1
     local url=$2
-    [ -f "$file" ] && [[ $(md5sum "$file" | awk '{print $1}') == $(curl -sL "$url" | md5sum | awk '{print $1}') ]]
+    local tmp rc
+    [ -f "$file" ] || return 1
+    tmp=$(mktemp)
+    # A failed download says the guide is unreachable, not that the file is
+    # stale, so report it as a skip instead of sending the user to re-run a
+    # section that is already correct.
+    if ! curl -fsL --max-time 15 -o "$tmp" "$url" || [ ! -s "$tmp" ]; then
+        rm -f "$tmp"
+        return $CHECK_SKIP_CODE
+    fi
+    rc=1
+    [[ $(md5sum "$file" | awk '{print $1}') == $(md5sum "$tmp" | awk '{print $1}') ]] && rc=0
+    rm -f "$tmp"
+    return $rc
 }
 is_kernel_6_18_or_newer() {
     local kver
@@ -377,6 +433,8 @@ check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.
 check_optional_section "grep -q '^CpuSend=[0-9]' /opt/diretta-alsa/setting.inf 2>/dev/null" "run_appendix7_checks" "Appendix 7 (Diretta Tuning)"
 check_optional_section "systemctl is-enabled limit-speed-100m.service" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 check_optional_section "grep -q '^FlexCycle=enable' /opt/diretta-alsa/setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
+
+print_rerun_summary
 
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}"
 
