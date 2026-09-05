@@ -459,7 +459,7 @@ LINK_PANEL_TEMPLATE = """
 
 • Configured: the CycleTime in setting.inf.
 • Elected: measured from the link while music plays.
-• They differ whenever TargetProfileLimitTime is not 0, and by about 1% in the Flex cycle modes.">
+• They differ if TargetProfileLimitTime is not 0, or by ~1% in Flex modes.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Cycle Time</dt>
             <dd class="mt-1 text-lg font-semibold {{ 'text-red-400' if link.cycle_mismatch else 'text-white' }}">
                 {% if link.cycle_time %}{{ link.cycle_time }} &micro;s{% else %}&mdash;{% endif %}
@@ -478,12 +478,12 @@ LINK_PANEL_TEMPLATE = """
                 {% if link.info_cycle_ms %}{{ link.info_cycle_ms }} ms{% else %}&mdash;{% endif %}
             </dd>
         </div>
-        <div class="bg-gray-900/40 p-4 cursor-help" title="Highest stereo PCM rate that fits one transmission per cycle, at this MTU and link speed.
+        <div class="bg-gray-900/40 p-4 cursor-help" title="Highest stereo PCM rate that fits one transmission per cycle here.
 
-• Width in the heading follows what is playing, and reverts to 32-bit when nothing is.
-• The link pays for the container, not the word size: 16-bit reaches twice the rate of 32-bit.
-• Red playing line: the stream costs more than the link can carry, so it fragments across several transmissions per cycle or misses the wire.
-• Yellow playing line: no Diretta license yet, so this stream stops after six minutes. The trial allows PCM up to 48 kHz, nothing above it.">
+• Width follows what is playing; 32-bit when idle.
+• The link pays for the container, not the word size: 16-bit doubles the rate.
+• Red: costs more than the link can carry — it fragments or misses the wire.
+• Yellow: no license yet, so this stops after six minutes (trial allows 48 kHz).">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Max PCM ({{ link.pcm_width }}-bit)</dt>
             <dd class="mt-1 text-lg font-semibold text-white">
                 {% if link.max_pcm %}{{ link.max_pcm }}{% else %}&mdash;{% endif %}
@@ -492,10 +492,11 @@ LINK_PANEL_TEMPLATE = """
             <dd class="mt-0.5 text-xs {% if link.playing_over_budget %}text-red-400{% elif link.playing_trial_limited %}text-yellow-400{% else %}text-gray-400{% endif %}">playing {{ link.playing_pcm }}</dd>
             {% endif %}
         </div>
-        <div class="bg-gray-900/40 p-4 cursor-help" title="Highest DSD rate that fits one transmission per cycle, at this MTU and link speed.
+        <div class="bg-gray-900/40 p-4 cursor-help" title="Highest DSD rate that fits one transmission per cycle here.
 
-• Native only: DoP carries DSD inside PCM frames, so a DoP stream counts against Max PCM and never appears here.
-• Yellow playing line: no Diretta license yet, so this stream stops after six minutes. Every DSD rate is above the trial's 48 kHz ceiling.">
+• Native only: DoP counts against Max PCM and never appears here.
+• Yellow: no license yet, so this stops after six minutes.
+• Every DSD rate is above the trial's 48 kHz ceiling.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Max DSD (Native)</dt>
             <dd class="mt-1 text-lg font-semibold text-white">
                 {% if link.max_dsd %}{{ link.max_dsd }}{% else %}&mdash;{% endif %}
