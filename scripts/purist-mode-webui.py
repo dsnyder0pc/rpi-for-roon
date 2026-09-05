@@ -122,13 +122,19 @@ STATUS_CACHE = {"data": None, "timestamp": 0.0, "valid": False}
 # valid. Caching it lets the link panel refresh without any extra SSH traffic.
 TARGET_LINK_CACHE = {"mtu": None}
 
-# Successive link-panel renders bracket the transmit-counter sampling interval,
-# so the elected cycle costs two file reads and never sleeps.
-LINK_TX_CACHE = {"t": None, "packets": None, "bytes": None, "pps": None}
-TX_SAMPLE_MIN_SPAN = 2.0    # a shorter bracket gives a noisy packet rate
-TX_SAMPLE_MAX_SPAN = 120.0  # a longer one may span a stop or a format change
+# The elected cycle is measured inside the render that displays it, from two
+# short transmit-counter brackets taken back to back. Nothing is sampled in the
+# background: with no browser open the Host does no work at all for this.
+ELECTED_CYCLE_CACHE = {"value": None, "t": float("-inf")}
+TX_SAMPLE_WINDOW = 0.15     # bracket for one packet-rate reading, in seconds
 TX_IDLE_PPS = 20.0          # below this the link is not carrying a stream
-TX_RATE_STABLE = 0.10       # two windows must agree this closely to be trusted
+TX_RATE_STABLE = 0.10       # the two halves must agree this closely
+# A stream holds one cycle for as long as it runs, so a reading this close to
+# the last one is the same cycle measured again, not the link changing.
+ELECTED_CYCLE_HYSTERESIS = 0.01
+# Tab focus and visibility both trigger a refresh, so renders can arrive in a
+# burst. One measurement serves the whole burst.
+ELECTED_CYCLE_MEMO = 5.0
 STATUS_CACHE_LOCK = threading.Lock()
 STATUS_FETCH_LOCK = threading.Lock()
 
@@ -917,54 +923,69 @@ def _read_tx_counters():
         return None
 
 
-def get_elected_cycle(cycle_time, mtu):
-    """Derives the cycle Diretta actually transmits on, from the link counters.
+def _counter_rate(before, after, span):
+    """Packets per second between two counter reads, or None if unusable."""
+    if before is None or after is None or span <= 0:
+        return None
+    packets = after[0] - before[0]
+    return packets / span if packets > 0 else None
 
-    `CycleTime` in setting.inf is what the Host asks for, not necessarily what
-    it gets. A non-zero TargetProfileLimitTime hands the choice to Diretta's
-    automatic target profile, and even at 0 the Flex modes land a little above
-    the request. The daemon states its choice at stream start, but Appendix 8
-    leaves Debug disabled, so on a finished build the wire is the only source.
+
+def _measure_packet_rate():
+    """Brackets two contiguous windows and returns (packets/s, bytes/packet).
+
+    Three counter reads make two halves and one whole. The halves are compared
+    against each other to catch a stream starting or stopping mid-measurement,
+    but the rate itself is taken across the full span: a packet rate is a count
+    of whole packets, and the one that may fall either side of an edge carries
+    half as much weight over twice the span. Measuring the halves separately
+    and keeping one would throw that accuracy away.
+
+    Each span is measured rather than assumed, so however the sleeps are
+    scheduled the rate stays exact to within the time it takes to read two
+    sysfs files. Returns None while the link is carrying no stream.
+    """
+    first = _read_tx_counters()
+    start = time.monotonic()
+    if first is None:
+        return None
+
+    # A quiet link is settled by the first half, so silence costs one window.
+    time.sleep(TX_SAMPLE_WINDOW)
+    middle = _read_tx_counters()
+    split = time.monotonic()
+    early = _counter_rate(first, middle, split - start)
+    if early is None or early < TX_IDLE_PPS:
+        return None
+
+    # A half straddling the start or stop of a stream counts packets for only
+    # part of its span, which reads as a far longer cycle than the truth and
+    # would raise a false mismatch. Trust the pair only where they agree.
+    time.sleep(TX_SAMPLE_WINDOW)
+    last = _read_tx_counters()
+    end = time.monotonic()
+    late = _counter_rate(middle, last, end - split)
+    if late is None or abs(late - early) > TX_RATE_STABLE * early:
+        return None
+
+    packets = last[0] - first[0]
+    return packets / (end - start), (last[1] - first[1]) / packets
+
+
+def _cycle_from_rate(pps, bytes_per_packet, cycle_time, mtu):
+    """Turns a measured packet rate into the cycle it implies.
 
     Returns:
-        dict: {"us", "frames", "diverges"} describing the measured cycle, or
-            None while nothing is playing. "us" is None when the stream is
-            fragmented and the frame count cannot be pinned down; "diverges" is
-            still meaningful there, because a packet rate that is not a whole
-            multiple of the configured cycle proves the two disagree.
+        dict: {"us", "frames", "diverges"} describing the cycle. "us" is None
+            when the stream is fragmented and the frame count cannot be pinned
+            down; "diverges" is still meaningful there, because a packet rate
+            that is not a whole multiple of the configured cycle proves the two
+            disagree. None when the shape of the stream says nothing at all.
     """
-    now = time.monotonic()
-    sample = _read_tx_counters()
-    previous = dict(LINK_TX_CACHE)
-    if sample is not None:
-        LINK_TX_CACHE.update(t=now, packets=sample[0], bytes=sample[1])
-    if sample is None or previous["t"] is None:
-        return None
-
-    span = now - previous["t"]
-    packets = sample[0] - previous["packets"]
-    # Short-circuits left to right, so the rate is only divided once the span
-    # is known to be sane.
-    # Short-circuits left to right, so the rate is only divided once the span
-    # is known to be sane.
-    live = (packets > 0
-            and TX_SAMPLE_MIN_SPAN <= span <= TX_SAMPLE_MAX_SPAN
-            and packets / span >= TX_IDLE_PPS)
-    pps = packets / span if live else None
-    LINK_TX_CACHE["pps"] = pps
-
-    # A window straddling the start or stop of a stream counts packets for only
-    # part of its span, which reads as a far longer cycle than the truth and
-    # would raise a false mismatch. Report nothing until two consecutive
-    # windows agree on the rate.
-    if pps is None or previous["pps"] is None \
-            or abs(pps - previous["pps"]) > TX_RATE_STABLE * previous["pps"]:
-        return None
-
     # Diretta splits a cycle's payload across the fewest frames that fit the
     # MTU, so a frame no larger than half the usable payload cannot have been
     # split: one frame per cycle, and the cycle is just the packet interval.
-    payload = (sample[1] - previous["bytes"]) / packets - FRAME_HEADER_BYTES
+    payload = bytes_per_packet - FRAME_HEADER_BYTES
     usable = mtu - FRAME_HEADER_BYTES if mtu else 0
     if usable > 0 and payload * 2 <= usable:
         elected = 1e6 / pps
@@ -975,13 +996,76 @@ def get_elected_cycle(cycle_time, mtu):
     # frame count the configured cycle implies. A ratio that lands on a whole
     # number means the cycle is being honoured; one that does not is proof it
     # is not, even though the elected value stays unknown.
-    if cycle_time:
-        frames = pps * cycle_time / 1e6
-        nearest = round(frames)
-        if nearest >= 1 and abs(frames - nearest) <= 0.05:
-            return {"us": nearest * 1e6 / pps, "frames": nearest, "diverges": False}
-        return {"us": None, "frames": None, "diverges": True}
-    return None
+    if not cycle_time:
+        return None
+
+    frames = pps * cycle_time / 1e6
+    nearest = round(frames)
+    if nearest >= 1 and abs(frames - nearest) <= 0.05:
+        return {"us": nearest * 1e6 / pps, "frames": nearest, "diverges": False}
+    return {"us": None, "frames": None, "diverges": True}
+
+
+def _measure_elected_cycle(cycle_time, mtu):
+    """Derives the cycle Diretta actually transmits on, from the link counters.
+
+    `CycleTime` in setting.inf is what the Host asks for, not necessarily what
+    it gets. A non-zero TargetProfileLimitTime hands the choice to Diretta\'s
+    automatic target profile, and even at 0 the Flex modes land a little above
+    the request. The daemon states its choice at stream start, but Appendix 8
+    leaves Debug disabled, so on a finished build the wire is the only source.
+
+    One self-contained bracket, needing nothing from the render before it, so
+    the figure is complete the first time the panel is drawn and cannot be lost
+    by refreshing at the wrong moment.
+
+    Returns:
+        dict: the cycle as described by `_cycle_from_rate`, or None while
+            nothing is playing or the bracket caught a stream starting.
+    """
+    measured = _measure_packet_rate()
+    if measured is None:
+        return None
+    return _cycle_from_rate(measured[0], measured[1], cycle_time, mtu)
+
+
+def _same_cycle(previous, current):
+    """True when a reading is the last one measured again, not a new cycle.
+
+    A stream holds one cycle for as long as it runs, so two readings a hair
+    apart are one cycle measured twice, and the gap between them is this
+    measurement\'s own noise rather than anything the link did. Redrawing that
+    gap as a fresh number on every refresh would present noise as signal.
+    """
+    if not previous or not current:
+        return False
+    if previous.get("frames") != current.get("frames"):
+        return False
+
+    before, after = previous.get("us"), current.get("us")
+    if before is None or after is None:
+        return before is after
+    return abs(after - before) <= ELECTED_CYCLE_HYSTERESIS * before
+
+
+def get_elected_cycle(cycle_time, mtu):
+    """Returns the measured cycle, reusing one taken moments ago.
+
+    Only the memo and the settled figure span renders. A reading the memo has
+    outlived is remeasured rather than shown, so a stopped stream drops the
+    figure at the next refresh instead of leaving a stale one on the page.
+    """
+    cached = dict(ELECTED_CYCLE_CACHE)
+    if time.monotonic() - cached["t"] <= ELECTED_CYCLE_MEMO:
+        return cached["value"]
+
+    value = _measure_elected_cycle(cycle_time, mtu)
+    # Hold the figure still while it is the same cycle, so the panel reports a
+    # cycle that changed only when one did.
+    if _same_cycle(cached["value"], value):
+        value = cached["value"]
+    ELECTED_CYCLE_CACHE.update(value=value, t=time.monotonic())
+    return value
 
 
 def _diverges(elected_us, cycle_time):
