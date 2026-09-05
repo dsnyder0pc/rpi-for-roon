@@ -161,7 +161,7 @@ ACTIVATION_URL_CACHE = {"url": ""}
 # The elected cycle is measured inside the render that displays it, from two
 # short transmit-counter brackets taken back to back. Nothing is sampled in the
 # background: with no browser open the Host does no work at all for this.
-ELECTED_CYCLE_CACHE = {"value": None, "t": float("-inf")}
+ELECTED_CYCLE_CACHE = {"value": None, "t": float("-inf"), "divergence_seen": False}
 TX_SAMPLE_WINDOW = 0.15     # bracket for one packet-rate reading, in seconds
 TX_IDLE_PPS = 20.0          # below this the link is not carrying a stream
 TX_RATE_STABLE = 0.10       # the two halves must agree this closely
@@ -1274,11 +1274,28 @@ def get_elected_cycle(cycle_time, mtu):
         return cached["value"]
 
     value = _measure_elected_cycle(cycle_time, mtu)
+    # Whether this reading diverged is recorded before anything below rewrites
+    # it, so a divergence the panel is holding back still counts towards being
+    # confirmed by the next one.
+    diverged_now = bool(value and value.get("diverges"))
+
     # Hold the figure still while it is the same cycle, so the panel reports a
     # cycle that changed only when one did.
     if _same_cycle(cached["value"], value):
         value = cached["value"]
-    ELECTED_CYCLE_CACHE.update(value=value, t=time.monotonic())
+
+    # A stream starting prefills the Target, and that burst inflates the packet
+    # rate for one bracket: 96 kHz measured 1411us against a configured 1500,
+    # 5.9% off, just past the threshold. The rate is internally consistent
+    # across both halves, so TX_RATE_STABLE cannot see it -- only a second
+    # reading can. Report the measured figure either way, but call it a
+    # mismatch only once two consecutive readings agree that it is one.
+    if value:
+        value = dict(value, diverges=diverged_now and bool(cached["divergence_seen"]))
+
+    ELECTED_CYCLE_CACHE.update(
+        value=value, t=time.monotonic(), divergence_seen=diverged_now
+    )
     return value
 
 
