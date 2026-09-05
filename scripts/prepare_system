@@ -135,14 +135,39 @@ if [ -f "$DIRETTA_APP" ]; then
     ACTIVATION_URL=$($DIRETTA_APP)
     HASH_ID=$(echo "$ACTIVATION_URL" | sed -n 's/.*hash=\([^&]*\).*/\1/p')
 
-    echo ""
-    echo "================================================"
-    echo -e "${RED_BOLD}   !!! COPY THIS DIRETTA INFORMATION NOW !!!${NC}"
-    echo "================================================"
-    echo "Purchase Link: $ACTIVATION_URL"
-    echo "Hardware ID:   $HASH_ID"
-    echo "================================================"
-    echo ""
+    if [ -n "$HASH_ID" ]; then
+        echo ""
+        echo "================================================"
+        echo -e "${RED_BOLD}   !!! COPY THIS DIRETTA INFORMATION NOW !!!${NC}"
+        echo "================================================"
+        echo "Purchase Link: $ACTIVATION_URL"
+        echo "Hardware ID:   $HASH_ID"
+        echo "================================================"
+        echo ""
+    else
+        # An activated Target answers "valid" instead of a purchase link, and
+        # its license is a small file in the Diretta directory named after the
+        # hardware ID. That file is keyed to this device, so another Pi cannot
+        # use it, but it would still ride along in a distributed image.
+        LICENSE_FILE=$(find "$(dirname "$DIRETTA_APP")" -maxdepth 1 -type f \
+            -regextype posix-extended -regex '.*/[0-9a-f]{64}' -printf '%f\n' 2>/dev/null | head -n 1)
+
+        echo ""
+        echo "================================================"
+        echo -e "${RED_BOLD}   !!! THIS TARGET IS ALREADY LICENSED !!!${NC}"
+        echo "================================================"
+        echo "Diretta reports: $ACTIVATION_URL"
+        echo "There is no purchase link to record."
+        if [ -n "$LICENSE_FILE" ]; then
+            echo ""
+            echo "License file: $(dirname "$DIRETTA_APP")/$LICENSE_FILE"
+            echo "It is keyed to this hardware, so no other Pi can use it,"
+            echo "but it will travel inside any image made from this card."
+            echo "Remove it by hand first if this card is to be distributed."
+        fi
+        echo "================================================"
+        echo ""
+    fi
 else
     echo "   - Diretta application not found. Skipping."
 fi
