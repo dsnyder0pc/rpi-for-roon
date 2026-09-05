@@ -149,6 +149,10 @@ STATUS_CACHE = {"data": None, "timestamp": 0.0, "valid": False}
 # MTU only changes across a reboot, so the last value the Target reported stays
 # valid. Caching it lets the link panel refresh without any extra SSH traffic.
 TARGET_LINK_CACHE = {"mtu": None}
+# The activation URL carries the Target's hardware hash and is fixed for as
+# long as that Target reports itself unlicensed, so it is fetched once rather
+# than on every status poll. Cleared as soon as the Target reports activation.
+ACTIVATION_URL_CACHE = {"url": ""}
 
 # The elected cycle is measured inside the render that displays it, from two
 # short transmit-counter brackets taken back to back. Nothing is sampled in the
@@ -939,6 +943,24 @@ def _write_status_cache(data, now):
         STATUS_CACHE["valid"] = True
 
 
+def _get_activation_url():
+    """Returns the Target's license activation URL, fetching it at most once.
+
+    The URL encodes the Target's own hardware hash, so it cannot change while
+    that Target keeps reporting the same unlicensed state. Fetching it inside
+    every status poll cost a second SSH round trip every 30 seconds for as
+    long as a system sat unlicensed. A failed fetch is not cached, so the next
+    poll retries.
+    """
+    if ACTIVATION_URL_CACHE["url"]:
+        return ACTIVATION_URL_CACHE["url"]
+
+    url = run_remote_command("/usr/local/bin/pm-get-license-url")
+    if url:
+        ACTIVATION_URL_CACHE["url"] = url
+    return url or ""
+
+
 def get_status_from_target(bypass_cache=False):
     """Gets the current status from the Diretta Target, using a brief cache."""
     if not bypass_cache:
@@ -967,9 +989,11 @@ def get_status_from_target(bypass_cache=False):
         try:
             status_data = json.loads(raw_status)
             if status_data.get("license_needs_activation"):
-                license_url = run_remote_command("/usr/local/bin/pm-get-license-url")
-                status_data["activation_url"] = license_url if license_url else ""
+                status_data["activation_url"] = _get_activation_url()
             else:
+                # Activated, or a different Target: drop the memo so a later
+                # unlicensed Target is asked for its own URL.
+                ACTIVATION_URL_CACHE["url"] = ""
                 status_data["activation_url"] = ""
 
             # Older Targets predate the mtu field; absent it, the link panel
