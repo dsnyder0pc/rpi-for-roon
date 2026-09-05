@@ -153,7 +153,6 @@ if [ -f "$DIRETTA_APP" ]; then
         echo "Diretta reports: $ACTIVATION_URL"
         echo "There is no purchase link to record."
         echo "================================================"
-        echo ""
     fi
 
     # The license is a small file in the Diretta directory named after the
@@ -162,7 +161,7 @@ if [ -f "$DIRETTA_APP" ]; then
     # same criterion shrink-image applies when it lifts the license out of an
     # image: anything here that is not part of the Diretta application.
     find "$(dirname "$DIRETTA_APP")" -maxdepth 1 -type f ! -name 'diretta*' \
-        -printf '   - Removing Diretta license file: %f\n' -delete 2>/dev/null
+        -printf '🧹 Removing Diretta license file: %f\n' -delete 2>/dev/null
 else
     echo "   - Diretta application not found. Skipping."
 fi
