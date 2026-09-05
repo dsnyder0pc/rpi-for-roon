@@ -1679,26 +1679,41 @@ Com a música tocando na sua nova zona Diretta Roon, aponte o seu controle remot
 
 ### **Passo 6: Criar um Serviço systemd**
 
-Crie um serviço para executar o script automaticamente em segundo plano.
+Crie um serviço para executar o script automaticamente em segundo plano. Ele está vinculado ao Roon Bridge, então o controle remoto inicia, para e reinicia junto com ele, e é totalmente ignorado em um Host onde o Roon Bridge não está instalado.
 
 ```bash
 cat <<EOT | sudo tee /etc/systemd/system/roon-ir-remote.service
 [Unit]
 Description=Roon IR Remote Service
-After=network-online.target
+After=network-online.target roonbridge.service
 Wants=network-online.target
+# O Roon Bridge precisa estar instalado e em execução: o controle remoto comanda uma Zona do Roon.
+# É ignorado de forma limpa quando ele falta, e parado sempre que o Roon Bridge para.
+ConditionPathExists=/opt/RoonBridge/VERSION
+PartOf=roonbridge.service
 
 [Service]
 Type=simple
 User=${LOGNAME}
 Group=${LOGNAME}
 WorkingDirectory=/home/${LOGNAME}/roon-ir-remote
+# Ignora a inicialização (sem erro) quando o Roon Bridge está instalado mas não está em execução.
+ExecCondition=/usr/bin/systemctl is-active --quiet roonbridge.service
 ExecStart=/home/${LOGNAME}/.pyenv/versions/roon-ir-remote/bin/python /home/${LOGNAME}/roon-ir-remote/roon_remote.py
 Restart=on-failure
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
+EOT
+
+# Inicia o controle remoto novamente sempre que o Roon Bridge sobe. PartOf= só propaga
+# paradas e reinicializações, e um Wants= apontando para uma unit ausente é inofensivo, então este
+# drop-in é seguro mesmo em um Host onde o Roon Bridge ainda não está instalado.
+sudo mkdir -p /etc/systemd/system/roonbridge.service.d
+cat <<EOT | sudo tee /etc/systemd/system/roonbridge.service.d/10-roon-ir-remote.conf
+[Unit]
+Wants=roon-ir-remote.service
 EOT
 
 # Habilitar e iniciar o serviço
@@ -2477,7 +2492,7 @@ A partir da página principal, uma barra de navegação no topo o guará para os
 
 * **Purist Mode App:** Esta página contém os controles para alternar o Modo Purista e seu comportamento de inicialização automática no Target Diretta. Ela se atualiza automaticamente a cada 30 segundos para mostrar o status atual. Também contém o botão "Restart Services" (Reiniciar Serviços) para uso após a ativação da licença do Diretta.
 
-* **IR Remote App:** Se você concluiu a configuração do controle remoto IR (Apêndice 2), este link aparecerá. Esta página fornece um formulário simples para visualizar e atualizar o nome da Zona do Roon que seu controle remoto controlará. Esta página não se atualiza automaticamente, então você pode levar o tempo que precisar para fazer suas edições.
+* **IR Remote App:** Este link só aparece se você concluiu a configuração do controle remoto IR (Apêndice 2) *e* o Roon Bridge estiver instalado no Host, pois o controle remoto comanda uma Zona do Roon. Se você instalar o Roon Bridge mais tarde, a aba aparecerá sozinha. Esta página fornece um formulário simples para visualizar e atualizar o nome da Zona do Roon que seu controle remoto controlará. Esta página não se atualiza automaticamente, então você pode levar o tempo que precisar para fazer suas edições.
 
 ### 🔗 Nota sobre a Funcionalidade Completa da Interface Web
 

@@ -1679,26 +1679,41 @@ Con la musica in riproduzione nella vostra nuova zona Roon Diretta, puntate il t
 
 ### **Passaggio 6: Creare un servizio `systemd`**
 
-Create un servizio per eseguire lo script automaticamente in background.
+Create un servizio per eseguire lo script automaticamente in background. È legato a Roon Bridge, quindi il telecomando si avvia, si ferma e si riavvia insieme a esso, e viene saltato del tutto su un Host in cui Roon Bridge non è installato.
 
 ```bash
 cat <<EOT | sudo tee /etc/systemd/system/roon-ir-remote.service
 [Unit]
 Description=Roon IR Remote Service
-After=network-online.target
+After=network-online.target roonbridge.service
 Wants=network-online.target
+# Roon Bridge deve essere installato e in esecuzione: il telecomando comanda una Zona Roon.
+# Viene saltato in modo pulito se manca, e fermato ogni volta che Roon Bridge si ferma.
+ConditionPathExists=/opt/RoonBridge/VERSION
+PartOf=roonbridge.service
 
 [Service]
 Type=simple
 User=${LOGNAME}
 Group=${LOGNAME}
 WorkingDirectory=/home/${LOGNAME}/roon-ir-remote
+# Salta l'avvio (senza errori) quando Roon Bridge è installato ma non è in esecuzione.
+ExecCondition=/usr/bin/systemctl is-active --quiet roonbridge.service
 ExecStart=/home/${LOGNAME}/.pyenv/versions/roon-ir-remote/bin/python /home/${LOGNAME}/roon-ir-remote/roon_remote.py
 Restart=on-failure
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
+EOT
+
+# Riavvia il telecomando ogni volta che Roon Bridge si avvia. PartOf= propaga solo
+# arresti e riavvii, e un Wants= verso una unit assente è innocuo, quindi questo
+# drop-in è sicuro anche su un Host dove Roon Bridge non è ancora installato.
+sudo mkdir -p /etc/systemd/system/roonbridge.service.d
+cat <<EOT | sudo tee /etc/systemd/system/roonbridge.service.d/10-roon-ir-remote.conf
+[Unit]
+Wants=roon-ir-remote.service
 EOT
 
 # Abilita e avvia il servizio
@@ -2477,7 +2492,7 @@ Dalla pagina principale, una barra di navigazione in alto vi guiderà ai diversi
 
 * **Purist Mode App:** Questa pagina contiene i controlli per attivare/disattivare la modalità Purist e il suo comportamento di avvio automatico sul Diretta Target. Si aggiorna automaticamente ogni 30 secondi per mostrare lo stato corrente. Contiene anche il pulsante "Restart Services" da utilizzare dopo l'attivazione della licenza Diretta.
 
-* **IR Remote App:** Se avete completato la configurazione del telecomando IR (Appendice 2), apparirà questo link. Questa pagina fornisce un semplice modulo per visualizzare e aggiornare il nome della Zona Roon che il vostro telecomando controllerà. Questa pagina non si aggiorna automaticamente, in modo da poter effettuare le modifiche con tutto il tempo necessario.
+* **IR Remote App:** Questo link appare solo se avete completato la configurazione del telecomando IR (Appendice 2) *e* Roon Bridge è installato sull'Host, poiché il telecomando comanda una Zona Roon. Se installate Roon Bridge in seguito, la scheda comparirà da sola. Questa pagina fornisce un semplice modulo per visualizzare e aggiornare il nome della Zona Roon che il vostro telecomando controllerà. Questa pagina non si aggiorna automaticamente, in modo da poter effettuare le modifiche con tutto il tempo necessario.
 
 ### 🔗 Nota sulla piena funzionalità della Web UI
 

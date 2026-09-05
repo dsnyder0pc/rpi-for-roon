@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Diretta Host QA Check Script v1.24.0
-# (Hardware gating for IR remote + exact awk PID parsing)
+# Diretta Host QA Check Script v1.25.0
+# (IR remote bound to Roon Bridge + hardware gating + exact awk PID parsing)
 #
 
 # --- Colors and Formatting ---
@@ -80,8 +80,26 @@ run_appendix2_checks() {
     check "Roon IR config 'app_info.json' exists" "[ -f /home/audiolinux/roon-ir-remote/app_info.json ]"
     check "'roon-ir-remote' service is enabled" "systemctl is-enabled roon-ir-remote.service"
 
-    # Hardware detection gate for active service check
-    if grep -iqE "flirc|gpio_ir_recv" /proc/bus/input/devices 2>/dev/null; then
+    # The unit follows roonbridge.service: skipped when Roon Bridge was never
+    # installed, skipped when it is installed but stopped, and stopped and
+    # restarted along with it. A Host missing these lines is running a
+    # pre-dependency copy of Appendix 2, Step 6.
+    local ir_unit="/etc/systemd/system/roon-ir-remote.service"
+    check "IR unit skips itself without Roon Bridge" \
+        "grep -q '^ConditionPathExists=/opt/RoonBridge/VERSION' $ir_unit"
+    check "IR unit stops with Roon Bridge" "grep -q '^PartOf=roonbridge.service' $ir_unit"
+    check "IR unit starts after Roon Bridge" "grep -q '^After=.*roonbridge.service' $ir_unit"
+    check "IR unit skips itself when Roon Bridge is stopped" \
+        "grep -q '^ExecCondition=.*is-active --quiet roonbridge.service' $ir_unit"
+    check "Roon Bridge drop-in pulls in the IR remote" \
+        "grep -q '^Wants=roon-ir-remote.service' /etc/systemd/system/roonbridge.service.d/10-roon-ir-remote.conf"
+
+    # Hardware and Roon Bridge gates for the active service check. The unit is
+    # bound to roonbridge.service, so it is deliberately inactive on a Host that
+    # runs HQPlayer NAA, UPnP or another non-Roon protocol.
+    if ! [ -f /opt/RoonBridge/VERSION ]; then
+        echo -e "  ${C_YELLOW}* Skipping active check: Roon Bridge is not installed.${C_RESET}"
+    elif grep -iqE "flirc|gpio_ir_recv" /proc/bus/input/devices 2>/dev/null; then
         check "'roon-ir-remote' service is active" "systemctl is-active roon-ir-remote.service"
     else
         echo -e "  ${C_YELLOW}* Skipping active check: Flirc or Argon IR receiver not detected.${C_RESET}"

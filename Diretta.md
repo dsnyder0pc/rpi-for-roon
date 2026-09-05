@@ -1679,26 +1679,41 @@ With music playing in your new Diretta Roon zone, point your IR remote control d
 
 ### **Step 6: Create a `systemd` Service**
 
-Create a service to run the script automatically in the background.
+Create a service to run the script automatically in the background. It is tied to Roon Bridge, so the remote starts, stops and restarts along with it, and is skipped entirely on a Host where Roon Bridge is not installed.
 
 ```bash
 cat <<EOT | sudo tee /etc/systemd/system/roon-ir-remote.service
 [Unit]
 Description=Roon IR Remote Service
-After=network-online.target
+After=network-online.target roonbridge.service
 Wants=network-online.target
+# Roon Bridge must be installed and running: the remote drives a Roon zone.
+# Skipped cleanly when it is absent, and stopped whenever Roon Bridge stops.
+ConditionPathExists=/opt/RoonBridge/VERSION
+PartOf=roonbridge.service
 
 [Service]
 Type=simple
 User=${LOGNAME}
 Group=${LOGNAME}
 WorkingDirectory=/home/${LOGNAME}/roon-ir-remote
+# Skips the start (no failure) when Roon Bridge is installed but not running.
+ExecCondition=/usr/bin/systemctl is-active --quiet roonbridge.service
 ExecStart=/home/${LOGNAME}/.pyenv/versions/roon-ir-remote/bin/python /home/${LOGNAME}/roon-ir-remote/roon_remote.py
 Restart=on-failure
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
+EOT
+
+# Start the remote again whenever Roon Bridge comes up. PartOf= only propagates
+# stops and restarts, and a Wants= aimed at a missing unit is harmless, so this
+# drop-in is safe even on a Host where Roon Bridge is not installed yet.
+sudo mkdir -p /etc/systemd/system/roonbridge.service.d
+cat <<EOT | sudo tee /etc/systemd/system/roonbridge.service.d/10-roon-ir-remote.conf
+[Unit]
+Wants=roon-ir-remote.service
 EOT
 
 # Enable and start the service
@@ -2477,7 +2492,7 @@ From the landing page, a navigation bar at the top will guide you to the differe
 
 * **Purist Mode App:** This page contains the controls for toggling Purist Mode and its auto-start behavior on the Diretta Target. It automatically refreshes every 30 seconds to show the current status. It also contains the "Restart Services" button for use after a Diretta license activation.
 
-* **IR Remote App:** If you have completed the IR remote setup (Appendix 2), this link will appear. This page provides a simple form to view and update the Roon Zone name your remote will control. This page does not auto-refresh, so you can take as long as you need to make your edits.
+* **IR Remote App:** This link appears only when you have completed the IR remote setup (Appendix 2) *and* Roon Bridge is installed on the Host, since the remote drives a Roon zone. If you add Roon Bridge later, the tab shows up on its own. This page provides a simple form to view and update the Roon Zone name your remote will control. This page does not auto-refresh, so you can take as long as you need to make your edits.
 
 ### 🔗 Note on Full Web UI Functionality
 

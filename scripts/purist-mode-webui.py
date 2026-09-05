@@ -23,6 +23,7 @@ REMOTE_USER = "purist-app"
 REMOTE_HOST = "diretta-target"
 SSH_KEY_PATH = os.path.expanduser("~/.ssh/purist_app_key")
 ROON_CONFIG_PATH = os.path.expanduser("~/roon-ir-remote/app_info.json")
+ROON_BRIDGE_VERSION_PATH = "/opt/RoonBridge/VERSION"
 DIRETTA_SETTING_PATH = "/opt/diretta-alsa/setting.inf"
 SUPER_PURIST_FLAG = os.path.expanduser("~/purist-mode-webui/super_purist.flag")
 
@@ -993,6 +994,28 @@ def invalidate_status_cache():
         STATUS_CACHE["valid"] = False
 
 
+def roon_bridge_is_installed():
+    """Reports whether Roon Bridge is installed on this Host.
+
+    The AudioLinux Three-Tier images ship without Roon Bridge, so a user who
+    runs HQPlayer NAA, UPnP or another protocol has no roonbridge.service to
+    act on. Roon Bridge self-updates in place, so its VERSION file is a
+    cheaper and more current signal than querying the package database.
+    """
+    return os.path.exists(ROON_BRIDGE_VERSION_PATH)
+
+
+def roon_is_available():
+    """Reports whether the Roon IR Remote feature should be offered.
+
+    The remote is only useful when this Host is a Roon endpoint, so both the
+    IR remote's own config (Appendix 2) and Roon Bridge must be present. The
+    remote stays installed either way, so the tab appears on its own if the
+    user adds Roon Bridge later.
+    """
+    return os.path.exists(ROON_CONFIG_PATH) and roon_bridge_is_installed()
+
+
 def get_roon_zone_from_host():
     """Gets the current Roon zone name from the local config file."""
     if not os.path.exists(ROON_CONFIG_PATH):
@@ -1534,13 +1557,16 @@ def restart_diretta_services():
             ],
             check=True
         )
-        subprocess.run(
-            [
-                "/usr/bin/sudo", "/usr/bin/systemctl",
-                "restart", "roonbridge.service"
-            ],
-            check=True
-        )
+        if roon_bridge_is_installed():
+            subprocess.run(
+                [
+                    "/usr/bin/sudo", "/usr/bin/systemctl",
+                    "restart", "roonbridge.service"
+                ],
+                check=True
+            )
+        else:
+            app.logger.info("Roon Bridge not installed; skipping its restart.")
     except subprocess.CalledProcessError as err:
         app.logger.error("Failed to restart services: %s", err)
     except OSError as err:
@@ -1861,7 +1887,7 @@ def check_and_enforce_host_profile(target_status):
 @app.route("/")
 def landing_page():
     """Serves the main landing page with activation details if required."""
-    roon_configured = os.path.exists(ROON_CONFIG_PATH)
+    roon_configured = roon_is_available()
 
     target_status = get_status_from_target()
     if not target_status:
@@ -1896,7 +1922,7 @@ def landing_page():
 @app.route("/purist")
 def purist_app():
     """Serves the Purist Mode control application."""
-    roon_configured = os.path.exists(ROON_CONFIG_PATH)
+    roon_configured = roon_is_available()
     content = render_template_string(PURIST_APP_TEMPLATE)
     return render_template_string(
         BASE_TEMPLATE,
@@ -1910,7 +1936,7 @@ def purist_app():
 @app.route("/remote", methods=["GET", "POST"])
 def remote_app():
     """Serves the IR Remote control application."""
-    roon_configured = os.path.exists(ROON_CONFIG_PATH)
+    roon_configured = roon_is_available()
     if not roon_configured:
         return redirect(url_for("landing_page"))
 
@@ -2229,14 +2255,17 @@ def restart_target():
     run_remote_command("/usr/local/bin/pm-restart-target")
     invalidate_status_cache()
 
-    app.logger.info("Restarting Roon Bridge service on Host...")
-    try:
-        subprocess.run(
-            ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "roonbridge.service"],
-            check=True
-        )
-    except subprocess.CalledProcessError as err:
-        app.logger.error("Failed to restart Roon Bridge during activation: %s", err)
+    if roon_bridge_is_installed():
+        app.logger.info("Restarting Roon Bridge service on Host...")
+        try:
+            subprocess.run(
+                ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "roonbridge.service"],
+                check=True
+            )
+        except subprocess.CalledProcessError as err:
+            app.logger.error("Failed to restart Roon Bridge during activation: %s", err)
+    else:
+        app.logger.info("Roon Bridge not installed; skipping its restart.")
 
     now = datetime.now().strftime("%H:%M:%S")
     return (

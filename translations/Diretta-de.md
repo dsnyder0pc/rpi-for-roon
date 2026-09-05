@@ -1679,26 +1679,41 @@ Während Musik in Ihrer neuen Diretta-Roon-Zone abgespielt wird, richten Sie Ihr
 
 ### **Schritt 6: Einen `systemd`-Dienst erstellen**
 
-Erstellen Sie einen Dienst, um das Skript automatisch im Hintergrund auszuführen.
+Erstellen Sie einen Dienst, um das Skript automatisch im Hintergrund auszuführen. Er ist an Roon Bridge gebunden, sodass die Fernbedienung zusammen mit ihm startet, stoppt und neu startet und auf einem Host ohne installierte Roon Bridge vollständig übersprungen wird.
 
 ```bash
 cat <<EOT | sudo tee /etc/systemd/system/roon-ir-remote.service
 [Unit]
 Description=Roon IR Remote Service
-After=network-online.target
+After=network-online.target roonbridge.service
 Wants=network-online.target
+# Roon Bridge muss installiert sein und laufen: Die Fernbedienung steuert eine Roon-Zone.
+# Wird sauber übersprungen, wenn es fehlt, und gestoppt, sobald Roon Bridge stoppt.
+ConditionPathExists=/opt/RoonBridge/VERSION
+PartOf=roonbridge.service
 
 [Service]
 Type=simple
 User=${LOGNAME}
 Group=${LOGNAME}
 WorkingDirectory=/home/${LOGNAME}/roon-ir-remote
+# Überspringt den Start (ohne Fehler), wenn Roon Bridge installiert ist, aber nicht läuft.
+ExecCondition=/usr/bin/systemctl is-active --quiet roonbridge.service
 ExecStart=/home/${LOGNAME}/.pyenv/versions/roon-ir-remote/bin/python /home/${LOGNAME}/roon-ir-remote/roon_remote.py
 Restart=on-failure
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
+EOT
+
+# Startet die Fernbedienung erneut, sobald Roon Bridge hochfährt. PartOf= überträgt nur
+# Stopps und Neustarts, und ein Wants= auf eine fehlende Unit ist harmlos, daher ist dieses
+# Drop-in auch auf einem Host sicher, auf dem Roon Bridge noch nicht installiert ist.
+sudo mkdir -p /etc/systemd/system/roonbridge.service.d
+cat <<EOT | sudo tee /etc/systemd/system/roonbridge.service.d/10-roon-ir-remote.conf
+[Unit]
+Wants=roon-ir-remote.service
 EOT
 
 # Den Dienst aktivieren und starten
@@ -2477,7 +2492,7 @@ Auf der Startseite führt Sie eine Navigationsleiste am oberen Rand zu den versc
 
 * **Purist-Modus-App:** Diese Seite enthält die Steuerelemente zum Umschalten des Purist-Modus und seines Autostart-Verhaltens auf dem Diretta-Target. Sie aktualisiert sich alle 30 Sekunden automatisch, um den aktuellen Status anzuzeigen. Sie enthält auch die Schaltfläche „Dienste neu starten“ zur Verwendung nach einer Diretta-Lizenzaktivierung.
 
-* **IR-Fernbedienung-App:** Wenn Sie die Einrichtung der IR-Fernbedienung abgeschlossen haben (Anhang 2), wird dieser Link angezeigt. Diese Seite bietet ein einfaches Formular zum Anzeigen und Aktualisieren des Namens der Roon-Zone, die Ihre Fernbedienung steuern soll. Diese Seite aktualisiert sich nicht automatisch, sodass Sie sich so viel Zeit nehmen können, wie Sie für Ihre Änderungen benötigen.
+* **IR-Fernbedienung-App:** Dieser Link erscheint nur, wenn Sie die Einrichtung der IR-Fernbedienung abgeschlossen haben (Anhang 2) *und* Roon Bridge auf dem Host installiert ist, da die Fernbedienung eine Roon-Zone steuert. Wenn Sie Roon Bridge später hinzufügen, erscheint der Reiter von selbst. Diese Seite bietet ein einfaches Formular zum Anzeigen und Aktualisieren des Namens der Roon-Zone, die Ihre Fernbedienung steuern soll. Diese Seite aktualisiert sich nicht automatisch, sodass Sie sich so viel Zeit nehmen können, wie Sie für Ihre Änderungen benötigen.
 
 ### 🔗 Hinweis zur vollen Funktionalität des Web-UI
 

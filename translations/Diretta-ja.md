@@ -1679,26 +1679,41 @@ Roonの新しいDirettaゾーンで音楽が再生されている状態で、赤
 
 ### **ステップ 6：`systemd`サービスの作成**
 
-スクリプトをバックグラウンドで自動的に実行するためのサービスを作成します。
+スクリプトをバックグラウンドで自動的に実行するためのサービスを作成します。このサービスはRoon Bridgeに連動しており、リモコンはRoon Bridgeと一緒に起動・停止・再起動し、Roon Bridgeが未インストールのホストでは完全にスキップされます。
 
 ```bash
 cat <<EOT | sudo tee /etc/systemd/system/roon-ir-remote.service
 [Unit]
 Description=Roon IR Remote Service
-After=network-online.target
+After=network-online.target roonbridge.service
 Wants=network-online.target
+# リモコンはRoonのゾーンを操作するため、Roon Bridgeがインストールされ動作している必要があります。
+# Roon Bridgeが無い場合は正常にスキップされ、停止した場合は本サービスも停止します。
+ConditionPathExists=/opt/RoonBridge/VERSION
+PartOf=roonbridge.service
 
 [Service]
 Type=simple
 User=${LOGNAME}
 Group=${LOGNAME}
 WorkingDirectory=/home/${LOGNAME}/roon-ir-remote
+# Roon Bridgeがインストール済みでも停止中なら、起動を（エラーなしで）スキップします。
+ExecCondition=/usr/bin/systemctl is-active --quiet roonbridge.service
 ExecStart=/home/${LOGNAME}/.pyenv/versions/roon-ir-remote/bin/python /home/${LOGNAME}/roon-ir-remote/roon_remote.py
 Restart=on-failure
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
+EOT
+
+# Roon Bridgeが起動したときにリモコンも起動させます。PartOf=は停止と再起動しか
+# 伝搬せず、存在しないユニットを指すWants=は無害なので、このドロップインは
+# Roon Bridgeが未インストールのホストでも安全です。
+sudo mkdir -p /etc/systemd/system/roonbridge.service.d
+cat <<EOT | sudo tee /etc/systemd/system/roonbridge.service.d/10-roon-ir-remote.conf
+[Unit]
+Wants=roon-ir-remote.service
 EOT
 
 # サービスを有効化し、起動する
@@ -2477,7 +2492,7 @@ source ~/.bashrc
 
 * **Purist Mode App：** Diretta Target上のピュリストモードおよびその自動起動挙動を切り替えるためのコントロールです。現在のステータスを表示するために30秒ごとに自動更新されます。Direttaライセンスのアクティベーション完了後に使用する「Restart Services（サービスの再起動）」ボタンもこのページにあります。
 
-* **IR Remote App：** 赤外線リモコンのセットアップ（付録2）を完了している場合、このリンクが表示されます。リモコンが制御するRoonのゾーン名（Zone Name）を確認・更新するためのシンプルなフォームが提供されます。このページは自動更新されないため、時間をかけて編集を行えます。
+* **IR Remote App：** このリンクは、赤外線リモコンのセットアップ（付録2）を完了しており、*かつ*ホストにRoon Bridgeがインストールされている場合にのみ表示されます。リモコンはRoonのゾーンを操作するためです。後からRoon Bridgeを追加すれば、タブは自動的に表示されます。リモコンが制御するRoonのゾーン名（Zone Name）を確認・更新するためのシンプルなフォームが提供されます。このページは自動更新されないため、時間をかけて編集を行えます。
 
 ### 🔗 Web UIの全機能利用に関する注意
 

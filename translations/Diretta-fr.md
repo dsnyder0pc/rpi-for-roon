@@ -1679,26 +1679,41 @@ Pendant que de la musique est lue dans votre nouvelle zone Diretta Roon, pointez
 
 ### **Étape 6 : Créer un service `systemd`**
 
-Créez un service pour exécuter le script automatiquement en arrière-plan.
+Créez un service pour exécuter le script automatiquement en arrière-plan. Il est lié à Roon Bridge : la télécommande démarre, s'arrête et redémarre avec lui, et elle est entièrement ignorée sur un Hôte où Roon Bridge n'est pas installé.
 
 ```bash
 cat <<EOT | sudo tee /etc/systemd/system/roon-ir-remote.service
 [Unit]
 Description=Roon IR Remote Service
-After=network-online.target
+After=network-online.target roonbridge.service
 Wants=network-online.target
+# Roon Bridge doit être installé et en cours d'exécution : la télécommande pilote une zone Roon.
+# Ignoré proprement s'il est absent, et arrêté dès que Roon Bridge s'arrête.
+ConditionPathExists=/opt/RoonBridge/VERSION
+PartOf=roonbridge.service
 
 [Service]
 Type=simple
 User=${LOGNAME}
 Group=${LOGNAME}
 WorkingDirectory=/home/${LOGNAME}/roon-ir-remote
+# Ignore le démarrage (sans erreur) quand Roon Bridge est installé mais pas en cours d'exécution.
+ExecCondition=/usr/bin/systemctl is-active --quiet roonbridge.service
 ExecStart=/home/${LOGNAME}/.pyenv/versions/roon-ir-remote/bin/python /home/${LOGNAME}/roon-ir-remote/roon_remote.py
 Restart=on-failure
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
+EOT
+
+# Redémarre la télécommande dès que Roon Bridge se lance. PartOf= ne propage que
+# les arrêts et les redémarrages, et un Wants= visant une unité absente est sans effet, donc ce
+# drop-in est sûr même sur un Hôte où Roon Bridge n'est pas encore installé.
+sudo mkdir -p /etc/systemd/system/roonbridge.service.d
+cat <<EOT | sudo tee /etc/systemd/system/roonbridge.service.d/10-roon-ir-remote.conf
+[Unit]
+Wants=roon-ir-remote.service
 EOT
 
 # Activer et démarrer le service
@@ -2477,7 +2492,7 @@ Depuis la page d'accueil, une barre de navigation en haut vous guidera vers les 
 
 * **Purist Mode App :** Cette page contient les commandes pour basculer le Mode Puriste et son comportement de démarrage automatique sur le Target Diretta. Elle se rafraîchit automatiquement toutes les 30 secondes pour afficher l'état actuel. Elle contient également le bouton « Restart Services » (Redémarrer les services) à utiliser après l'activation d'une licence Diretta.
 
-* **IR Remote App :** Si vous avez terminé la configuration de la télécommande IR (Annexe 2), ce lien apparaîtra. Cette page fournit un formulaire simple pour afficher et mettre à jour le nom de la zone Roon que votre télécommande contrôlera. Cette page ne se rafraîchit pas automatiquement, vous pouvez donc prendre tout le temps nécessaire pour effectuer vos modifications.
+* **IR Remote App :** Ce lien n'apparaît que si vous avez terminé la configuration de la télécommande IR (Annexe 2) *et* que Roon Bridge est installé sur l'Hôte, car la télécommande pilote une zone Roon. Si vous installez Roon Bridge plus tard, l'onglet apparaîtra de lui-même. Cette page fournit un formulaire simple pour afficher et mettre à jour le nom de la zone Roon que votre télécommande contrôlera. Cette page ne se rafraîchit pas automatiquement, vous pouvez donc prendre tout le temps nécessaire pour effectuer vos modifications.
 
 ### 🔗 Note sur la fonctionnalité complète de l'interface Web
 
