@@ -227,7 +227,13 @@ if [ -d "/opt/diretta-alsa-target" ]; then
             ISO_FOUND=$(grep "$ISO_DEV" /proc/interrupts | awk '{print $1}' | tr -d ':')
             [ -n "$ISO_FOUND" ] && ISO_IRQS="${ISO_IRQS} ${ISO_FOUND}"
         done
-        ISO_IRQS=$(echo "$ISO_IRQS" | xargs)
+        # Images are prepped on RPi5 pairs but must also boot on an RPi4,
+        # where end0 enumerates as 27 and 28 on the current kernel. Carry both
+        # so the baked list is sane on either board; isolated_app.sh rewrites
+        # IRQ1 from DEVICES1 at the first boot regardless, which is what makes
+        # a guess for the other generation harmless.
+        RPI4_END0_IRQS="27 28"
+        ISO_IRQS=$(echo "$ISO_IRQS $RPI4_END0_IRQS" | xargs -n1 | sort -un | xargs)
 
         if [ -n "$ISO_IRQS" ]; then
             update_config_key "$ISO_CONF" "IRQ1" "\"${ISO_IRQS}\""
