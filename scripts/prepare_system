@@ -368,7 +368,19 @@ fi
 
 echo "------------------------------------------------"
 
-# Step 15: Sync disks and power off the system
+# Step 15: Drop the machine ID so every install generates its own
+echo "🧹 Removing /etc/machine-id..."
+# AudioLinux images ship with one already in place, so two systems restored
+# from the same image present the same DHCP identifier and a DHCP server hands
+# them both the same address. systemd writes a fresh one at the next boot, and
+# /var/lib/dbus/machine-id is a symlink to this file, so one removal covers
+# both. shrink-image does the same to the mounted image; doing it here keeps a
+# card that is handed to someone else clean on its own.
+rm -fv /etc/machine-id
+
+echo "------------------------------------------------"
+
+# Step 16: Sync disks and power off the system
 echo "✅ Preparation complete. System will power off in 5 seconds."
 sleep 5
 sync
