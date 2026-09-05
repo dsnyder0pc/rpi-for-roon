@@ -2496,7 +2496,7 @@ source ~/.bashrc
 
 ### 🔗 Web UIの全機能利用に関する注意
 
-システム管理Web UIのすべての機能（具体的にはネットワークの接続速度（**Link Speed**）の調整や**Super Purist**モードの切り替え）を解放するには、[**付録 8：オプションのピュリストネットワーク速度**](#21-appendix-8-optional-purist-network-speeds)で詳しく説明されているハードウェアおよびサービスの構成も完了する必要があります[cite: 1]。Webインターフェースは、そのセクションで構築されるスクリプト、フラグ、およびサービスに直接依存して、ポイント・ツー・ポイント接続の物理リンク速度の制限を適用および制御します[cite: 1]。
+**Super Purist** の段階は、[**付録8: オプションのPuristネットワーク速度**](#21-appendix-8-optional-purist-network-speeds) のハードウェアおよびサービス設定を完了するまで、Web UIには表示されません。物理リンク速度を変更し維持するために、付録8で用意されるスクリプト・フラグ・`limit-speed-100m.service` が必要だからです。それまでPurist Modeページには Standard と Purist のみが表示されます。
 
 > ---
 > ### ✅ Checkpoint：Web UI設定の動作確認

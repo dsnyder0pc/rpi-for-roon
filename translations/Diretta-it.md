@@ -2496,7 +2496,7 @@ Dalla pagina principale, una barra di navigazione in alto vi guiderà ai diversi
 
 ### 🔗 Nota sulla piena funzionalità della Web UI
 
-Per sbloccare tutte le funzionalità della Web UI di controllo del sistema — in particolare la regolazione della velocità di collegamento di rete (**Link Speed**) e l'attivazione della modalità **Super Purist** — dovete completare anche le configurazioni hardware e dei servizi dettagliate nell'[**Appendice 8: Velocità di rete Purist opzionale**](#21-appendix-8-optional-purist-network-speeds)[cite: 1]. L'interfaccia web si affida direttamente agli script, ai flag e ai servizi sottostanti stabiliti in quella sezione per modificare e imporre con successo i limiti della velocità di collegamento fisico sulla connessione point-to-point[cite: 1].
+Il livello **Super Purist** non compare nell'interfaccia web finché non completate le configurazioni hardware e dei servizi in [**Appendice 8: Velocità di Rete Purist Opzionali**](#21-appendix-8-optional-purist-network-speeds). L'interfaccia si basa sugli script, sui flag e su `limit-speed-100m.service` creati lì per modificare e mantenere la velocità fisica del collegamento, quindi fino ad allora la pagina Purist Mode offre solo Standard e Purist.
 
 > ---
 > ### ✅ Checkpoint: Verificare la configurazione della Web UI

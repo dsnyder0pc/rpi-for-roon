@@ -566,7 +566,7 @@ STATUS_PANEL_TEMPLATE = """
     <div class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
         <div>
             <h2 class="font-semibold text-xl text-white mb-4">System Optimization Level</h2>
-            <div class="grid grid-cols-3 gap-2 p-1 bg-gray-900 rounded-xl border border-gray-700">
+            <div class="grid {{ 'grid-cols-3' if app8_enabled else 'grid-cols-2' }} gap-2 p-1 bg-gray-900 rounded-xl border border-gray-700">
                 <button hx-post="/set-state/Standard" hx-target="#control-panel" hx-swap="innerHTML" hx-disabled-elt="this"
                         class="relative inline-flex items-center justify-center py-3 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
                         {{ 'bg-yellow-600 text-gray-900' if current_state == 'Standard' else 'text-gray-400 hover:text-white' }}">
@@ -579,12 +579,14 @@ STATUS_PANEL_TEMPLATE = """
                     <span class="btn-text">Purist</span>
                     <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-current"></span>
                 </button>
+                {% if app8_enabled %}
                 <button hx-post="/set-state/SuperPurist" hx-target="#control-panel" hx-swap="innerHTML" hx-disabled-elt="this"
                         class="relative inline-flex items-center justify-center py-3 text-sm font-semibold rounded-lg shadow-sm transition-colors duration-200
                         {{ 'bg-green-600 text-white border border-green-400/30' if current_state == 'SuperPurist' else 'text-gray-400 hover:text-white' }}">
                     <span class="btn-text">Super Purist</span>
                     <span class="absolute btn-spinner hidden h-5 w-5 rounded-full border-2 border-current"></span>
                 </button>
+                {% endif %}
             </div>
         </div>
 
@@ -2031,7 +2033,8 @@ def status():
     return render_template_string(
         STATUS_PANEL_TEMPLATE,
         status=target_status,
-        current_state=current_state
+        current_state=current_state,
+        app8_enabled=is_app8_enabled()
     )
 
 
@@ -2107,9 +2110,50 @@ def _transition_to_super_purist(is_currently_purist):
         run_remote_command("/usr/local/bin/pm-toggle-mode")
 
 
+def _enforce_profile_after_transition(updated_status):
+    """Aligns the link speed and Diretta profile with the state just selected."""
+    current_speed_str = _get_current_speed()
+    if not current_speed_str or "Unknown" in current_speed_str:
+        return
+
+    current_speed_val = current_speed_str.replace("Mb/s", "").strip()
+    current_ct = _get_current_cycletime()
+
+    current_state = get_current_system_state(updated_status)
+    expected_speed = get_target_speed(current_state, updated_status)
+    expected_ct, expected_ic = get_target_profile(current_state)
+
+    if current_speed_val == expected_speed and current_ct == expected_ct:
+        return
+
+    app.logger.info(
+        "Synchronous hardware enforcement needed: "
+        "Speed %s -> %s | CycleTime %s -> %s",
+        current_speed_val, expected_speed,
+        current_ct, expected_ct
+    )
+    _sync_hardware_transition(
+        expected_speed, expected_ct,
+        expected_ic, current_state
+    )
+
+
 @app.route("/set-state/<state_name>", methods=["POST"])
 def set_state(state_name):
     """HTMX endpoint to transition the system explicitly between operational states."""
+    # Super Purist is the 10 Mbps layer, and only Appendix 8 installs the
+    # boot-time clamp that keeps the link there. Without it the transition
+    # would still drop both ends to 10 Mbps via ethtool, then lose that speed
+    # at the next reboot while the flag survived -- a link and a Diretta
+    # profile describing different modes. The button is hidden in that case,
+    # so this catches a hand-made request.
+    if state_name == "SuperPurist" and not is_app8_enabled():
+        app.logger.warning(
+            "Super Purist requested but limit-speed-100m.service is not "
+            "enabled (Appendix 8 not installed). Refusing the transition."
+        )
+        return status()
+
     TRANSITION_STATE["active"] = True
 
     # The flag is what the Host's boot script reads to clamp the link, so it has
@@ -2159,27 +2203,7 @@ def set_state(state_name):
             # A Super Purist request that failed to engage Purist Mode on the
             # Target must not leave its flag behind to clamp the next boot.
             reconcile_super_purist_flag(updated_status)
-
-            current_speed_str = _get_current_speed()
-            if current_speed_str and "Unknown" not in current_speed_str:
-                current_speed_val = current_speed_str.replace("Mb/s", "").strip()
-                current_ct = _get_current_cycletime()
-
-                current_state = get_current_system_state(updated_status)
-                expected_speed = get_target_speed(current_state, updated_status)
-                expected_ct, expected_ic = get_target_profile(current_state)
-
-                if current_speed_val != expected_speed or current_ct != expected_ct:
-                    app.logger.info(
-                        "Synchronous hardware enforcement needed: "
-                        "Speed %s -> %s | CycleTime %s -> %s",
-                        current_speed_val, expected_speed,
-                        current_ct, expected_ct
-                    )
-                    _sync_hardware_transition(
-                        expected_speed, expected_ct,
-                        expected_ic, current_state
-                    )
+            _enforce_profile_after_transition(updated_status)
 
         # Condition 3: Wait for Target to return to being reachable (network may drop)
         app.logger.info("Waiting for Target to return to being reachable...")

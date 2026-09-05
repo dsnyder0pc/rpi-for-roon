@@ -2496,7 +2496,7 @@ Depuis la page d'accueil, une barre de navigation en haut vous guidera vers les 
 
 ### 🔗 Note sur la fonctionnalité complète de l'interface Web
 
-Pour déverrouiller toutes les capacités de l'interface web de contrôle du système — en particulier les ajustements de la vitesse de liaison réseau (**Link Speed**) et le basculement vers **Super Purist** —, vous devez également effectuer les configurations matérielles et de services détaillées dans l'[**Annexe 8 : Vitesses réseau puristes optionnelles**](#21-appendix-8-optional-purist-network-speeds)[cite: 1]. L'interface web s'appuie directement sur les scripts, indicateurs et services sous-jacents établis dans cette section pour modifier et appliquer avec succès les limites de vitesse de liaison physique sur votre connexion point à point[cite: 1].
+Le niveau **Super Purist** n'apparaît dans l'interface web qu'une fois terminées les configurations matérielles et de services de [**Annexe 8 : Vitesses Réseau Purist Optionnelles**](#21-appendix-8-optional-purist-network-speeds). L'interface s'appuie sur les scripts, indicateurs et `limit-speed-100m.service` mis en place là-bas pour modifier et maintenir la vitesse physique du lien ; jusque-là, la page Purist Mode ne propose que Standard et Purist.
 
 > ---
 > ### ✅ Checkpoint : Vérifiez la configuration de votre interface Web

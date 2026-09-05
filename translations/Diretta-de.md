@@ -2496,7 +2496,7 @@ Auf der Startseite führt Sie eine Navigationsleiste am oberen Rand zu den versc
 
 ### 🔗 Hinweis zur vollen Funktionalität des Web-UI
 
-Um die vollen Funktionen des System-Control-Web-UI freizuschalten – insbesondere die Anpassung der Netzwerk-**Verbindungsgeschwindigkeit** (Link Speed) und das Umschalten auf **Super Purist** – müssen Sie auch die Hardware- und Dienstekonfigurationen ausführen, die in [**Anhang 8: Optionale puristische Netzwerkgeschwindigkeiten**](#21-appendix-8-optional-purist-network-speeds) beschrieben sind. Die Weboberfläche verlässt sich direkt auf die in diesem Abschnitt eingerichteten Skripte, Flags und Dienste, um die physischen Geschwindigkeitsgrenzen Ihrer Punkt-zu-Punkt-Verbindung erfolgreich zu ändern und durchzusetzen.
+Die Stufe **Super Purist** erscheint erst dann in der Web-Oberfläche, wenn Sie die Hardware- und Dienstkonfigurationen in [**Anhang 8: Optionale Purist-Netzwerkgeschwindigkeiten**](#21-appendix-8-optional-purist-network-speeds) abgeschlossen haben. Die Oberfläche benötigt die dort eingerichteten Skripte, Flags und `limit-speed-100m.service`, um die physische Verbindungsgeschwindigkeit zu ändern und zu halten; bis dahin bietet die Purist-Mode-Seite nur Standard und Purist an.
 
 > ---
 > ### ✅ Checkpoint: Überprüfen Sie Ihr Web-UI-Setup

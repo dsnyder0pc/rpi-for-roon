@@ -2496,7 +2496,7 @@ From the landing page, a navigation bar at the top will guide you to the differe
 
 ### 🔗 Note on Full Web UI Functionality
 
-To unlock the full capabilities of the System Control Web UI—specifically the network **Link Speed** adjustments and the **Super Purist** toggle—you must also complete the hardware and service configurations detailed in [**Appendix 8: Optional Purist Network Speeds**](#21-appendix-8-optional-purist-network-speeds)[cite: 1]. The web interface relies directly on the underlying scripts, flags, and services established in that section to successfully modify and enforce physical link speed boundaries on your point-to-point connection[cite: 1].
+The **Super Purist** tier does not appear in the web UI until you complete the hardware and service configurations in [**Appendix 8: Optional Purist Network Speeds**](#21-appendix-8-optional-purist-network-speeds). The interface relies on the scripts, flags, and `limit-speed-100m.service` established there to move and hold the physical link speed, so until they exist the Purist Mode page offers only Standard and Purist.
 
 > ---
 > ### ✅ Checkpoint: Verify Your Web UI Setup

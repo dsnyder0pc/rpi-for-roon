@@ -2496,7 +2496,7 @@ Desde la página de inicio, una barra de navegación en la parte superior le gui
 
 ### 🔗 Nota sobre la funcionalidad completa de la interfaz web (Web UI)
 
-Para desbloquear todas las capacidades de la interfaz web de control del sistema (Web UI), específicamente los ajustes de **Link Speed** (Velocidad de enlace) de red y el interruptor **Super Purist** (Súper Purista), también debe completar las configuraciones de hardware y servicios detalladas en el [**Apéndice 8: Velocidades de red puristas opcionales**](#21-appendix-8-optional-purist-network-speeds)[cite: 1]. La interfaz web depende directamente de los scripts, flags y servicios subyacentes establecidos en esa sección para modificar y hacer cumplir con éxito los límites físicos de velocidad de enlace en su conexión de punto a punto[cite: 1].
+El nivel **Super Purist** no aparece en la interfaz web hasta que complete las configuraciones de hardware y servicios de [**Apéndice 8: Velocidades de Red Purist Opcionales**](#21-appendix-8-optional-purist-network-speeds). La interfaz depende de los scripts, indicadores y `limit-speed-100m.service` establecidos allí para mover y mantener la velocidad física del enlace, así que hasta entonces la página de Purist Mode solo ofrece Standard y Purist.
 
 > ---
 > ### ✅ Punto de control: Verificar la configuración de la interfaz web (Web UI)
