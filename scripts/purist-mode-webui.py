@@ -1322,11 +1322,21 @@ def get_link_info():
         max_dsd, max_pcm = None, None
 
     # Measured against the budget rather than the frames it needs, because the
-    # two failure modes differ: overrunning the frame limit fragments the cycle
-    # and shows up as frames/cycle, while overrunning the wire limit still fits
-    # one frame and simply fails to clear it in time. The second is the quieter
-    # fault -- dropouts with nothing else on the panel to explain them -- so the
-    # budget is what the warning has to key on.
+    # two failure modes differ. Overrunning the frame limit fragments the cycle
+    # and shows up as frames/cycle: the stream plays on, indefinitely and
+    # invisibly, which is why it wants a warning at all. Overrunning the wire
+    # limit still fits one frame but cannot clear it in time, and on a 10 Mbps
+    # Super Purist link that has been seen to stop playback outright -- the Roon
+    # zone drops and takes ~20s to reset before anything will play again.
+    #
+    # That last observation comes from 32-bit PCM and native DSD only. A stream
+    # barely over the line, such as the packed 24-bit a UPnP source can send and
+    # Roon cannot, may yet degrade instead of failing; treat "it stops dead" as
+    # the tested case rather than the rule.
+    #
+    # Either way the panel seldom gets to colour a wire-limit overrun, since the
+    # device closes before the next render. The warning that earns its keep
+    # there is the ceiling shown while idle, read before anyone tries.
     over_budget = bool(
         budget and playing and playing["payload_rate"] > budget + PAYLOAD_TOLERANCE
     )
