@@ -3025,15 +3025,15 @@ EOF
 
 ***
 > **Hinweis zu MTU-Stufen und `CycleTime`:**
-> `CycleTime` wird berechnet, nicht gewählt. Jeder Wert ist die am stärksten gelockerte Einstellung, bei der das höchste unterstützte Format noch in eine **einzige Übertragung pro Zyklus** passt. Die Obergrenze ist `(MTU - 48) / 2.8224`, wobei 2,8224 Byte/µs der Datenrate von DSD256 und DXD (32 Bit, 352,8 kHz) entspricht.
+> `CycleTime` wird berechnet, nicht gewählt. Jeder Wert ist die am stärksten gelockerte Einstellung, bei der das höchste unterstützte Format noch in eine **einzige Übertragung pro Zyklus** passt. Die Obergrenze ist `(MTU - 2) / 2.8224`, wobei 2 Byte der eigene Header von Diretta sind — es läuft als reines L2 mit dem Ethertype `0xcb4b`, ohne IP oder UDP darunter — und 2,8224 Byte/µs der Datenrate von DSD256 und DXD (32 Bit, 352,8 kHz) entspricht.
 >
 > All dies hängt von **`TargetProfileLimitTime=0`** ab, weshalb jeder Konfigurationsblock oben diesen Wert setzt. AudioLinux liefert `200` aus, und bei jedem Wert ungleich null überlässt Diretta die Wahl des Zyklus seinem automatischen Zielprofil: Der Host sendet dann mit einem vom Profil gewählten Zyklus und `CycleTime` bleibt vollkommen wirkungslos. Auf einer MTU-3824-Verbindung gemessen erzwingt `200` unabhängig von `CycleTime` konstante 2000 µs — genug, dass DXD zwei Übertragungen pro Zyklus benötigt und 768 kHz vier, also genau die Fragmentierung, die diese Stufen verhindern sollen. Der Preis dafür ist, dass `0` auf den automatischen Rückfall des Profils auf leichtere Verarbeitung bei hoher Host-Last verzichtet. Falls Sie diese Blöcke jemals anhand einer Standardinstallation auffrischen, behalten Sie die `0` bei.
 >
 > | Link-MTU | `CycleTime` | Obergrenze | Anmerkungen |
 > | :--- | :--- | :--- | :--- |
-> | 2032 (Baby) | 700 µs | 703 µs | An der Obergrenze |
-> | 3824 (Mittel) | 1300 µs | 1338 µs | An der Obergrenze |
-> | 9000 (Voll) | 1500 µs | 3172 µs | Bewusst begrenzt; über 2000 µs hinaus nimmt der Nutzen ab |
+> | 2032 (Baby) | 700 µs | 719 µs | Größter runder Wert unter der Obergrenze |
+> | 3824 (Mittel) | 1300 µs | 1354 µs | Größter runder Wert unter der Obergrenze |
+> | 9000 (Voll) | 1500 µs | 3188 µs | Bewusst begrenzt; über 2000 µs hinaus nimmt der Nutzen ab |
 >
 > Eine größere MTU ermöglicht einen längeren, ruhigeren Zyklus. Bei 9000 ist nicht mehr die Arithmetik, sondern der Höreindruck ausschlaggebend.
 >

@@ -21,6 +21,13 @@ source is left untouched and only its TODO list is refreshed, so running --sync 
 (or running it after translations were updated by hand) cannot double-apply a hunk.
 A file matching neither source is reported and skipped rather than patched blindly.
 
+The one exception to "safe to re-run" is a line whose English was rewritten in
+place. Such a line is reported until its TODO entry is cleared, because a
+re-translated line and a stale one are indistinguishable without reading the
+language. Repetition is the safe failure here: --apply never writes an
+untranslated entry over an existing translation, so the cost is a reminder that
+outstays its welcome rather than a regression that goes unnoticed.
+
 Exit status is non-zero if any file could not be synced, applied, or verified.
 """
 
@@ -89,8 +96,41 @@ def hunk_placeholders(hunks):
             placeholders[hunk['new_start'] + offset] = added_line
     return placeholders
 
-def build_todo(placeholders, needs_translation, target_lines):
-    """Collect lines that still need translating: added, translatable, still English."""
+def rewritten_lines(hunks):
+    """Line numbers in the NEW source whose English was rewritten in place.
+
+    Only hunks that replace lines one for one qualify: there the Nth added line
+    is unambiguously the new text for the Nth removed line. A hunk that changes
+    the line count is handled by the structural patch instead, which already
+    leaves an English placeholder behind for translation.
+    """
+    rewritten = set()
+    for hunk in hunks:
+        added, removed = hunk['added_lines'], hunk['removed_lines']
+        if not removed or len(added) != len(removed):
+            continue
+        for offset in range(len(added)):
+            rewritten.add(hunk['new_start'] + offset)
+    return rewritten
+
+
+def build_todo(placeholders, rewritten, needs_translation, target_lines):
+    """Collect lines that still need translating.
+
+    Two kinds qualify, and only the first is visible to a content comparison.
+    A line still holding English is an untranslated placeholder, whether it was
+    just inserted or never got done. A line whose English was rewritten in
+    place is stale even though it reads as a perfectly good translation -- it
+    translates a sentence that no longer exists -- and nothing about the line
+    itself reveals that, which is why the diff's removed lines are needed.
+
+    The second kind cannot be detected as *done* either: a re-translated line
+    is indistinguishable from a stale one without knowing the language. So a
+    rewritten line keeps being listed until its TODO entry is removed. That is
+    deliberate -- a stale translation reported twice costs a moment, and one
+    reported never is a silent regression. `apply_todo_to_lines` is what makes
+    the repetition safe, by refusing to write English over a real translation.
+    """
     todo = {}
     for line_num, english_text in sorted(placeholders.items()):
         if not needs_translation.get(line_num, False):
@@ -98,9 +138,36 @@ def build_todo(placeholders, needs_translation, target_lines):
         idx = line_num - 1
         if idx >= len(target_lines):
             continue
-        if target_lines[idx].strip() == english_text.strip():
+        if target_lines[idx].strip() == english_text.strip() or line_num in rewritten:
             todo[str(line_num)] = english_text
     return todo
+
+
+def apply_todo_to_lines(todo, src_lines, target_lines):
+    """Write translated lines into target_lines, refusing the unsafe ones.
+
+    A TODO value identical to the English source is an entry nobody translated.
+    Writing it where the target still holds the English placeholder is a no-op,
+    but writing it over a real translation would replace that language's text
+    with English -- so those entries are skipped and reported instead of
+    applied. This is what lets a rewritten line be listed repeatedly without
+    ever costing the reader their translation.
+
+    Returns:
+        list: 1-based line numbers skipped because they were still English.
+    """
+    skipped = []
+    for line_num_str, translation in todo.items():
+        idx = int(line_num_str) - 1
+        src_line = src_lines[idx]
+        if translation.strip() == src_line.strip() \
+                and target_lines[idx].strip() != src_line.strip():
+            skipped.append(int(line_num_str))
+            continue
+        # Align leading space exactly
+        src_space = len(src_line) - len(src_line.lstrip())
+        target_lines[idx] = ' ' * src_space + translation.lstrip()
+    return skipped
 
 def parse_diff(diff_output):
     """Parse unified diff hunks into structured metadata."""
@@ -125,14 +192,14 @@ def parse_diff(diff_output):
                     'old_len': old_len,
                     'new_start': new_start,
                     'new_len': new_len,
-                    'added_lines': []
+                    'added_lines': [],
+                    'removed_lines': []
                 }
         elif current_hunk is not None:
             if line.startswith("+"):
                 current_hunk['added_lines'].append(line[1:])
             elif line.startswith("-"):
-                # We skip deleted lines but they are tracked via old_len
-                pass
+                current_hunk['removed_lines'].append(line[1:])
             
     if current_hunk:
         hunks.append(current_hunk)
@@ -368,6 +435,9 @@ def cmd_sync(ref, dry_run=False):
 
     needs_translation = analyze_lines(new_src_lines)
     placeholders = hunk_placeholders(hunks)
+    # Lines whose English was replaced in place. Their translations are stale
+    # but structurally valid, so nothing else in this tool can spot them.
+    rewritten = rewritten_lines(hunks)
     languages = get_languages()
 
     if not languages:
@@ -407,7 +477,8 @@ def cmd_sync(ref, dry_run=False):
             errors += 1
             continue
 
-        todo = build_todo(placeholders, needs_translation, new_target_lines)
+        todo = build_todo(placeholders, rewritten, needs_translation, new_target_lines)
+        stale = sum(1 for line_num in todo if int(line_num) in rewritten)
 
         if dry_run:
             print(f"  - [{lang}] {status}; would leave {len(todo)} line(s) to translate.")
@@ -420,7 +491,10 @@ def cmd_sync(ref, dry_run=False):
         if todo:
             with open(todo_path, 'w', encoding='utf-8') as f:
                 json.dump(todo, f, indent=2, ensure_ascii=False)
-            print(f"  - [{lang}] {target_path} {status}. TODO file: {todo_path} ({len(todo)} items).")
+            detail = f"{len(todo)} items"
+            if stale:
+                detail += f", {stale} rewritten in English and now stale"
+            print(f"  - [{lang}] {target_path} {status}. TODO file: {todo_path} ({detail}).")
         else:
             if os.path.exists(todo_path):
                 os.remove(todo_path)
@@ -460,22 +534,23 @@ def cmd_apply():
             continue
             
         # Apply translations and enforce indentation
-        for line_num_str, translation in todo.items():
-            idx = int(line_num_str) - 1
-            src_line = src_lines[idx]
-            
-            # Align leading space exactly
-            src_space = len(src_line) - len(src_line.lstrip())
-            translation_lstrip = translation.lstrip()
-            adjusted_translation = ' ' * src_space + translation_lstrip
-            
-            target_lines[idx] = adjusted_translation
-            
+        skipped = apply_todo_to_lines(todo, src_lines, target_lines)
+
         # Verify correctness
         if verify_translation(src_lines, target_lines):
             # Save the file
             with open(target_path, 'w', encoding='utf-8') as f:
                 f.write("\n".join(target_lines) + "\n")
+            if skipped:
+                # Written, but not finished: these lines still read in English
+                # in the TODO, so the file keeps its existing translation and
+                # the TODO stays as the reminder.
+                print(f"  [Warning] {target_path} updated, but line(s) "
+                      f"{', '.join(str(n) for n in skipped)} were left alone: their "
+                      f"{todo_path} entries are still English and would have replaced "
+                      f"a real translation. Translate them or delete the entries.")
+                failures += 1
+                continue
             print(f"  [Success] Verification passed for {target_path}. Cleaning up {todo_path}.")
             os.remove(todo_path)
             applied_count += 1

@@ -3025,15 +3025,15 @@ EOF
 
 ***
 > **Nota sobre os níveis de MTU e o `CycleTime`:**
-> O `CycleTime` é derivado, não escolhido. Cada valor é a configuração mais relaxada em que o formato mais exigente suportado ainda cabe em uma **única transmissão por ciclo**. O teto é `(MTU - 48) / 2.8224`, onde 2,8224 bytes/µs é a taxa do DSD256 e do DXD (32 bits, 352,8 kHz).
+> O `CycleTime` é derivado, não escolhido. Cada valor é a configuração mais relaxada em que o formato mais exigente suportado ainda cabe em uma **única transmissão por ciclo**. O teto é `(MTU - 2) / 2.8224`, onde 2 bytes são o próprio cabeçalho do Diretta — ele funciona em L2 puro sobre o ethertype `0xcb4b`, sem IP nem UDP por baixo — e 2,8224 bytes/µs é a taxa do DSD256 e do DXD (32 bits, 352,8 kHz).
 >
 > Tudo isto depende de **`TargetProfileLimitTime=0`**, e é por isso que todos os blocos de configuração acima o definem. O AudioLinux vem com `200` e, com qualquer valor diferente de zero, o Diretta entrega a escolha do ciclo ao seu perfil de destino automático: o Host passa então a transmitir num ciclo escolhido por esse perfil e `CycleTime` deixa de ter qualquer efeito. Medido numa ligação com MTU 3824, `200` impõe 2000 µs fixos diga o que disser `CycleTime` — o suficiente para que o DXD exija duas transmissões por ciclo e o 768 kHz quatro, exatamente a fragmentação que estes níveis existem para evitar. Em troca, `0` abdica do recuo automático do perfil para um processamento mais leve quando o Host está sob carga. Se algum dia atualizar estes blocos a partir de uma instalação de origem, mantenha o `0`.
 >
 > | MTU do link | `CycleTime` | Teto | Observações |
 > | :--- | :--- | :--- | :--- |
-> | 2032 (Baby) | 700 µs | 703 µs | No teto |
-> | 3824 (Médio) | 1300 µs | 1338 µs | No teto |
-> | 9000 (Full) | 1500 µs | 3172 µs | Limitado de propósito; além de 2000 µs os ganhos diminuem |
+> | 2032 (Baby) | 700 µs | 719 µs | Maior valor redondo abaixo do teto |
+> | 3824 (Médio) | 1300 µs | 1354 µs | Maior valor redondo abaixo do teto |
+> | 9000 (Full) | 1500 µs | 3188 µs | Limitado de propósito; além de 2000 µs os ganhos diminuem |
 >
 > Uma MTU maior permite um ciclo mais longo e silencioso. Em 9000, o limite deixa de ser aritmético e passa a ser preferência de escuta.
 >

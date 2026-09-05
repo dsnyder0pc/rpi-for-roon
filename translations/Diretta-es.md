@@ -3025,15 +3025,15 @@ EOF
 
 ***
 > **Nota sobre los niveles de MTU y `CycleTime`:**
-> `CycleTime` se deriva, no se elige. Cada valor es el ajuste más relajado con el que el formato más exigente admitido todavía cabe en una **única transmisión por ciclo**. El límite es `(MTU - 48) / 2.8224`, donde 2,8224 bytes/µs es la tasa de DSD256 y DXD (32 bits, 352,8 kHz).
+> `CycleTime` se deriva, no se elige. Cada valor es el ajuste más relajado con el que el formato más exigente admitido todavía cabe en una **única transmisión por ciclo**. El límite es `(MTU - 2) / 2.8224`, donde 2 bytes son la propia cabecera de Diretta — funciona en L2 puro sobre el ethertype `0xcb4b`, sin IP ni UDP por debajo — y 2,8224 bytes/µs es la tasa de DSD256 y DXD (32 bits, 352,8 kHz).
 >
 > Todo esto depende de **`TargetProfileLimitTime=0`**, y por eso cada bloque de configuración anterior lo establece. AudioLinux distribuye `200`, y con cualquier valor distinto de cero Diretta cede la elección del ciclo a su perfil de destino automático: el Host transmite entonces con un ciclo elegido por ese perfil y `CycleTime` deja de tener efecto alguno. Medido en un enlace con MTU 3824, `200` impone 2000 µs fijos diga lo que diga `CycleTime` — suficiente para que DXD necesite dos transmisiones por ciclo y 768 kHz cuatro, justo la fragmentación que estos niveles existen para evitar. A cambio, `0` renuncia al repliegue automático del perfil hacia un procesamiento más ligero cuando el Host está cargado. Si alguna vez actualiza estos bloques a partir de una instalación de fábrica, conserve el `0`.
 >
 > | MTU del enlace | `CycleTime` | Límite | Notas |
 > | :--- | :--- | :--- | :--- |
-> | 2032 (Baby) | 700 µs | 703 µs | En el límite |
-> | 3824 (Medio) | 1300 µs | 1338 µs | En el límite |
-> | 9000 (Completo) | 1500 µs | 3172 µs | Limitado a propósito; más allá de 2000 µs los beneficios decrecen |
+> | 2032 (Baby) | 700 µs | 719 µs | Mayor valor redondo por debajo del límite |
+> | 3824 (Medio) | 1300 µs | 1354 µs | Mayor valor redondo por debajo del límite |
+> | 9000 (Completo) | 1500 µs | 3188 µs | Limitado a propósito; más allá de 2000 µs los beneficios decrecen |
 >
 > Una MTU mayor permite un ciclo más largo y silencioso. En 9000 el límite deja de ser aritmético y pasa a ser una preferencia de escucha.
 >

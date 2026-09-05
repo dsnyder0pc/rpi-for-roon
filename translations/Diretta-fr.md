@@ -3025,15 +3025,15 @@ EOF
 
 ***
 > **Note sur les paliers de MTU et le `CycleTime` :**
-> Le `CycleTime` est calculé, non choisi. Chaque valeur est le réglage le plus détendu permettant au format le plus exigeant pris en charge de tenir dans une **seule transmission par cycle**. Le plafond est `(MTU - 48) / 2.8224`, où 2,8224 octets/µs correspond au débit du DSD256 et du DXD (32 bits, 352,8 kHz).
+> Le `CycleTime` est calculé, non choisi. Chaque valeur est le réglage le plus détendu permettant au format le plus exigeant pris en charge de tenir dans une **seule transmission par cycle**. Le plafond est `(MTU - 2) / 2.8224`, où 2 octets correspondent à l'en-tête propre de Diretta — il fonctionne en L2 brut sur l'ethertype `0xcb4b`, sans IP ni UDP en dessous — et 2,8224 octets/µs correspond au débit du DSD256 et du DXD (32 bits, 352,8 kHz).
 >
 > Tout ceci repose sur **`TargetProfileLimitTime=0`**, et c'est pourquoi chaque bloc de configuration ci-dessus le définit. AudioLinux livre `200`, et à toute valeur non nulle Diretta confie le choix du cycle à son profil de cible automatique : l'Hôte émet alors sur un cycle choisi par ce profil et `CycleTime` n'a plus aucun effet. Mesuré sur un lien MTU 3824, `200` impose un cycle fixe de 2000 µs quelle que soit la valeur de `CycleTime` — assez pour que le DXD exige deux transmissions par cycle et le 768 kHz quatre, précisément la fragmentation que ces paliers doivent empêcher. En contrepartie, `0` renonce au repli automatique du profil vers un traitement plus léger lorsque l'Hôte est chargé. Si vous rafraîchissez un jour ces blocs à partir d'une installation d'origine, conservez le `0`.
 >
 > | MTU de la liaison | `CycleTime` | Plafond | Remarques |
 > | :--- | :--- | :--- | :--- |
-> | 2032 (Baby) | 700 µs | 703 µs | Au plafond |
-> | 3824 (Moyen) | 1300 µs | 1338 µs | Au plafond |
-> | 9000 (Complet) | 1500 µs | 3172 µs | Plafonné volontairement ; au-delà de 2000 µs, les gains diminuent |
+> | 2032 (Baby) | 700 µs | 719 µs | Plus grande valeur ronde sous le plafond |
+> | 3824 (Moyen) | 1300 µs | 1354 µs | Plus grande valeur ronde sous le plafond |
+> | 9000 (Complet) | 1500 µs | 3188 µs | Plafonné volontairement ; au-delà de 2000 µs, les gains diminuent |
 >
 > Une MTU plus grande permet un cycle plus long et plus silencieux. À 9000, la limite n'est plus arithmétique mais relève de la préférence d'écoute.
 >

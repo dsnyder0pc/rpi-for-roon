@@ -3025,15 +3025,15 @@ EOF
 
 ***
 > **Note on MTU Tiers and `CycleTime`:**
-> `CycleTime` is derived, not chosen. Each value is the most relaxed setting at which the highest supported format still fits into a **single transmission per cycle**. The ceiling is `(MTU - 48) / 2.8224`, where 2.8224 bytes/µs is the rate of DSD256 and DXD (32-bit, 352.8 kHz).
+> `CycleTime` is derived, not chosen. Each value is the most relaxed setting at which the highest supported format still fits into a **single transmission per cycle**. The ceiling is `(MTU - 2) / 2.8224`, where 2 bytes is Diretta's own header — it runs raw L2 on ethertype `0xcb4b`, with no IP or UDP beneath it — and 2.8224 bytes/µs is the rate of DSD256 and DXD (32-bit, 352.8 kHz).
 >
 > All of this depends on **`TargetProfileLimitTime=0`**, which is why every configuration block above sets it. AudioLinux ships `200`, and at any non-zero value Diretta hands cycle selection to its automatic target profile: the Host then transmits on a cycle of the profile's choosing and `CycleTime` has no effect at all. Measured on an MTU 3824 link, `200` elects a flat 2000 µs whatever `CycleTime` says — enough that DXD needs two transmissions per cycle and 768 kHz needs four, the exact fragmentation these tiers exist to prevent. The trade is that `0` gives up the profile's automatic fallback to lighter processing under Host load. If you ever refresh these blocks against a stock install, keep the `0`.
 >
 > | Link MTU | `CycleTime` | Ceiling | Notes |
 > | :--- | :--- | :--- | :--- |
-> | 2032 (Baby) | 700 µs | 703 µs | At the ceiling |
-> | 3824 (Medium) | 1300 µs | 1338 µs | At the ceiling |
-> | 9000 (Full) | 1500 µs | 3172 µs | Capped deliberately; past 2000 µs the returns diminish |
+> | 2032 (Baby) | 700 µs | 719 µs | Largest round value under the ceiling |
+> | 3824 (Medium) | 1300 µs | 1354 µs | Largest round value under the ceiling |
+> | 9000 (Full) | 1500 µs | 3188 µs | Capped deliberately; past 2000 µs the returns diminish |
 >
 > A larger MTU buys a longer, quieter cycle. At 9000 the limit stops being arithmetic and becomes listening preference.
 >

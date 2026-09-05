@@ -3025,15 +3025,15 @@ EOF
 
 ***
 > **Nota sui livelli di MTU e sul `CycleTime`:**
-> Il `CycleTime` è calcolato, non scelto. Ogni valore è l'impostazione più rilassata con cui il formato più impegnativo supportato entra ancora in una **singola trasmissione per ciclo**. Il limite è `(MTU - 48) / 2.8224`, dove 2,8224 byte/µs è la velocità di DSD256 e DXD (32 bit, 352,8 kHz).
+> Il `CycleTime` è calcolato, non scelto. Ogni valore è l'impostazione più rilassata con cui il formato più impegnativo supportato entra ancora in una **singola trasmissione per ciclo**. Il limite è `(MTU - 2) / 2.8224`, dove 2 byte sono l'header di Diretta stesso — funziona in L2 puro sull'ethertype `0xcb4b`, senza IP né UDP sotto — e 2,8224 byte/µs è la velocità di DSD256 e DXD (32 bit, 352,8 kHz).
 >
 > Tutto questo dipende da **`TargetProfileLimitTime=0`**, ed è per questo che ogni blocco di configurazione qui sopra lo imposta. AudioLinux distribuisce `200`, e con qualsiasi valore diverso da zero Diretta affida la scelta del ciclo al suo profilo target automatico: l'Host trasmette allora su un ciclo scelto dal profilo e `CycleTime` non ha più alcun effetto. Misurato su un collegamento con MTU 3824, `200` impone 2000 µs fissi qualunque cosa dica `CycleTime` — abbastanza perché il DXD richieda due trasmissioni per ciclo e il 768 kHz quattro, esattamente la frammentazione che questi livelli esistono per evitare. In cambio, `0` rinuncia al ripiego automatico del profilo verso un'elaborazione più leggera quando l'Host è sotto carico. Se un giorno aggiornate questi blocchi partendo da un'installazione originale, mantenete lo `0`.
 >
 > | MTU del collegamento | `CycleTime` | Limite | Note |
 > | :--- | :--- | :--- | :--- |
-> | 2032 (Baby) | 700 µs | 703 µs | Al limite |
-> | 3824 (Medio) | 1300 µs | 1338 µs | Al limite |
-> | 9000 (Completo) | 1500 µs | 3172 µs | Limitato di proposito; oltre i 2000 µs i vantaggi diminuiscono |
+> | 2032 (Baby) | 700 µs | 719 µs | Massimo valore tondo sotto il limite |
+> | 3824 (Medio) | 1300 µs | 1354 µs | Massimo valore tondo sotto il limite |
+> | 9000 (Completo) | 1500 µs | 3188 µs | Limitato di proposito; oltre i 2000 µs i vantaggi diminuiscono |
 >
 > Una MTU più grande consente un ciclo più lungo e silenzioso. A 9000 il limite non è più aritmetico, ma diventa una preferenza di ascolto.
 >
