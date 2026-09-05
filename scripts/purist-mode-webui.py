@@ -98,6 +98,11 @@ TX_BYTES_OVERHEAD = 20
 
 ALSA_STATUS_PATH = "/proc/asound/card0/pcm0p/sub0/status"
 
+# Absorbs binary rounding where a format lands exactly on the ceiling, as
+# DSD256 does at CycleTime 514 and again at MTU 2032. A stream sitting exactly
+# on the budget fits, and must not be reported as exceeding it.
+PAYLOAD_TOLERANCE = 1e-9
+
 # The width to reckon PCM capacity in when nothing is playing: the widest
 # container Diretta offers, so an idle panel quotes the conservative ceiling.
 PCM_DEFAULT_SAMPLE_BYTES = 4
@@ -448,7 +453,7 @@ LINK_PANEL_TEMPLATE = """
             </dd>
             {% if link.elected_cycle %}
             <dd class="mt-0.5 text-xs {{ 'text-red-400' if link.cycle_mismatch else 'text-gray-400' }}">
-                elected {{ link.elected_cycle }} &micro;s{% if link.frames_per_cycle > 1 %} &middot; {{ link.frames_per_cycle }} frames/cycle{% endif %}
+                elected {{ link.elected_cycle }} &micro;s{% if link.frames_per_cycle > 1 %}<span class="text-red-400"> &middot; {{ link.frames_per_cycle }} frames/cycle</span>{% endif %}
             </dd>
             {% elif link.cycle_mismatch %}
             <dd class="mt-0.5 text-xs text-red-400">elected value differs</dd>
@@ -460,13 +465,13 @@ LINK_PANEL_TEMPLATE = """
                 {% if link.info_cycle_ms %}{{ link.info_cycle_ms }} ms{% else %}&mdash;{% endif %}
             </dd>
         </div>
-        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest stereo PCM rate that still fits in one transmission per cycle at this MTU and link speed, for the container width in the heading. The link pays for the container rather than the word size, so a 16-bit stream reaches twice the rate a 32-bit one does. The width follows whatever is playing, and reverts to 32-bit when nothing is.">
+        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest stereo PCM rate that still fits in one transmission per cycle at this MTU and link speed, for the container width in the heading. The link pays for the container rather than the word size, so a 16-bit stream reaches twice the rate a 32-bit one does. The width follows whatever is playing, and reverts to 32-bit when nothing is. A red playing line means the stream costs more than the link can carry: it will either fragment across several transmissions per cycle or fail to clear the wire in time.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Max PCM ({{ link.pcm_width }}-bit)</dt>
             <dd class="mt-1 text-lg font-semibold text-white">
                 {% if link.max_pcm %}{{ link.max_pcm }}{% else %}&mdash;{% endif %}
             </dd>
             {% if link.playing_pcm %}
-            <dd class="mt-0.5 text-xs text-gray-400">playing {{ link.playing_pcm }}</dd>
+            <dd class="mt-0.5 text-xs {{ 'text-red-400' if link.playing_over_budget else 'text-gray-400' }}">playing {{ link.playing_pcm }}</dd>
             {% endif %}
         </div>
         <div class="bg-gray-900/40 p-4 cursor-help" title="The highest DSD rate that still fits in one transmission per cycle at this MTU and link speed. Native because DoP carries DSD inside PCM frames, so a DoP stream is counted against Max PCM instead and never appears here.">
@@ -475,7 +480,7 @@ LINK_PANEL_TEMPLATE = """
                 {% if link.max_dsd %}{{ link.max_dsd }}{% else %}&mdash;{% endif %}
             </dd>
             {% if link.playing_dsd %}
-            <dd class="mt-0.5 text-xs text-gray-400">playing {{ link.playing_dsd }}</dd>
+            <dd class="mt-0.5 text-xs {{ 'text-red-400' if link.playing_over_budget else 'text-gray-400' }}">playing {{ link.playing_dsd }}</dd>
             {% endif %}
         </div>
     </dl>
@@ -814,8 +819,10 @@ def get_playing_format():
         # into, but only where Roon's line agrees with the device about what is
         # playing. A stale or rotated-away line then costs nothing: the label
         # falls back to the container, which is what it said before.
-        return {"label": f"{rate / 1000:g} kHz", "is_dsd": False,
-                "bits": bits, "sample_bytes": _container_bytes(format_name, bits)}
+        sample_bytes = _container_bytes(format_name, bits)
+        return {"label": f"{rate / 1000:g} kHz", "is_dsd": False, "bits": bits,
+                "sample_bytes": sample_bytes,
+                "payload_rate": rate * sample_bytes * 2 / 1e6}
 
     # DSD arrives packed into PCM-shaped words, so its real bit rate is the
     # container rate times the container width: DSD_U32_LE at 88200 is
@@ -824,8 +831,10 @@ def get_playing_format():
     base = 44100 if rate % 44100 == 0 else 48000 if rate % 48000 == 0 else None
     if not base:
         return None
+    sample_bytes = _container_bytes(format_name, bits)
     return {"label": f"DSD{round(rate * bits / base)}", "is_dsd": True,
-            "bits": bits, "sample_bytes": _container_bytes(format_name, bits)}
+            "bits": bits, "sample_bytes": sample_bytes,
+            "payload_rate": rate * sample_bytes * 2 / 1e6}
 
 
 def run_remote_command(command, attempts=SSH_RETRY_ATTEMPTS):
@@ -1246,9 +1255,7 @@ def get_max_formats(budget, sample_bytes=PCM_DEFAULT_SAMPLE_BYTES):
     if budget is None or budget <= 0:
         return None, None
 
-    # A tolerance absorbs binary rounding where a tier lands exactly on the
-    # ceiling, as DSD256 does at CycleTime 514 and again at MTU 2032.
-    tolerance = 1e-9
+    tolerance = PAYLOAD_TOLERANCE
 
     max_dsd = None
     for name, rate in DSD_TIERS:
@@ -1308,12 +1315,21 @@ def get_link_info():
     # Without a negotiated speed the wire limit cannot be applied, and the frame
     # limit alone would overstate the link: it would claim DSD256 on a 10 Mbps
     # Super Purist connection. Report nothing rather than something unfounded.
-    if link_up and speed:
-        max_dsd, max_pcm = get_max_formats(
-            get_payload_budget(mtu, cycle_time, speed), sample_bytes
-        )
+    budget = get_payload_budget(mtu, cycle_time, speed) if link_up and speed else None
+    if budget:
+        max_dsd, max_pcm = get_max_formats(budget, sample_bytes)
     else:
         max_dsd, max_pcm = None, None
+
+    # Measured against the budget rather than the frames it needs, because the
+    # two failure modes differ: overrunning the frame limit fragments the cycle
+    # and shows up as frames/cycle, while overrunning the wire limit still fits
+    # one frame and simply fails to clear it in time. The second is the quieter
+    # fault -- dropouts with nothing else on the panel to explain them -- so the
+    # budget is what the warning has to key on.
+    over_budget = bool(
+        budget and playing and playing["payload_rate"] > budget + PAYLOAD_TOLERANCE
+    )
 
     elected = get_elected_cycle(cycle_time, mtu) or {}
 
@@ -1346,6 +1362,9 @@ def get_link_info():
         "playing_pcm": pcm_playing["label"] if pcm_playing else None,
         "playing_dsd": playing["label"] if playing and playing["is_dsd"] else None,
         "pcm_width": sample_bytes * 8 if not pcm_playing else pcm_playing["bits"],
+        # True when what is playing costs more than the link can carry, whether
+        # it fragments or merely fails to keep up.
+        "playing_over_budget": over_budget,
     }
 
 
