@@ -989,6 +989,7 @@ sudo sync && sudo reboot
     * Choose **4) Edit configuration** only if you need to make advanced changes. The previous steps should be sufficient; however, here are some tuned settings you may wish to try:
         ```text
         ScanOnlineStop=enable
+        TargetProfileLimitTime=0
         InfoCycle=80000
         FlexCycle=disable
         CycleTime=800
@@ -1004,7 +1005,7 @@ sudo sync && sudo reboot
         Broadcast=disable
         ScanOnlineStop=enable
         ScanInterval=
-        TargetProfileLimitTime=200
+        TargetProfileLimitTime=0
         ThredMode=1
         InfoCycle=80000
         FlexCycle=disable
@@ -2699,7 +2700,7 @@ With the real-time kernel optimizations in place, the Diretta Host can now handl
     Broadcast=disable
     ScanOnlineStop=enable
     ScanInterval=
-    TargetProfileLimitTime=200
+    TargetProfileLimitTime=0
     ThredMode=16
     InfoCycle=51400
     FlexCycle=disable
@@ -2994,6 +2995,11 @@ EOF
   # 3. Apply Diretta Config
   echo "Configuring Diretta Host..."
 
+  # CycleTime only reaches the wire when the Host uses its own profile. Leave
+  # TargetProfileLimitTime non-zero and Diretta's automatic target profile
+  # elects the cycle instead, silently ignoring every value set below.
+  sudo sed -i 's/^TargetProfileLimitTime=.*/TargetProfileLimitTime=0/' /opt/diretta-alsa/setting.inf
+
   # Always enable FlexCycle for Jumbo Frames to ensure stability
   sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
 
@@ -3020,6 +3026,8 @@ EOF
 ***
 > **Note on MTU Tiers and `CycleTime`:**
 > `CycleTime` is derived, not chosen. Each value is the most relaxed setting at which the highest supported format still fits into a **single transmission per cycle**. The ceiling is `(MTU - 48) / 2.8224`, where 2.8224 bytes/µs is the rate of DSD256 and DXD (32-bit, 352.8 kHz).
+>
+> All of this depends on **`TargetProfileLimitTime=0`**, which is why every configuration block above sets it. AudioLinux ships `200`, and at any non-zero value Diretta hands cycle selection to its automatic target profile: the Host then transmits on a cycle of the profile's choosing and `CycleTime` has no effect at all. Measured on an MTU 3824 link, `200` elects a flat 2000 µs whatever `CycleTime` says — enough that DXD needs two transmissions per cycle and 768 kHz needs four, the exact fragmentation these tiers exist to prevent. The trade is that `0` gives up the profile's automatic fallback to lighter processing under Host load. If you ever refresh these blocks against a stock install, keep the `0`.
 >
 > | Link MTU | `CycleTime` | Ceiling | Notes |
 > | :--- | :--- | :--- | :--- |

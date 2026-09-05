@@ -989,6 +989,7 @@ sudo sync && sudo reboot
     * **4) Edit configuration**を選択します。高度な変更が必要な場合にのみ、これを使用してください。通常はこれまでの手順で十分ですが、以下に示す調整済みの設定をお試しいただくことも可能です：
         ```text
         ScanOnlineStop=enable
+        TargetProfileLimitTime=0
         InfoCycle=80000
         FlexCycle=disable
         CycleTime=800
@@ -1004,7 +1005,7 @@ sudo sync && sudo reboot
         Broadcast=disable
         ScanOnlineStop=enable
         ScanInterval=
-        TargetProfileLimitTime=200
+        TargetProfileLimitTime=0
         ThredMode=1
         InfoCycle=80000
         FlexCycle=disable
@@ -2699,7 +2700,7 @@ sudo sync && sudo reboot
     Broadcast=disable
     ScanOnlineStop=enable
     ScanInterval=
-    TargetProfileLimitTime=200
+    TargetProfileLimitTime=0
     ThredMode=16
     InfoCycle=51400
     FlexCycle=disable
@@ -2994,6 +2995,11 @@ EOF
   # 3. 構成の適用 (Diretta Config)
   echo "Diretta Hostを設定しています..."
 
+  # CycleTime は Host が自身のプロファイルを使う場合にのみ有効です。
+  # TargetProfileLimitTime が 0 以外のままだと、Diretta の自動ターゲット
+  # プロファイルがサイクルを決定し、以下の値はすべて黙って無視されます。
+  sudo sed -i 's/^TargetProfileLimitTime=.*/TargetProfileLimitTime=0/' /opt/diretta-alsa/setting.inf
+
   # 安定性を確保するため、ジャンボフレームでは常にFlexCycleを有効にする
   sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
 
@@ -3020,6 +3026,8 @@ EOF
 ***
 > **MTUの段階と`CycleTime`に関する注記：**
 > `CycleTime`は選ぶものではなく、算出されるものです。各値は、サポートされる最高フォーマットが**1サイクルあたり1回の送信**に収まる範囲で最も緩和された設定です。上限は`(MTU - 48) / 2.8224`で、2.8224バイト/µsはDSD256およびDXD（32ビット、352.8 kHz）のレートです。
+>
+> これらはすべて **`TargetProfileLimitTime=0`** を前提としており、上記の各設定ブロックがこの値を設定しているのはそのためです。AudioLinux の出荷時の値は `200` で、0 以外のどの値でも Diretta はサイクルの選択を自動ターゲットプロファイルに委ねます。その場合、Host はプロファイルが選んだサイクルで送信し、`CycleTime` はまったく効果を持ちません。MTU 3824 のリンクで測定したところ、`200` では `CycleTime` の値にかかわらず一律 2000 µs となり、DXD は 1 サイクルあたり 2 回、768 kHz は 4 回の送信を必要としました。これはまさに、これらの階層が防ごうとしている分割です。その代償として、`0` では Host の負荷が高いときにプロファイルが自動的に軽い処理へ切り替わる機能は失われます。今後これらのブロックを標準インストールから作り直す場合も、`0` は維持してください。
 >
 > | リンクMTU | `CycleTime` | 上限 | 備考 |
 > | :--- | :--- | :--- | :--- |

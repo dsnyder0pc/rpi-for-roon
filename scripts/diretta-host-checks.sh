@@ -206,6 +206,10 @@ run_appendix9_checks() {
     fi
 
     CONFIG="/opt/diretta-alsa/setting.inf"
+    # Every CycleTime assertion below is meaningless unless the Host uses its
+    # own profile: at any non-zero TargetProfileLimitTime, Diretta's automatic
+    # target profile elects the cycle and CycleTime never reaches the wire.
+    check "TargetProfileLimitTime is 0" "grep -q '^TargetProfileLimitTime=0' $CONFIG"
     check "FlexCycle is enabled" "grep -q '^FlexCycle=enable' $CONFIG"
     if [ -f "$CONFIG" ]; then
         CT=$(grep '^CycleTime=' "$CONFIG" | cut -d= -f2)

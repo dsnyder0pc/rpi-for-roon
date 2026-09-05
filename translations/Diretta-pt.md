@@ -989,6 +989,7 @@ sudo sync && sudo reboot
     * Escolha **4) Edit configuration** apenas se precisar fazer alterações avançadas. As etapas anteriores devem ser suficientes; no entanto, aqui estão algumas configurações ajustadas que você pode querer experimentar:
         ```text
         ScanOnlineStop=enable
+        TargetProfileLimitTime=0
         InfoCycle=80000
         FlexCycle=disable
         CycleTime=800
@@ -1004,7 +1005,7 @@ sudo sync && sudo reboot
         Broadcast=disable
         ScanOnlineStop=enable
         ScanInterval=
-        TargetProfileLimitTime=200
+        TargetProfileLimitTime=0
         ThredMode=1
         InfoCycle=80000
         FlexCycle=disable
@@ -2699,7 +2700,7 @@ Com as otimizações de kernel em tempo real implementadas, o Host Diretta agora
     Broadcast=disable
     ScanOnlineStop=enable
     ScanInterval=
-    TargetProfileLimitTime=200
+    TargetProfileLimitTime=0
     ThredMode=16
     InfoCycle=51400
     FlexCycle=disable
@@ -2994,6 +2995,11 @@ EOF
   # 3. Aplicar Configuração do Diretta
   echo "Configurando o Host Diretta..."
 
+  # CycleTime só chega à rede se o Host usar o seu próprio perfil. Se
+  # TargetProfileLimitTime não for zero, o perfil de destino automático do
+  # Diretta escolhe o ciclo e ignora silenciosamente todos os valores abaixo.
+  sudo sed -i 's/^TargetProfileLimitTime=.*/TargetProfileLimitTime=0/' /opt/diretta-alsa/setting.inf
+
   # Sempre ativar o FlexCycle para Jumbo Frames para garantir estabilidade
   sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
 
@@ -3020,6 +3026,8 @@ EOF
 ***
 > **Nota sobre os níveis de MTU e o `CycleTime`:**
 > O `CycleTime` é derivado, não escolhido. Cada valor é a configuração mais relaxada em que o formato mais exigente suportado ainda cabe em uma **única transmissão por ciclo**. O teto é `(MTU - 48) / 2.8224`, onde 2,8224 bytes/µs é a taxa do DSD256 e do DXD (32 bits, 352,8 kHz).
+>
+> Tudo isto depende de **`TargetProfileLimitTime=0`**, e é por isso que todos os blocos de configuração acima o definem. O AudioLinux vem com `200` e, com qualquer valor diferente de zero, o Diretta entrega a escolha do ciclo ao seu perfil de destino automático: o Host passa então a transmitir num ciclo escolhido por esse perfil e `CycleTime` deixa de ter qualquer efeito. Medido numa ligação com MTU 3824, `200` impõe 2000 µs fixos diga o que disser `CycleTime` — o suficiente para que o DXD exija duas transmissões por ciclo e o 768 kHz quatro, exatamente a fragmentação que estes níveis existem para evitar. Em troca, `0` abdica do recuo automático do perfil para um processamento mais leve quando o Host está sob carga. Se algum dia atualizar estes blocos a partir de uma instalação de origem, mantenha o `0`.
 >
 > | MTU do link | `CycleTime` | Teto | Observações |
 > | :--- | :--- | :--- | :--- |

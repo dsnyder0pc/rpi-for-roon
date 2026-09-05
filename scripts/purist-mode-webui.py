@@ -121,6 +121,14 @@ STATUS_CACHE = {"data": None, "timestamp": 0.0, "valid": False}
 # MTU only changes across a reboot, so the last value the Target reported stays
 # valid. Caching it lets the link panel refresh without any extra SSH traffic.
 TARGET_LINK_CACHE = {"mtu": None}
+
+# Successive link-panel renders bracket the transmit-counter sampling interval,
+# so the elected cycle costs two file reads and never sleeps.
+LINK_TX_CACHE = {"t": None, "packets": None, "bytes": None, "pps": None}
+TX_SAMPLE_MIN_SPAN = 2.0    # a shorter bracket gives a noisy packet rate
+TX_SAMPLE_MAX_SPAN = 120.0  # a longer one may span a stop or a format change
+TX_IDLE_PPS = 20.0          # below this the link is not carrying a stream
+TX_RATE_STABLE = 0.10       # two windows must agree this closely to be trusted
 STATUS_CACHE_LOCK = threading.Lock()
 STATUS_FETCH_LOCK = threading.Lock()
 
@@ -405,11 +413,18 @@ LINK_PANEL_TEMPLATE = """
                 {{ link.mtu }} bytes
             </dd>
         </div>
-        <div class="bg-gray-900/40 p-4 cursor-help" title="How often the Host transmits audio to the Target.">
+        <div class="bg-gray-900/40 p-4 cursor-help" title="How often the Host transmits audio to the Target. The configured value comes from setting.inf; the elected value is measured from the link while music plays. They differ whenever TargetProfileLimitTime is not 0, and by about 1% in the Flex cycle modes.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Cycle Time</dt>
-            <dd class="mt-1 text-lg font-semibold text-white">
+            <dd class="mt-1 text-lg font-semibold {{ 'text-red-400' if link.cycle_mismatch else 'text-white' }}">
                 {% if link.cycle_time %}{{ link.cycle_time }} &micro;s{% else %}&mdash;{% endif %}
             </dd>
+            {% if link.elected_cycle %}
+            <dd class="mt-0.5 text-xs {{ 'text-red-400' if link.cycle_mismatch else 'text-gray-400' }}">
+                elected {{ link.elected_cycle }} &micro;s{% if link.frames_per_cycle > 1 %} &middot; {{ link.frames_per_cycle }} frames/cycle{% endif %}
+            </dd>
+            {% elif link.cycle_mismatch %}
+            <dd class="mt-0.5 text-xs text-red-400">elected value differs</dd>
+            {% endif %}
         </div>
         <div class="bg-gray-900/40 p-4 cursor-help" title="Diretta's information interval, set alongside CycleTime in setting.inf.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Info Cycle</dt>
@@ -889,6 +904,97 @@ def _pcm_payload_rate(rate_khz):
     return rate_khz * 1000.0 * 4.0 * 2.0 / 1_000_000.0
 
 
+def _read_tx_counters():
+    """Reads end0's cumulative transmit counters, or None when unavailable."""
+    try:
+        base = "/sys/class/net/end0/statistics/"
+        with open(base + "tx_packets", encoding="utf-8") as file_handle:
+            packets = int(file_handle.read())
+        with open(base + "tx_bytes", encoding="utf-8") as file_handle:
+            octets = int(file_handle.read())
+        return packets, octets
+    except (OSError, ValueError):
+        return None
+
+
+def get_elected_cycle(cycle_time, mtu):
+    """Derives the cycle Diretta actually transmits on, from the link counters.
+
+    `CycleTime` in setting.inf is what the Host asks for, not necessarily what
+    it gets. A non-zero TargetProfileLimitTime hands the choice to Diretta's
+    automatic target profile, and even at 0 the Flex modes land a little above
+    the request. The daemon states its choice at stream start, but Appendix 8
+    leaves Debug disabled, so on a finished build the wire is the only source.
+
+    Returns:
+        dict: {"us", "frames", "diverges"} describing the measured cycle, or
+            None while nothing is playing. "us" is None when the stream is
+            fragmented and the frame count cannot be pinned down; "diverges" is
+            still meaningful there, because a packet rate that is not a whole
+            multiple of the configured cycle proves the two disagree.
+    """
+    now = time.monotonic()
+    sample = _read_tx_counters()
+    previous = dict(LINK_TX_CACHE)
+    if sample is not None:
+        LINK_TX_CACHE.update(t=now, packets=sample[0], bytes=sample[1])
+    if sample is None or previous["t"] is None:
+        return None
+
+    span = now - previous["t"]
+    packets = sample[0] - previous["packets"]
+    # Short-circuits left to right, so the rate is only divided once the span
+    # is known to be sane.
+    # Short-circuits left to right, so the rate is only divided once the span
+    # is known to be sane.
+    live = (packets > 0
+            and TX_SAMPLE_MIN_SPAN <= span <= TX_SAMPLE_MAX_SPAN
+            and packets / span >= TX_IDLE_PPS)
+    pps = packets / span if live else None
+    LINK_TX_CACHE["pps"] = pps
+
+    # A window straddling the start or stop of a stream counts packets for only
+    # part of its span, which reads as a far longer cycle than the truth and
+    # would raise a false mismatch. Report nothing until two consecutive
+    # windows agree on the rate.
+    if pps is None or previous["pps"] is None \
+            or abs(pps - previous["pps"]) > TX_RATE_STABLE * previous["pps"]:
+        return None
+
+    # Diretta splits a cycle's payload across the fewest frames that fit the
+    # MTU, so a frame no larger than half the usable payload cannot have been
+    # split: one frame per cycle, and the cycle is just the packet interval.
+    payload = (sample[1] - previous["bytes"]) / packets - FRAME_HEADER_BYTES
+    usable = mtu - FRAME_HEADER_BYTES if mtu else 0
+    if usable > 0 and payload * 2 <= usable:
+        elected = 1e6 / pps
+        return {"us": elected, "frames": 1,
+                "diverges": _diverges(elected, cycle_time)}
+
+    # A fragmented stream is ambiguous from counters alone, so fall back to the
+    # frame count the configured cycle implies. A ratio that lands on a whole
+    # number means the cycle is being honoured; one that does not is proof it
+    # is not, even though the elected value stays unknown.
+    if cycle_time:
+        frames = pps * cycle_time / 1e6
+        nearest = round(frames)
+        if nearest >= 1 and abs(frames - nearest) <= 0.05:
+            return {"us": nearest * 1e6 / pps, "frames": nearest, "diverges": False}
+        return {"us": None, "frames": None, "diverges": True}
+    return None
+
+
+def _diverges(elected_us, cycle_time):
+    """True when the measured cycle is more than 5% off the configured one.
+
+    The Flex modes overshoot by about 1%, which is expected and should not be
+    reported as a fault.
+    """
+    if not elected_us or not cycle_time:
+        return False
+    return abs(elected_us - cycle_time) / cycle_time > 0.05
+
+
 def get_payload_budget(mtu, cycle_time, speed_mbps):
     """
     Returns the largest payload rate in bytes/us that still fits one L2
@@ -967,6 +1073,8 @@ def get_link_info():
     else:
         max_dsd, max_pcm = None, None
 
+    elected = get_elected_cycle(cycle_time, mtu) or {}
+
     return {
         "up": link_up,
         "speed": speed,
@@ -979,6 +1087,12 @@ def get_link_info():
         # than as a packet rate: InfoCycle's transport is not the L2 stream, so
         # a frames-per-second reading would be speculation.
         "cycle_time": cycle_time,
+        # What setting.inf asks for and what the link actually runs are not the
+        # same number whenever the target profile is electing the cycle.
+        "elected_cycle": round(elected["us"]) if elected.get("us") else None,
+        "frames_per_cycle": elected.get("frames"),
+        "cycle_mismatch": bool(elected.get("diverges")),
+        "cycle_measured": bool(elected),
         "info_cycle_ms": _us_to_ms(info_cycle),
         "max_dsd": max_dsd,
         "max_pcm": max_pcm,
