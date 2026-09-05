@@ -148,7 +148,11 @@ TRANSITION_STATE = {"active": False}
 STATUS_CACHE = {"data": None, "timestamp": 0.0, "valid": False}
 # MTU only changes across a reboot, so the last value the Target reported stays
 # valid. Caching it lets the link panel refresh without any extra SSH traffic.
-TARGET_LINK_CACHE = {"mtu": None}
+TARGET_LINK_CACHE = {"mtu": None, "license_needs_activation": None}
+
+# Without an activated Diretta license the Target stops PCM above this rate
+# after six minutes. Native DSD is always above it.
+TRIAL_PCM_LIMIT_HZ = 48000
 # The activation URL carries the Target's hardware hash and is fixed for as
 # long as that Target reports itself unlicensed, so it is fetched once rather
 # than on every status poll. Cleared as soon as the Target reports activation.
@@ -470,22 +474,22 @@ LINK_PANEL_TEMPLATE = """
                 {% if link.info_cycle_ms %}{{ link.info_cycle_ms }} ms{% else %}&mdash;{% endif %}
             </dd>
         </div>
-        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest stereo PCM rate that still fits in one transmission per cycle at this MTU and link speed, for the container width in the heading. The link pays for the container rather than the word size, so a 16-bit stream reaches twice the rate a 32-bit one does. The width follows whatever is playing, and reverts to 32-bit when nothing is. A red playing line means the stream costs more than the link can carry: it will either fragment across several transmissions per cycle or fail to clear the wire in time.">
+        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest stereo PCM rate that still fits in one transmission per cycle at this MTU and link speed, for the container width in the heading. The link pays for the container rather than the word size, so a 16-bit stream reaches twice the rate a 32-bit one does. The width follows whatever is playing, and reverts to 32-bit when nothing is. A red playing line means the stream costs more than the link can carry: it will either fragment across several transmissions per cycle or fail to clear the wire in time. A yellow one means the Diretta license is not activated yet, so this stream stops after six minutes: the trial allows PCM up to 48 kHz indefinitely, and nothing above it.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Max PCM ({{ link.pcm_width }}-bit)</dt>
             <dd class="mt-1 text-lg font-semibold text-white">
                 {% if link.max_pcm %}{{ link.max_pcm }}{% else %}&mdash;{% endif %}
             </dd>
             {% if link.playing_pcm %}
-            <dd class="mt-0.5 text-xs {{ 'text-red-400' if link.playing_over_budget else 'text-gray-400' }}">playing {{ link.playing_pcm }}</dd>
+            <dd class="mt-0.5 text-xs {% if link.playing_over_budget %}text-red-400{% elif link.playing_trial_limited %}text-yellow-400{% else %}text-gray-400{% endif %}">playing {{ link.playing_pcm }}</dd>
             {% endif %}
         </div>
-        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest DSD rate that still fits in one transmission per cycle at this MTU and link speed. Native because DoP carries DSD inside PCM frames, so a DoP stream is counted against Max PCM instead and never appears here.">
+        <div class="bg-gray-900/40 p-4 cursor-help" title="The highest DSD rate that still fits in one transmission per cycle at this MTU and link speed. Native because DoP carries DSD inside PCM frames, so a DoP stream is counted against Max PCM instead and never appears here. A yellow playing line means the Diretta license is not activated yet, so this stream stops after six minutes: every DSD rate is above the trial's 48 kHz PCM ceiling.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Max DSD (Native)</dt>
             <dd class="mt-1 text-lg font-semibold text-white">
                 {% if link.max_dsd %}{{ link.max_dsd }}{% else %}&mdash;{% endif %}
             </dd>
             {% if link.playing_dsd %}
-            <dd class="mt-0.5 text-xs {{ 'text-red-400' if link.playing_over_budget else 'text-gray-400' }}">playing {{ link.playing_dsd }}</dd>
+            <dd class="mt-0.5 text-xs {% if link.playing_over_budget %}text-red-400{% elif link.playing_trial_limited %}text-yellow-400{% else %}text-gray-400{% endif %}">playing {{ link.playing_dsd }}</dd>
             {% endif %}
         </div>
     </dl>
@@ -828,7 +832,7 @@ def get_playing_format():
         # falls back to the container, which is what it said before.
         sample_bytes = _container_bytes(format_name, bits)
         return {"label": f"{rate / 1000:g} kHz", "is_dsd": False, "bits": bits,
-                "sample_bytes": sample_bytes,
+                "sample_bytes": sample_bytes, "rate": rate,
                 "payload_rate": rate * sample_bytes * 2 / 1e6}
 
     # DSD arrives packed into PCM-shaped words, so its real bit rate is the
@@ -840,7 +844,7 @@ def get_playing_format():
         return None
     sample_bytes = _container_bytes(format_name, bits)
     return {"label": f"DSD{round(rate * bits / base)}", "is_dsd": True,
-            "bits": bits, "sample_bytes": sample_bytes,
+            "bits": bits, "sample_bytes": sample_bytes, "rate": rate,
             "payload_rate": rate * sample_bytes * 2 / 1e6}
 
 
@@ -1007,6 +1011,9 @@ def get_status_from_target(bypass_cache=False):
             # simply omits the agreement check rather than guessing.
             if status_data.get("mtu"):
                 TARGET_LINK_CACHE["mtu"] = status_data["mtu"]
+            TARGET_LINK_CACHE["license_needs_activation"] = status_data.get(
+                "license_needs_activation"
+            )
 
             _write_status_cache(status_data, now)
             return status_data
@@ -1431,6 +1438,15 @@ def get_link_info():
         # True when what is playing costs more than the link can carry, whether
         # it fragments or merely fails to keep up.
         "playing_over_budget": over_budget,
+        # True when the Target has no license and what is playing is above the
+        # rate its trial allows, so playback will stop after six minutes. The
+        # flag rides along with the cached status, keeping this panel free of
+        # SSH traffic. Every native DSD stream is above the limit.
+        "playing_trial_limited": bool(
+            playing
+            and TARGET_LINK_CACHE["license_needs_activation"]
+            and (playing["is_dsd"] or playing.get("rate", 0) > TRIAL_PCM_LIMIT_HZ)
+        ),
     }
 
 

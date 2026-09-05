@@ -932,7 +932,7 @@ sudo sync && sudo reboot
         ?0
         ```
     * Wählen Sie **4) Edit configuration**. Setzen Sie `AlsaLatency=20` für ein Raspberry Pi 5 Target oder `AlsaLatency=40` für RPi4.
-    * Wählen Sie **6) License**. Das System spielt hochauflösendes Audio (mehr als 44,1 kHz PCM) 6 Minuten lang im Testmodus ab. Folgen Sie dem Link auf dem Bildschirm und den Anweisungen, um Ihre vollständige Lizenz für Hi-Res-Unterstützung zu erwerben und anzuwenden. Dies erfordert den in Schritt 5 konfigurierten Internetzugang.
+    * Wählen Sie **6) License**. Das System spielt hochauflösendes Audio (mehr als 48 kHz PCM) 6 Minuten lang im Testmodus ab. Folgen Sie dem Link auf dem Bildschirm und den Anweisungen, um Ihre vollständige Lizenz für Hi-Res-Unterstützung zu erwerben und anzuwenden. Dies erfordert den in Schritt 5 konfigurierten Internetzugang.
         ```text
         The price of this third party license is 100$
         Without license DIRETTA Target will work for 6 min.

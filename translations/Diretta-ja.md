@@ -932,7 +932,7 @@ sudo sync && sudo reboot
         ?0
         ```
     * **4) Edit configuration**を選択します。Raspberry Pi 5がTargetの場合は`AlsaLatency=20`を、RPi4の場合は`AlsaLatency=40`を設定します。
-    * **6) License**を選択します。システムは体験モードとして、ハイレゾ（44.1 kHzを超えるPCMオーディオ）を6分間再生します。画面に表示されるリンクと指示に従って、ハイレゾ対応のためのフルライセンスを購入し、適用してください。これには、ステップ5で構成したインターネット接続が必要になります。
+    * **6) License**を選択します。システムは体験モードとして、ハイレゾ（48 kHzを超えるPCMオーディオ）を6分間再生します。画面に表示されるリンクと指示に従って、ハイレゾ対応のためのフルライセンスを購入し、適用してください。これには、ステップ5で構成したインターネット接続が必要になります。
         ```text
         The price of this third party license is 100$
         Without license DIRETTA Target will work for 6 min.
