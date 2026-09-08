@@ -1664,8 +1664,12 @@ def get_link_info():
         # Timed from the Target's own reports rather than read back from
         # setting.inf, so an interval the Target elects for itself is visible
         # instead of hiding behind the configured figure.
+        #
+        # Whole milliseconds: the reading is good to about a percent, which at
+        # 180 ms is nearly two of them, so a tenths digit would be noise dressed
+        # as precision and would invite a reader to watch it move.
         "info_measured_ms": (
-            f"{info_measured['ms']:.1f}" if info_measured.get("ms") else None
+            f"{info_measured['ms']:.0f}" if info_measured.get("ms") else None
         ),
         "info_mismatch": bool(info_measured.get("diverges")),
         "max_dsd": max_dsd,
