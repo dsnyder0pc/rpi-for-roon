@@ -188,29 +188,40 @@ ELECTED_CYCLE_MEMO = 5.0
 # render after a restart has nothing to subtract and reports nothing.
 #
 # rx_bytes counts 64 of the 78 bytes each report puts on the wire, because the
-# driver strips the Ethernet header on receive where tx_bytes keeps it. A span
-# is accepted only where the byte count is exactly 64 times the frame count,
-# which is the whole of the filtering: every stray frame is an extra frame, and
-# extra frames read as an InfoCycle shorter than the truth.
+# driver strips the Ethernet header on receive where tx_bytes keeps it. Every
+# stray frame is an extra frame, and extra frames read as an InfoCycle shorter
+# than the truth, so a span is judged by how far its byte total sits from 64
+# times its frame count.
 #
-# A tolerance was tried first and is not enough. An ARP frame contributes 46
-# bytes, only 18 short of a report, so a handful of them shift the mean by less
-# than half a byte while inflating the count by 2%. Measured over nine spans,
-# every exact one landed within 0.5% of the interval a capture timed, and every
-# inexact one read low, by as much as 3.8%.
+# A mean was tried first and is too blunt: an ARP frame contributes 46 bytes,
+# only 18 short of a report, so several shift the mean by less than half a byte
+# while inflating the count by 2%. Exactness was tried next and is too strict:
+# on the 10 Mbps link an IPv6 neighbour-discovery frame arrives about once every
+# 30 seconds, which is the span itself, so almost no span is ever clean -- and
+# that single stray costs only 0.6%, well inside what this figure is worth to
+# anyone reading it.
+#
+# The slack below is one stray's worth. Each moves the total by the 8 to 18
+# bytes it differs from a report, so this admits the single neighbour
+# advertisement that a span is likely to catch, at a cost of 0.6%, and abandons
+# the span for a fresh one as soon as there are more. Set wider it reads
+# visibly low: at two strays' slack the figure ran 1.5 to 2.6% under an
+# interval a capture timed at 179.6 ms.
 #
 # Roughly one span in five is clean, so a reading is held while later spans are
-# dirty. The InfoCycle does not change on its own, and a figure from a minute
-# ago is worth more than a figure that is wrong now.
+# dirty. The InfoCycle does not change on its own, so the memo only has to
+# outlive a run of dirty spans; it is dropped outright when the stream stops or
+# when setting.inf is rewritten under it.
 INFO_FRAME_RX_BYTES = 64
-INFO_CYCLE_MEMO = 300.0
+INFO_FRAME_SLACK = 8
+INFO_CYCLE_MEMO = 600.0
 # Below this the one frame the span may be out by is worth more than 2.5%.
 INFO_CYCLE_MIN_FRAMES = 40
 # A baseline older than this has spanned stops, starts and mode changes.
 INFO_CYCLE_MAX_SPAN = 300.0
 INFO_CYCLE_STATE = {"packets": None, "octets": None, "t": None,
                     "divergence_seen": False, "value": None,
-                    "value_t": float("-inf")}
+                    "value_t": float("-inf"), "value_cycle": None}
 INFO_CYCLE_LOCK = threading.Lock()
 STATUS_CACHE_LOCK = threading.Lock()
 STATUS_FETCH_LOCK = threading.Lock()
@@ -1406,44 +1417,77 @@ def _diverges(elected_us, cycle_time):
     return abs(elected_us - cycle_time) / cycle_time > 0.05
 
 
-def _remembered_info_cycle(now):
-    """The last clean reading, while it is recent enough to still describe the link."""
+def _remembered_info_cycle(now, info_cycle):
+    """The last clean reading, while it still describes the link.
+
+    A reading outlives the span it came from, but not a rewrite of setting.inf:
+    every mode transition writes a new InfoCycle, and a figure measured against
+    the old one would sit under the new one looking like a divergence.
+    """
     with INFO_CYCLE_LOCK:
         if now - INFO_CYCLE_STATE["value_t"] > INFO_CYCLE_MEMO:
+            return None
+        if INFO_CYCLE_STATE["value_cycle"] != info_cycle:
             return None
         return INFO_CYCLE_STATE["value"]
 
 
-def _measure_info_cycle(info_cycle):
+def _forget_info_cycle():
+    """Drops the baseline and the reading, so neither outlives the stream."""
+    with INFO_CYCLE_LOCK:
+        INFO_CYCLE_STATE.update(packets=None, octets=None, t=None,
+                                divergence_seen=False, value=None,
+                                value_t=float("-inf"), value_cycle=None)
+
+
+def _measure_info_cycle(info_cycle, playing):
     """Times the Target's InfoCycle reports across the gap since the last render.
 
     Returns:
-        dict: {"ms", "diverges"}, or None while the span cannot carry a
-            reading: no baseline yet, too few reports to be precise, a baseline
-            old enough to have spanned a stop, or traffic in the span that is
-            not the Target reporting.
+        dict: {"ms", "diverges"}, or None while nothing is playing or no span
+            has yet carried a reading.
     """
+    # The Target only reports while it has a stream to report on, so with the
+    # bridge closed there is nothing to time and nothing a held reading could
+    # still be describing. Dropping both here is what makes this line appear
+    # and disappear with playback rather than trailing it by the memo.
+    if not playing:
+        _forget_info_cycle()
+        return None
+
     now = time.monotonic()
     current = _read_counters("rx")
 
-    # The baseline is replaced on every render, including the ones that report
-    # nothing, so a span that fails below still leaves a usable one behind.
+    # A baseline is only spent on a span long enough to read, and only replaced
+    # once it has been. Renders arrive in bursts -- visibilitychange and focus
+    # both fire on waking a tablet, and every page load renders too -- so
+    # advancing it on every render would restart the span each time and, while
+    # someone was using the UI, guarantee it never reached a readable length.
     with INFO_CYCLE_LOCK:
         previous = dict(INFO_CYCLE_STATE)
-        if current is not None:
+        span = now - previous["t"] if previous["t"] is not None else None
+        restart = (
+            current is not None
+            and (span is None or span <= 0 or span > INFO_CYCLE_MAX_SPAN)
+        )
+        if restart:
             INFO_CYCLE_STATE.update(packets=current[0], octets=current[1], t=now)
 
-    if current is None or previous["t"] is None:
-        return _remembered_info_cycle(now)
+    if current is None or restart:
+        return _remembered_info_cycle(now, info_cycle)
 
-    span = now - previous["t"]
     frames = current[0] - previous["packets"]
-    if span <= 0 or span > INFO_CYCLE_MAX_SPAN or frames < INFO_CYCLE_MIN_FRAMES:
-        return _remembered_info_cycle(now)
+    if frames < INFO_CYCLE_MIN_FRAMES:
+        return _remembered_info_cycle(now, info_cycle)
+
+    # The span is now spent either way: it either yields a reading or is
+    # abandoned for a fresh one, since contamination cannot be subtracted out.
+    with INFO_CYCLE_LOCK:
+        INFO_CYCLE_STATE.update(packets=current[0], octets=current[1], t=now)
 
     octets = current[1] - previous["octets"]
-    if octets != frames * INFO_FRAME_RX_BYTES:
-        return _remembered_info_cycle(now)
+    if abs(frames * INFO_FRAME_RX_BYTES - octets) > INFO_FRAME_SLACK:
+        return _remembered_info_cycle(now, info_cycle)
 
     measured_us = span * 1e6 / frames
     diverges = _diverges(measured_us, info_cycle)
@@ -1456,7 +1500,7 @@ def _measure_info_cycle(info_cycle):
         confirmed = diverges and INFO_CYCLE_STATE["divergence_seen"]
         value = {"ms": measured_us / 1000.0, "diverges": confirmed}
         INFO_CYCLE_STATE.update(divergence_seen=diverges, value=value,
-                                value_t=now)
+                                value_t=now, value_cycle=info_cycle)
 
     return value
 
@@ -1573,7 +1617,7 @@ def get_link_info():
     )
 
     elected = get_elected_cycle(cycle_time, mtu) or {}
-    info_measured = _measure_info_cycle(info_cycle) or {}
+    info_measured = _measure_info_cycle(info_cycle, bool(playing)) or {}
 
     # Against the negotiated speed rather than a fixed figure, so the reading
     # means the same thing on a 10 Mbps Super Purist link as on a gigabit one.
