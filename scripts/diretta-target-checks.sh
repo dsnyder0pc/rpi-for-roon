@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Target QA Check Script v1.26.0
+# Diretta Target QA Check Script v1.27.0
 # (USB IRQs discovered by bus name + re-run summary + Purist Mode aware skips)
 #
 
@@ -18,6 +18,17 @@ C_BOLD=$'\033[1m'
 # failure can be traced back to the one thing the user has to re-run.
 CURRENT_SECTION=""
 FAILED_SECTIONS=()
+
+# Some failures do not need their whole section re-run. A check may carry the
+# commands from the one step that installs the thing it checks, and a failure
+# that has them is reported as those commands instead of as its section. The
+# text is the step's own, so the remedy stays what the guide documents; this is
+# the same idempotency the sections rely on, at the grain of a step.
+TARGETED_FIXES=()
+
+record_fix() {
+    TARGETED_FIXES+=("$1"$'\x1f'"$2")
+}
 
 record_failure() {
     local where=$1
@@ -46,7 +57,11 @@ check() {
         printf '[%sSKIP%s]\n' "$C_YELLOW" "$C_RESET"
     else
         printf '[%sFAIL%s]\n' "$C_RED" "$C_RESET"
-        record_failure "$CURRENT_SECTION"
+        if [ -n "$3" ]; then
+            record_fix "$1" "$3"
+        else
+            record_failure "$CURRENT_SECTION"
+        fi
     fi
 }
 check_status() {
@@ -62,18 +77,37 @@ header() {
     echo -e "\n${C_BOLD}${C_YELLOW}--- $1: $2 ---${C_RESET}"
 }
 print_rerun_summary() {
-    if [ ${#FAILED_SECTIONS[@]} -eq 0 ]; then
+    if [ ${#FAILED_SECTIONS[@]} -eq 0 ] && [ ${#TARGETED_FIXES[@]} -eq 0 ]; then
         echo -e "\n${C_GREEN}No failures. Nothing to re-run.${C_RESET}"
         return
     fi
-    echo -e "\n${C_BOLD}${C_YELLOW}--- What to Re-run ---${C_RESET}"
-    echo -e "  Each section below is safe to re-run from the top, and doing so"
-    echo -e "  fixes the failures reported above it. Re-run these in order, then"
-    echo -e "  run this QA check again:"
-    local where
-    for where in "${FAILED_SECTIONS[@]}"; do
-        echo -e "    ${C_BLUE}*${C_RESET} ${C_BOLD}${where}${C_RESET}"
-    done
+
+    local entry label remedy line
+    if [ ${#TARGETED_FIXES[@]} -gt 0 ]; then
+        echo -e "\n${C_BOLD}${C_YELLOW}--- What to Fix ---${C_RESET}"
+        echo -e "  These failures do not need a whole section re-run. Run the"
+        echo -e "  commands below, then run this QA check again:"
+        for entry in "${TARGETED_FIXES[@]}"; do
+            label=${entry%%$'\x1f'*}
+            remedy=${entry#*$'\x1f'}
+            echo -e "\n    ${C_BLUE}*${C_RESET} ${C_BOLD}${label}${C_RESET}"
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                echo "        $line"
+            done <<< "$remedy"
+        done
+    fi
+
+    if [ ${#FAILED_SECTIONS[@]} -gt 0 ]; then
+        echo -e "\n${C_BOLD}${C_YELLOW}--- What to Re-run ---${C_RESET}"
+        echo -e "  Each section below is safe to re-run from the top, and doing so"
+        echo -e "  fixes the failures reported above it. Re-run these in order, then"
+        echo -e "  run this QA check again:"
+        local where
+        for where in "${FAILED_SECTIONS[@]}"; do
+            echo -e "    ${C_BLUE}*${C_RESET} ${C_BOLD}${where}${C_RESET}"
+        done
+    fi
 }
 check_optional_section() {
     if eval "$1" &>/dev/null; then eval "$2"; else echo -e "\n${C_BOLD}${C_YELLOW}--- Skipping QA for $3 (Not Detected) ---\033[0m"; fi
@@ -126,7 +160,10 @@ run_appendix1_checks() {
 }
 run_appendix3_checks() {
     header "Appendix 3" "Optional: Purist Mode"
-    check "'purist-mode' script is up-to-date" "check_hash /usr/local/bin/purist-mode https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode"
+    check "'purist-mode' script is up-to-date" "check_hash /usr/local/bin/purist-mode https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode" \
+        "curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode
+sudo install -m 0755 purist-mode /usr/local/bin
+rm purist-mode"
     check "Login status message script exists" "[ -f /etc/profile.d/purist-status.sh ]"
     check "Purist revert-on-boot service is enabled" "systemctl is-enabled purist-mode-revert-on-boot.service"
     check "Menu wrapper alias is in .bashrc" "grep -q 'alias menu=.menu_wrapper' /home/audiolinux/.bashrc"
