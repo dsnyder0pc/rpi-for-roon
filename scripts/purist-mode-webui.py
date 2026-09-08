@@ -215,8 +215,17 @@ ELECTED_CYCLE_MEMO = 5.0
 INFO_FRAME_RX_BYTES = 64
 INFO_FRAME_SLACK = 8
 INFO_CYCLE_MEMO = 600.0
-# Below this the one frame the span may be out by is worth more than 2.5%.
-INFO_CYCLE_MIN_FRAMES = 40
+# A span this short is worth about 10%, which is still worth showing: a reader
+# wants to know the Target is reporting on roughly the configured interval, and
+# waiting for a figure good to a percent means showing nothing at all for the
+# first half minute. Renders come in bursts while someone is using the UI, and
+# any pair of them a couple of seconds apart now yields something.
+INFO_CYCLE_MIN_FRAMES = 10
+# The reading is only trusted to call a mismatch once the span is long enough
+# for the one frame it may be out by to be worth less than the 5% threshold
+# _diverges() applies. Below this a short span could raise a false alarm out of
+# its own quantisation, so it is displayed but never flagged.
+INFO_CYCLE_TRUST_FRAMES = 100
 # A baseline older than this has spanned stops, starts and mode changes.
 INFO_CYCLE_MAX_SPAN = 300.0
 INFO_CYCLE_STATE = {"packets": None, "octets": None, "t": None,
@@ -1490,7 +1499,9 @@ def _measure_info_cycle(info_cycle, playing):
         return _remembered_info_cycle(now, info_cycle)
 
     measured_us = span * 1e6 / frames
-    diverges = _diverges(measured_us, info_cycle)
+    diverges = (
+        frames >= INFO_CYCLE_TRUST_FRAMES and _diverges(measured_us, info_cycle)
+    )
 
     # Confirmed by a second reading before it is called a mismatch, as the
     # elected cycle is: a span that began while the stream was still filling
