@@ -82,7 +82,7 @@ print_rerun_summary() {
         for entry in "${TARGETED_FIXES[@]}"; do
             label=${entry%%$'\x1f'*}
             remedy=${entry#*$'\x1f'}
-            echo -e "\n    ${C_BLUE}*${C_RESET} ${C_BOLD}${label}${C_RESET}"
+            echo -e "\n    ${C_BLUE}*${C_RESET} ${C_RED}FAILED:${C_RESET} ${C_BOLD}${label}${C_RESET}"
             while IFS= read -r line; do
                 [ -z "$line" ] && continue
                 echo "        $line"
