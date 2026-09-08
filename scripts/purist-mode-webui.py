@@ -1509,7 +1509,8 @@ def _measure_info_cycle(info_cycle, playing):
     # that has genuinely elected an interval of its own.
     with INFO_CYCLE_LOCK:
         confirmed = diverges and INFO_CYCLE_STATE["divergence_seen"]
-        value = {"ms": measured_us / 1000.0, "diverges": confirmed}
+        value = {"ms": measured_us / 1000.0, "diverges": confirmed,
+                 "rough": frames < INFO_CYCLE_TRUST_FRAMES}
         INFO_CYCLE_STATE.update(divergence_seen=diverges, value=value,
                                 value_t=now, value_cycle=info_cycle)
 
@@ -1679,8 +1680,15 @@ def get_link_info():
         # Whole milliseconds: the reading is good to about a percent, which at
         # 180 ms is nearly two of them, so a tenths digit would be noise dressed
         # as precision and would invite a reader to watch it move.
+        #
+        # The tilde says which of the two readings this is. The first one lands
+        # seconds after the page opens and is worth about 10%, so it can sit a
+        # few milliseconds either side of a configured 180 and look wrong; the
+        # mark is there to say it is a first approximation and not a finding.
+        # It is dropped once a span long enough to be quoted plainly arrives.
         "info_measured_ms": (
-            f"{info_measured['ms']:.0f}" if info_measured.get("ms") else None
+            f"{'~' if info_measured.get('rough') else ''}{info_measured['ms']:.0f}"
+            if info_measured.get("ms") else None
         ),
         "info_mismatch": bool(info_measured.get("diverges")),
         "max_dsd": max_dsd,
