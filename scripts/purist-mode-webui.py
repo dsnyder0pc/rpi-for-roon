@@ -96,6 +96,10 @@ WIRE_OVERHEAD_BYTES = 40
 # plus the 14-byte Ethernet header and 4-byte FCS that sysfs counts and the MTU
 # does not.
 TX_BYTES_OVERHEAD = 20
+# tx_bytes counts the FCS and a capture does not, so the frame size this panel
+# reports is four bytes below the sysfs figure and matches tshark's frame.len
+# exactly. Reported on that basis so a capture can confirm it without arithmetic.
+FCS_BYTES = 4
 
 ALSA_STATUS_PATH = "/proc/asound/card0/pcm0p/sub0/status"
 
@@ -171,6 +175,43 @@ ELECTED_CYCLE_HYSTERESIS = 0.01
 # Tab focus and visibility both trigger a refresh, so renders can arrive in a
 # burst. One measurement serves the whole burst.
 ELECTED_CYCLE_MEMO = 5.0
+
+# The Target reports to the Host once per InfoCycle, as UDP over IPv6
+# link-local, and while a stream runs those reports are the only thing this
+# link receives. That makes the receive counters a clock: no capture, no
+# privileges, and nothing to filter.
+#
+# Timed across the gap between two renders rather than in a bracket of its own.
+# The counters are cumulative, so the reading costs two file reads and no
+# sampling window at all, and a longer gap between renders is a better
+# measurement rather than a slower one. The cost is a baseline: the first
+# render after a restart has nothing to subtract and reports nothing.
+#
+# rx_bytes counts 64 of the 78 bytes each report puts on the wire, because the
+# driver strips the Ethernet header on receive where tx_bytes keeps it. A span
+# is accepted only where the byte count is exactly 64 times the frame count,
+# which is the whole of the filtering: every stray frame is an extra frame, and
+# extra frames read as an InfoCycle shorter than the truth.
+#
+# A tolerance was tried first and is not enough. An ARP frame contributes 46
+# bytes, only 18 short of a report, so a handful of them shift the mean by less
+# than half a byte while inflating the count by 2%. Measured over nine spans,
+# every exact one landed within 0.5% of the interval a capture timed, and every
+# inexact one read low, by as much as 3.8%.
+#
+# Roughly one span in five is clean, so a reading is held while later spans are
+# dirty. The InfoCycle does not change on its own, and a figure from a minute
+# ago is worth more than a figure that is wrong now.
+INFO_FRAME_RX_BYTES = 64
+INFO_CYCLE_MEMO = 300.0
+# Below this the one frame the span may be out by is worth more than 2.5%.
+INFO_CYCLE_MIN_FRAMES = 40
+# A baseline older than this has spanned stops, starts and mode changes.
+INFO_CYCLE_MAX_SPAN = 300.0
+INFO_CYCLE_STATE = {"packets": None, "octets": None, "t": None,
+                    "divergence_seen": False, "value": None,
+                    "value_t": float("-inf")}
+INFO_CYCLE_LOCK = threading.Lock()
 STATUS_CACHE_LOCK = threading.Lock()
 STATUS_FETCH_LOCK = threading.Lock()
 
@@ -443,17 +484,29 @@ LINK_PANEL_TEMPLATE = """
     </div>
 
     <dl class="grid grid-cols-2 gap-px bg-gray-700/50 rounded-xl overflow-hidden border border-gray-700">
-        <div class="bg-gray-900/40 p-4 cursor-help" title="The Ethernet speed the Host and Target negotiated on the point-to-point cable between them.">
+        <div class="bg-gray-900/40 p-4 cursor-help" title="The Ethernet speed the Host and Target negotiated on the point-to-point cable between them.
+
+&#8226; Sending: what the Host is putting on the wire while music plays, preamble and interframe gap included.
+&#8226; Host to Target only. The speed is per direction, and the Target&#39;s replies do not compete with the audio.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Link Speed</dt>
-            <dd class="mt-1 text-lg font-semibold text-white">
+            <dd class="mt-1 text-lg font-semibold {{ 'text-red-400' if link.sent_saturating else 'text-white' }}">
                 {% if link.speed %}{{ link.speed }} Mb/s{% else %}&mdash;{% endif %}
             </dd>
+            {% if link.sent_mbps %}
+            <dd class="mt-0.5 text-xs {{ 'text-red-400' if link.sent_saturating else 'text-gray-400' }}">sending {{ link.sent_mbps }} Mb/s{% if link.sent_percent %} &middot; {{ link.sent_percent }}%{% endif %}</dd>
+            {% endif %}
         </div>
-        <div class="bg-gray-900/40 p-4 cursor-help" title="The largest Ethernet payload this link will carry.">
+        <div class="bg-gray-900/40 p-4 cursor-help" title="The largest Ethernet payload this link will carry.
+
+• Avg frame: the mean Ethernet frame measured while music plays, header included and FCS excluded, as a capture reports it.
+• It sits 14 bytes above the payload the MTU governs, and moves a little as Diretta trims each cycle to what the Target asks for.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">MTU</dt>
             <dd class="mt-1 text-lg font-semibold {{ 'text-red-400' if link.mtu_mismatch else 'text-white' }}">
                 {{ link.mtu }} bytes
             </dd>
+            {% if link.frame_bytes %}
+            <dd class="mt-0.5 text-xs text-gray-400">avg frame {{ link.frame_bytes }} bytes</dd>
+            {% endif %}
         </div>
         <div class="bg-gray-900/40 p-4 cursor-help" title="How often the Host transmits audio to the Target.
 
@@ -472,11 +525,17 @@ LINK_PANEL_TEMPLATE = """
             <dd class="mt-0.5 text-xs text-red-400">elected value differs</dd>
             {% endif %}
         </div>
-        <div class="bg-gray-900/40 p-4 cursor-help" title="Diretta's information interval, set alongside CycleTime in setting.inf.">
+        <div class="bg-gray-900/40 p-4 cursor-help" title="Diretta's information interval, set alongside CycleTime in setting.inf.
+
+• Measured: timed from the Target's reports, which arrive one per interval over UDP/IPv6 and are all this link receives while music plays.
+• It appears a refresh after playback starts, and needs a few seconds of reports to be worth quoting.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Info Cycle</dt>
-            <dd class="mt-1 text-lg font-semibold text-white">
+            <dd class="mt-1 text-lg font-semibold {{ 'text-red-400' if link.info_mismatch else 'text-white' }}">
                 {% if link.info_cycle_ms %}{{ link.info_cycle_ms }} ms{% else %}&mdash;{% endif %}
             </dd>
+            {% if link.info_measured_ms %}
+            <dd class="mt-0.5 text-xs {{ 'text-red-400' if link.info_mismatch else 'text-gray-400' }}">measured {{ link.info_measured_ms }} ms</dd>
+            {% endif %}
         </div>
         <div class="bg-gray-900/40 p-4 cursor-help" title="Highest stereo PCM rate that fits one transmission per cycle here.
 
@@ -1130,17 +1189,22 @@ def _pcm_payload_rate(rate_khz, sample_bytes=PCM_DEFAULT_SAMPLE_BYTES):
     return rate_khz * 1000.0 * float(sample_bytes) * 2.0 / 1_000_000.0
 
 
-def _read_tx_counters():
-    """Reads end0's cumulative transmit counters, or None when unavailable."""
+def _read_counters(direction):
+    """Reads end0's cumulative counters for one direction, or None."""
     try:
-        base = "/sys/class/net/end0/statistics/"
-        with open(base + "tx_packets", encoding="utf-8") as file_handle:
+        base = f"/sys/class/net/{LINK_INTERFACE}/statistics/{direction}_"
+        with open(base + "packets", encoding="utf-8") as file_handle:
             packets = int(file_handle.read())
-        with open(base + "tx_bytes", encoding="utf-8") as file_handle:
+        with open(base + "bytes", encoding="utf-8") as file_handle:
             octets = int(file_handle.read())
         return packets, octets
     except (OSError, ValueError):
         return None
+
+
+def _read_tx_counters():
+    """Reads end0's cumulative transmit counters, or None when unavailable."""
+    return _read_counters("tx")
 
 
 def _counter_rate(before, after, span):
@@ -1209,9 +1273,18 @@ def _cycle_from_rate(pps, bytes_per_packet, cycle_time, mtu):
     # need different overheads subtracted to be comparable at all.
     payload = bytes_per_packet - TX_BYTES_OVERHEAD
     usable = mtu - FRAME_HEADER_BYTES if mtu else 0
+    frame_bytes = round(bytes_per_packet - FCS_BYTES)
+    # What the link is being asked to carry, reckoned the way the wire limit in
+    # get_payload_budget() reckons it: tx_bytes already counts the Ethernet
+    # header and FCS, so what it lacks against a link speed is the preamble,
+    # SFD and interframe gap. One direction only -- the negotiated speed is per
+    # direction, and the Target's replies do not compete with the audio.
+    wire_mbps = pps * (bytes_per_packet + WIRE_OVERHEAD_BYTES
+                       - TX_BYTES_OVERHEAD) * 8.0 / 1e6
     if usable > 0 and payload * 2 <= usable:
         elected = 1e6 / pps
-        return {"us": elected, "frames": 1,
+        return {"us": elected, "frames": 1, "frame_bytes": frame_bytes,
+                "wire_mbps": wire_mbps,
                 "diverges": _diverges(elected, cycle_time)}
 
     # A fragmented stream is ambiguous from counters alone, so fall back to the
@@ -1229,8 +1302,13 @@ def _cycle_from_rate(pps, bytes_per_packet, cycle_time, mtu):
     # a stream that lands inside this tolerance would pass _diverges() too. Real
     # 32-bit 768 kHz measures 2.998 against 3 and reports honestly.
     if nearest >= 1 and abs(frames - nearest) <= 0.05:
-        return {"us": nearest * 1e6 / pps, "frames": nearest, "diverges": False}
-    return {"us": None, "frames": None, "diverges": True}
+        return {"us": nearest * 1e6 / pps, "frames": nearest,
+                "frame_bytes": frame_bytes, "wire_mbps": wire_mbps,
+                "diverges": False}
+    # The frame size stands even here. It is an average of what was actually
+    # sent, so it needs neither the cycle nor the frame count to be known.
+    return {"us": None, "frames": None, "frame_bytes": frame_bytes,
+            "wire_mbps": wire_mbps, "diverges": True}
 
 
 def _measure_elected_cycle(cycle_time, mtu):
@@ -1295,7 +1373,12 @@ def get_elected_cycle(cycle_time, mtu):
     # Hold the figure still while it is the same cycle, so the panel reports a
     # cycle that changed only when one did.
     if _same_cycle(cached["value"], value):
-        value = cached["value"]
+        # Only the cycle is held. Diretta trims each cycle's payload to what the
+        # Target asks for next, so the frame size genuinely moves while the
+        # cycle stands still, and freezing it would report the first bracket of
+        # a track for the whole of it.
+        value = dict(cached["value"], frame_bytes=value.get("frame_bytes"),
+                     wire_mbps=value.get("wire_mbps"))
 
     # A stream starting prefills the Target, and that burst inflates the packet
     # rate for one bracket: 96 kHz measured 1411us against a configured 1500,
@@ -1321,6 +1404,61 @@ def _diverges(elected_us, cycle_time):
     if not elected_us or not cycle_time:
         return False
     return abs(elected_us - cycle_time) / cycle_time > 0.05
+
+
+def _remembered_info_cycle(now):
+    """The last clean reading, while it is recent enough to still describe the link."""
+    with INFO_CYCLE_LOCK:
+        if now - INFO_CYCLE_STATE["value_t"] > INFO_CYCLE_MEMO:
+            return None
+        return INFO_CYCLE_STATE["value"]
+
+
+def _measure_info_cycle(info_cycle):
+    """Times the Target's InfoCycle reports across the gap since the last render.
+
+    Returns:
+        dict: {"ms", "diverges"}, or None while the span cannot carry a
+            reading: no baseline yet, too few reports to be precise, a baseline
+            old enough to have spanned a stop, or traffic in the span that is
+            not the Target reporting.
+    """
+    now = time.monotonic()
+    current = _read_counters("rx")
+
+    # The baseline is replaced on every render, including the ones that report
+    # nothing, so a span that fails below still leaves a usable one behind.
+    with INFO_CYCLE_LOCK:
+        previous = dict(INFO_CYCLE_STATE)
+        if current is not None:
+            INFO_CYCLE_STATE.update(packets=current[0], octets=current[1], t=now)
+
+    if current is None or previous["t"] is None:
+        return _remembered_info_cycle(now)
+
+    span = now - previous["t"]
+    frames = current[0] - previous["packets"]
+    if span <= 0 or span > INFO_CYCLE_MAX_SPAN or frames < INFO_CYCLE_MIN_FRAMES:
+        return _remembered_info_cycle(now)
+
+    octets = current[1] - previous["octets"]
+    if octets != frames * INFO_FRAME_RX_BYTES:
+        return _remembered_info_cycle(now)
+
+    measured_us = span * 1e6 / frames
+    diverges = _diverges(measured_us, info_cycle)
+
+    # Confirmed by a second reading before it is called a mismatch, as the
+    # elected cycle is: a span that began while the stream was still filling
+    # the Target reads long, and only the next one can tell that from a Target
+    # that has genuinely elected an interval of its own.
+    with INFO_CYCLE_LOCK:
+        confirmed = diverges and INFO_CYCLE_STATE["divergence_seen"]
+        value = {"ms": measured_us / 1000.0, "diverges": confirmed}
+        INFO_CYCLE_STATE.update(divergence_seen=diverges, value=value,
+                                value_t=now)
+
+    return value
 
 
 def get_payload_budget(mtu, cycle_time, speed_mbps):
@@ -1435,26 +1573,57 @@ def get_link_info():
     )
 
     elected = get_elected_cycle(cycle_time, mtu) or {}
+    info_measured = _measure_info_cycle(info_cycle) or {}
+
+    # Against the negotiated speed rather than a fixed figure, so the reading
+    # means the same thing on a 10 Mbps Super Purist link as on a gigabit one.
+    sent_mbps = elected.get("wire_mbps")
+    try:
+        sent_percent = round(100.0 * sent_mbps / float(speed)) if sent_mbps else None
+    except (TypeError, ValueError):
+        sent_percent = None
 
     return {
         "up": link_up,
         "speed": speed,
+        # Transmit only, framing included. The wire limit is the one that stops
+        # playback outright rather than merely fragmenting it, and on the
+        # 10 Mbps link it is the limit that binds, so what is left of it is
+        # worth showing next to the speed it is measured against.
+        "sent_mbps": f"{sent_mbps:.1f}" if sent_mbps else None,
+        "sent_percent": sent_percent,
+        "sent_saturating": bool(sent_percent and sent_percent >= 90),
         "mtu": mtu,
         "target_mtu": target_mtu,
         # A silent MTU mismatch is the failure this panel most needs to surface:
         # the link still comes up, but every full-size frame is discarded.
         "mtu_mismatch": target_mtu is not None and target_mtu != mtu,
         # Both cycle figures come straight from setting.inf, as periods rather
-        # than as a packet rate: InfoCycle's transport is not the L2 stream, so
-        # a frames-per-second reading would be speculation.
+        # than as a packet rate. InfoCycle's transport is not the L2 stream: it
+        # is UDP over IPv6 link-local, one 78-byte report from the Target per
+        # interval, which is why it is timed from the receive counters below
+        # while the cycle is timed from the transmit ones.
         "cycle_time": cycle_time,
         # What setting.inf asks for and what the link actually runs are not the
         # same number whenever the target profile is electing the cycle.
         "elected_cycle": round(elected["us"]) if elected.get("us") else None,
         "frames_per_cycle": elected.get("frames"),
+        # An average over the bracket, not a constant: the payload per cycle
+        # follows what the Target requests, and a cycle split across frames is
+        # split evenly, so the mean is the only honest single figure. Measured
+        # from tx_bytes and tx_packets together, so it costs nothing beyond the
+        # counter reads the elected cycle already makes.
+        "frame_bytes": elected.get("frame_bytes"),
         "cycle_mismatch": bool(elected.get("diverges")),
         "cycle_measured": bool(elected),
         "info_cycle_ms": _us_to_ms(info_cycle),
+        # Timed from the Target's own reports rather than read back from
+        # setting.inf, so an interval the Target elects for itself is visible
+        # instead of hiding behind the configured figure.
+        "info_measured_ms": (
+            f"{info_measured['ms']:.1f}" if info_measured.get("ms") else None
+        ),
+        "info_mismatch": bool(info_measured.get("diverges")),
         "max_dsd": max_dsd,
         "max_pcm": max_pcm,
         # Filed under whichever ceiling it belongs beneath, so the reader sees
