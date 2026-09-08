@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-#     Remote System Preparation & Shutdown Script (v8 - Medium Jumbo Frames)
+#     Remote System Preparation & Shutdown Script (v9 - UTC on shipped images)
 #
 # Meant to be run with a command that first clears the calling user's history:
 # history -c; rm -f ~/.bash_history; export HISTSIZE=0; curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/prepare_system | sudo bash
@@ -368,7 +368,25 @@ fi
 
 echo "------------------------------------------------"
 
-# Step 15: Drop the machine ID so every install generates its own
+# Step 15: Ship the image on UTC rather than the builder's own timezone
+echo "🕒 Setting the system timezone to UTC..."
+# These images go to people in timezones the builder does not share, so the
+# builder's local zone is not a sensible default for any of them. UTC is the
+# neutral choice, and it also makes a log someone sends for help mean the same
+# thing to both ends of the conversation. Anyone who wants local time can set
+# it themselves; nothing in the build depends on the zone.
+if timedatectl set-timezone UTC 2>/dev/null; then
+    echo "   - Timezone set to UTC."
+else
+    # timedatectl needs a running systemd to talk to. The symlink it would have
+    # written is the whole of the setting, so write it directly if it cannot.
+    ln -sf /usr/share/zoneinfo/UTC /etc/localtime
+    echo "   - Timezone set to UTC by symlink (timedatectl unavailable)."
+fi
+
+echo "------------------------------------------------"
+
+# Step 16: Drop the machine ID so every install generates its own
 echo "🧹 Removing /etc/machine-id..."
 # AudioLinux images ship with one already in place, so two systems restored
 # from the same image present the same DHCP identifier and a DHCP server hands
@@ -380,7 +398,7 @@ rm -fv /etc/machine-id
 
 echo "------------------------------------------------"
 
-# Step 16: Sync disks and power off the system
+# Step 17: Sync disks and power off the system
 echo "✅ Preparation complete. System will power off in 5 seconds."
 sleep 5
 sync
