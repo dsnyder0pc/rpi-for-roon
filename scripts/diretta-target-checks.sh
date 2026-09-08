@@ -179,7 +179,10 @@ run_appendix4_checks() {
     check "'pm-set-link' script exists" "[ -x /usr/local/bin/pm-set-link ]"
     check "'pm-power' script exists" "[ -x /usr/local/bin/pm-power ]"
     check "'create-diretta-cache.sh' script exists" "[ -x /usr/local/bin/create-diretta-cache.sh ]"
-    check "'create-diretta-cache.sh' script is up-to-date" "check_hash /usr/local/bin/create-diretta-cache.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh"
+    check "'create-diretta-cache.sh' script is up-to-date" "check_hash /usr/local/bin/create-diretta-cache.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh" \
+        "curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh
+sudo install -m 0755 create-diretta-cache.sh /usr/local/bin/
+rm create-diretta-cache.sh"
     check "'diretta-cache' service file exists" "[ -f /etc/systemd/system/diretta-cache.service ]"
     check "'diretta-cache' service is enabled" "systemctl is-enabled --quiet diretta-cache.service"
     check "'diretta-cache' service defines its runtime directory" "grep -q '^RuntimeDirectory=diretta' /etc/systemd/system/diretta-cache.service"
@@ -199,7 +202,9 @@ run_appendix6_checks() {
     check "AudioLinux isolation config exists" "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf"
 
     # Old rtapp.timer must be disabled
-    check "'rtapp.timer' service is disabled" "! systemctl is-enabled rtapp.timer"
+    check "'rtapp.timer' service is disabled" "! systemctl is-enabled rtapp.timer" \
+        "sudo systemctl stop rtapp.timer
+sudo systemctl disable rtapp.timer"
 
     # Check Diretta Isolation (Using pgrep -f to match the binary under the wrapper)
     # Using pgrep -f to match the full command line
@@ -394,7 +399,10 @@ check "MOTD wait-for-ip drop-in exists" "[ -f /etc/systemd/system/update_motd.se
 check "MOTD service actively waits for a default route" "grep -q 'while.*ip route' /etc/systemd/system/update_motd.service.d/wait-for-ip.conf"
 
 # 7.4. Create the Repair Script
-check "Boot repair script is up-to-date" "check_hash /usr/local/sbin/check-and-repair-boot.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh"
+check "Boot repair script is up-to-date" "check_hash /usr/local/sbin/check-and-repair-boot.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh" \
+        "curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh
+sudo install -m 0755 check-and-repair-boot.sh /usr/local/sbin/
+rm check-and-repair-boot.sh"
 
 # 7.5. Create the systemd Service File
 check "'boot-repair' service file exists" "[ -f /etc/systemd/system/boot-repair.service ]"

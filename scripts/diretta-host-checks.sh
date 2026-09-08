@@ -195,7 +195,10 @@ run_appendix2_checks() {
         echo -e "  ${C_YELLOW}* Skipping active check: Flirc or Argon IR receiver not detected.${C_RESET}"
     fi
 
-    check "'set-roon-zone' script is up-to-date" "check_hash /usr/local/bin/set-roon-zone https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone"
+    check "'set-roon-zone' script is up-to-date" "check_hash /usr/local/bin/set-roon-zone https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone" \
+        "curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/set-roon-zone
+sudo install -m 0755 set-roon-zone /usr/local/bin/
+rm set-roon-zone"
 
     # Only check for Argon IR specifics if the dtoverlay is active in /boot/config.txt
     if grep -q '^dtoverlay=gpio-ir,gpio_pin=23' /boot/config.txt; then
@@ -214,7 +217,10 @@ run_appendix4_checks() {
     check "Web UI app file is up-to-date" "check_hash /home/audiolinux/purist-mode-webui/app.py https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py" \
         "curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py -o /home/audiolinux/purist-mode-webui/app.py
 sudo systemctl restart purist-webui.service"
-    check "Python has port binding capability" "getcap \$(readlink -f /home/audiolinux/.pyenv/versions/purist-webui/bin/python) | grep -q 'cap_net_bind_service.ep'"
+    check "Python has port binding capability" "getcap \$(readlink -f /home/audiolinux/.pyenv/versions/purist-webui/bin/python) | grep -q 'cap_net_bind_service.ep'" \
+        "sudo pacman -S --noconfirm --needed libcap
+PYTHON_EXEC=\$(readlink -f /home/audiolinux/.pyenv/versions/purist-webui/bin/python)
+sudo setcap 'cap_net_bind_service=+ep' \"\$PYTHON_EXEC\""
     check "Web UI sudoers file exists" "[ -f /etc/sudoers.d/webui-restarts ]"
     check "'pm-power' script exists" "[ -x /usr/local/bin/pm-power ]"
     check "Web UI sudoers allows 'pm-power'" "grep -q 'NOPASSWD: /usr/local/bin/pm-power' /etc/sudoers.d/webui-restarts"
@@ -227,7 +233,9 @@ run_appendix6_checks() {
     check "AudioLinux isolation config exists" "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf"
 
     # Old rtapp.timer must be disabled
-    check "'rtapp.timer' service is disabled" "! systemctl is-enabled rtapp.timer"
+    check "'rtapp.timer' service is disabled" "! systemctl is-enabled rtapp.timer" \
+        "sudo systemctl stop rtapp.timer
+sudo systemctl disable rtapp.timer"
 
     # Check Diretta Isolation
     DPID=$(systemctl show --property MainPID --value diretta_alsa.service 2>/dev/null)
@@ -407,7 +415,11 @@ check "nftables MASQUERADE rule exists (wlp*)" "grep -q 'oifname \"wlp\*\" masqu
 check "Old 'iptables' service is disabled" "! systemctl is-enabled iptables.service 2>/dev/null"
 check "Old 'iptables' rule file is removed" "! [ -f /etc/iptables/iptables.rules ] 2>/dev/null"
 check "USB Ethernet udev rule exists" "[ -f /etc/udev/rules.d/99-ax88179a.rules ]"
-check "MOTD update script is up-to-date" "check_hash /opt/scripts/update/update_motd.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh"
+check "MOTD update script is up-to-date" "check_hash /opt/scripts/update/update_motd.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh" \
+        "[ -f /opt/scripts/update/update_motd.sh.dist ] || sudo mv /opt/scripts/update/update_motd.sh /opt/scripts/update/update_motd.sh.dist
+curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/update_motd.sh
+sudo install -m 0755 update_motd.sh /opt/scripts/update/
+rm update_motd.sh"
 
 header "Section 7" "Common System Optimizations"
 
@@ -423,7 +435,10 @@ check "MOTD wait-for-ip drop-in exists" "[ -f /etc/systemd/system/update_motd.se
 check "MOTD service actively waits for a default route" "grep -q 'while.*ip route' /etc/systemd/system/update_motd.service.d/wait-for-ip.conf"
 
 # 7.4. Create the Repair Script
-check "Boot repair script is up-to-date" "check_hash /usr/local/sbin/check-and-repair-boot.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh"
+check "Boot repair script is up-to-date" "check_hash /usr/local/sbin/check-and-repair-boot.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh" \
+        "curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/check-and-repair-boot.sh
+sudo install -m 0755 check-and-repair-boot.sh /usr/local/sbin/
+rm check-and-repair-boot.sh"
 
 # 7.5. Create the systemd Service File
 check "'boot-repair' service file exists" "[ -f /etc/systemd/system/boot-repair.service ]"
