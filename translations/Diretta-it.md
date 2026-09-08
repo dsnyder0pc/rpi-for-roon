@@ -797,36 +797,7 @@ Una regola predefinita nel file principale `/etc/sudoers` può talvolta sovrascr
 Il seguente script corregge in modo sicuro l'ordine delle regole nel file `/etc/sudoers` per garantire che le eccezioni specifiche vengano elaborate correttamente. Lo script apporta modifiche solo se rileva l'ordine errato.
 
 ```bash
-SUDOERS_FILE="/etc/sudoers"
-TEMP_SUDOERS=$(mktemp)
-
-# Utilizza un filtro Perl per creare una versione corretta del file sudoers.
-# Questo script è idempotente e non modificherà un file che è già corretto.
-sudo cat "$SUDOERS_FILE" | perl -e '
-while (<>) {
-  if (m{/etc/sudoers.d} and not $found_audiolinux_all) {
-    pop @lines if $#lines > -1 and $lines[$#lines] =~ /^$/;
-    push @drop_in, $_;
-  } else {
-    push @lines, $_;
-  }
-  if (/^audiolinux ALL=\(ALL\) ALL$/) {
-    $found_audiolinux_all++;
-    push @lines, ("\n", @drop_in) if @drop_in;
-  }
-}
-print @lines;
-' > "$TEMP_SUDOERS"
-
-# Convalida il nuovo file con visudo prima dell'installazione
-if [ -s "$TEMP_SUDOERS" ] && sudo visudo -c -f "$TEMP_SUDOERS"; then
-    echo "Il file sudoers ha superato la convalida. Installazione della versione corretta..."
-    # Utilizza install per impostare la proprietà e i permessi corretti e sostituire l'originale
-    sudo install -m 0440 -o root -g root "$TEMP_SUDOERS" "$SUDOERS_FILE"
-else
-    echo "ERRORE: La convalida del file sudoers modificato non è riuscita. Nessuna modifica apportata." >&2
-fi
-rm -f "$TEMP_SUDOERS"
+curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/fix-sudoers-order.sh | sudo bash
 ```
 
 ### 7.3. Ottimizzare i tempi di avvio

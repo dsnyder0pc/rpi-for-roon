@@ -797,36 +797,7 @@ sudo grpconv
 以下のスクリプトは、`/etc/sudoers`ファイルのルールの順序を安全に補正し、例外設定が正しく処理されるようにします。このスクリプトは、不適切な順序が検出された場合にのみ変更を加えます。
 
 ```bash
-SUDOERS_FILE="/etc/sudoers"
-TEMP_SUDOERS=$(mktemp)
-
-# Perlフィルターを使用して、補正されたバージョンのsudoersファイルを作成する。
-# このスクリプトはべき等であり、すでに正しい状態のファイルは変更しません。
-sudo cat "$SUDOERS_FILE" | perl -e '
-while (<>) {
-  if (m{/etc/sudoers.d} and not $found_audiolinux_all) {
-    pop @lines if $#lines > -1 and $lines[$#lines] =~ /^$/;
-    push @drop_in, $_;
-  } else {
-    push @lines, $_;
-  }
-  if (/^audiolinux ALL=\(ALL\) ALL$/) {
-    $found_audiolinux_all++;
-    push @lines, ("\n", @drop_in) if @drop_in;
-  }
-}
-print @lines;
-' > "$TEMP_SUDOERS"
-
-# インストール前に、visudoを使用して新しいファイルを検証する
-if [ -s "$TEMP_SUDOERS" ] && sudo visudo -c -f "$TEMP_SUDOERS"; then
-    echo "Sudoersファイルの検証に合格しました。修正されたバージョンをインストールしています..."
-    # installを使用して正しい所有者/権限を設定し、オリジナルのファイルと置き換える
-    sudo install -m 0440 -o root -g root "$TEMP_SUDOERS" "$SUDOERS_FILE"
-else
-    echo "エラー: 変更されたsudoersファイルの検証に失敗しました。変更は行われませんでした。" >&2
-fi
-rm -f "$TEMP_SUDOERS"
+curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/fix-sudoers-order.sh | sudo bash
 ```
 
 ### 7.3. 起動時間の最適化

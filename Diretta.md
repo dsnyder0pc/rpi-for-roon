@@ -797,36 +797,7 @@ A default rule in the main `/etc/sudoers` file can sometimes override more speci
 The following script safely corrects the order of rules in the `/etc/sudoers` file to ensure that specific exceptions are processed correctly. The script will only make changes if it detects the incorrect order.
 
 ```bash
-SUDOERS_FILE="/etc/sudoers"
-TEMP_SUDOERS=$(mktemp)
-
-# Use a Perl filter to create a corrected version of the sudoers file.
-# This script is idempotent and will not change a file that is already correct.
-sudo cat "$SUDOERS_FILE" | perl -e '
-while (<>) {
-  if (m{/etc/sudoers.d} and not $found_audiolinux_all) {
-    pop @lines if $#lines > -1 and $lines[$#lines] =~ /^$/;
-    push @drop_in, $_;
-  } else {
-    push @lines, $_;
-  }
-  if (/^audiolinux ALL=\(ALL\) ALL$/) {
-    $found_audiolinux_all++;
-    push @lines, ("\n", @drop_in) if @drop_in;
-  }
-}
-print @lines;
-' > "$TEMP_SUDOERS"
-
-# Validate the new file with visudo before installing
-if [ -s "$TEMP_SUDOERS" ] && sudo visudo -c -f "$TEMP_SUDOERS"; then
-    echo "Sudoers file passed validation. Installing corrected version..."
-    # Use install to set correct ownership/permissions and replace the original
-    sudo install -m 0440 -o root -g root "$TEMP_SUDOERS" "$SUDOERS_FILE"
-else
-    echo "ERROR: The modified sudoers file failed validation. No changes were made." >&2
-fi
-rm -f "$TEMP_SUDOERS"
+curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/fix-sudoers-order.sh | sudo bash
 ```
 
 ### 7.3. Optimize Boot Time

@@ -797,36 +797,7 @@ Uma regra padrão no arquivo principal `/etc/sudoers` às vezes pode substituir 
 O script a seguir corrige com segurança a ordem das regras no arquivo `/etc/sudoers` para garantir que exceções específicas sejam processadas corretamente. O script só fará alterações se detectar a ordem incorreta.
 
 ```bash
-SUDOERS_FILE="/etc/sudoers"
-TEMP_SUDOERS=$(mktemp)
-
-# Usar um filtro Perl para criar uma versão corrigida do arquivo sudoers.
-# Este script é idempotente e não alterará um arquivo que já esteja correto.
-sudo cat "$SUDOERS_FILE" | perl -e '
-while (<>) {
-  if (m{/etc/sudoers.d} and not $found_audiolinux_all) {
-    pop @lines if $#lines > -1 and $lines[$#lines] =~ /^$/;
-    push @drop_in, $_;
-  } else {
-    push @lines, $_;
-  }
-  if (/^audiolinux ALL=\(ALL\) ALL$/) {
-    $found_audiolinux_all++;
-    push @lines, ("\n", @drop_in) if @drop_in;
-  }
-}
-print @lines;
-' > "$TEMP_SUDOERS"
-
-# Validar o novo arquivo com o visudo antes de instalar
-if [ -s "$TEMP_SUDOERS" ] && sudo visudo -c -f "$TEMP_SUDOERS"; then
-    echo "O arquivo sudoers passou na validação. Instalando a versão corrigida..."
-    # Usar o comando install para definir a propriedade/permissões corretas e substituir o original
-    sudo install -m 0440 -o root -g root "$TEMP_SUDOERS" "$SUDOERS_FILE"
-else
-    echo "ERRO: O arquivo sudoers modificado falhou na validação. Nenhuma alteração foi feita." >&2
-fi
-rm -f "$TEMP_SUDOERS"
+curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/fix-sudoers-order.sh | sudo bash
 ```
 
 ### 7.3. Otimizar o Tempo de Inicialização

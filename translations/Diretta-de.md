@@ -797,36 +797,7 @@ Eine Standardregel in der Hauptdatei `/etc/sudoers` kann manchmal spezifischere 
 Das folgende Skript korrigiert die Reihenfolge der Regeln in der Datei `/etc/sudoers` auf sichere Weise, um sicherzustellen, dass spezifische Ausnahmen korrekt verarbeitet werden. Das Skript nimmt Änderungen nur vor, wenn es die falsche Reihenfolge erkennt.
 
 ```bash
-SUDOERS_FILE="/etc/sudoers"
-TEMP_SUDOERS=$(mktemp)
-
-# Einen Perl-Filter verwenden, um eine korrigierte Version der sudoers-Datei zu erstellen.
-# Dieses Skript ist idempotent und ändert keine Datei, die bereits korrekt ist.
-sudo cat "$SUDOERS_FILE" | perl -e '
-while (<>) {
-  if (m{/etc/sudoers.d} and not $found_audiolinux_all) {
-    pop @lines if $#lines > -1 and $lines[$#lines] =~ /^$/;
-    push @drop_in, $_;
-  } else {
-    push @lines, $_;
-  }
-  if (/^audiolinux ALL=\(ALL\) ALL$/) {
-    $found_audiolinux_all++;
-    push @lines, ("\n", @drop_in) if @drop_in;
-  }
-}
-print @lines;
-' > "$TEMP_SUDOERS"
-
-# Die neue Datei vor der Installation mit visudo überprüfen
-if [ -s "$TEMP_SUDOERS" ] && sudo visudo -c -f "$TEMP_SUDOERS"; then
-    echo "Sudoers-Datei hat die Validierung bestanden. Korrigierte Version wird installiert..."
-    # 'install' verwenden, um die korrekten Eigentümer/Berechtigungen zu setzen und das Original zu ersetzen
-    sudo install -m 0440 -o root -g root "$TEMP_SUDOERS" "$SUDOERS_FILE"
-else
-    echo "FEHLER: Die geänderte Sudoers-Datei hat die Validierung nicht bestanden. Es wurden keine Änderungen vorgenommen." >&2
-fi
-rm -f "$TEMP_SUDOERS"
+curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/fix-sudoers-order.sh | sudo bash
 ```
 
 ### 7.3. Bootzeit optimieren
