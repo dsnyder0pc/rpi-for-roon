@@ -221,11 +221,15 @@ INFO_CYCLE_MEMO = 600.0
 # first half minute. Renders come in bursts while someone is using the UI, and
 # any pair of them a couple of seconds apart now yields something.
 INFO_CYCLE_MIN_FRAMES = 10
-# The reading is only trusted to call a mismatch once the span is long enough
-# for the one frame it may be out by to be worth less than the 5% threshold
-# _diverges() applies. Below this a short span could raise a false alarm out of
-# its own quantisation, so it is displayed but never flagged.
-INFO_CYCLE_TRUST_FRAMES = 100
+# Where a span stops being an approximation. The frame it may be out by is
+# worth 1.7% here, which is about what consecutive clean spans actually differ
+# by: report boundaries fall arbitrarily inside a span, so 30-second readings
+# of an interval a capture timed at 179.6 ms ranged over 177.5 to 180.9. A
+# tighter threshold would only promise a precision the reading does not have,
+# and would hold the approximation mark on the panel for longer to do it.
+# Either way this is comfortably inside the 5% _diverges() applies, so a short
+# span cannot raise a false alarm out of its own quantisation.
+INFO_CYCLE_TRUST_FRAMES = 60
 # A baseline older than this has spanned stops, starts and mode changes.
 INFO_CYCLE_MAX_SPAN = 300.0
 INFO_CYCLE_STATE = {"packets": None, "octets": None, "t": None,
@@ -1489,13 +1493,21 @@ def _measure_info_cycle(info_cycle, playing):
     if frames < INFO_CYCLE_MIN_FRAMES:
         return _remembered_info_cycle(now, info_cycle)
 
-    # The span is now spent either way: it either yields a reading or is
-    # abandoned for a fresh one, since contamination cannot be subtracted out.
-    with INFO_CYCLE_LOCK:
-        INFO_CYCLE_STATE.update(packets=current[0], octets=current[1], t=now)
-
+    # A short span is a peek, not a consumption: it is worth publishing as an
+    # approximation, but the baseline stays where it is so the span keeps
+    # growing towards a length worth quoting plainly. Spending it here is what
+    # made the approximation mark permanent for anyone using the UI, whose
+    # renders arrive too close together for a span to ever grow between them.
+    #
+    # A dirty span is spent whatever its length, since contamination cannot be
+    # subtracted out and only accumulates from here.
     octets = current[1] - previous["octets"]
-    if abs(frames * INFO_FRAME_RX_BYTES - octets) > INFO_FRAME_SLACK:
+    dirty = abs(frames * INFO_FRAME_RX_BYTES - octets) > INFO_FRAME_SLACK
+    if dirty or frames >= INFO_CYCLE_TRUST_FRAMES:
+        with INFO_CYCLE_LOCK:
+            INFO_CYCLE_STATE.update(packets=current[0], octets=current[1], t=now)
+
+    if dirty:
         return _remembered_info_cycle(now, info_cycle)
 
     measured_us = span * 1e6 / frames
@@ -1507,12 +1519,27 @@ def _measure_info_cycle(info_cycle, playing):
     # elected cycle is: a span that began while the stream was still filling
     # the Target reads long, and only the next one can tell that from a Target
     # that has genuinely elected an interval of its own.
+    rough = frames < INFO_CYCLE_TRUST_FRAMES
+
+    # An approximation never replaces a reading that was not one. Spans restart
+    # after every trusted reading, so the ones that follow are short again, and
+    # publishing those would flip the panel between marked and unmarked
+    # readings of the same interval for as long as anyone watched it.
+    held = _remembered_info_cycle(now, info_cycle)
+    if rough and held and not held.get("rough"):
+        return held
+
     with INFO_CYCLE_LOCK:
+        # Only a trusted reading votes on divergence, in both directions: an
+        # approximation is not evidence of a mismatch, and it must not clear
+        # the evidence of one either, or the two consecutive readings a
+        # mismatch needs could never fall together.
         confirmed = diverges and INFO_CYCLE_STATE["divergence_seen"]
+        if not rough:
+            INFO_CYCLE_STATE["divergence_seen"] = diverges
         value = {"ms": measured_us / 1000.0, "diverges": confirmed,
-                 "rough": frames < INFO_CYCLE_TRUST_FRAMES}
-        INFO_CYCLE_STATE.update(divergence_seen=diverges, value=value,
-                                value_t=now, value_cycle=info_cycle)
+                 "rough": rough}
+        INFO_CYCLE_STATE.update(value=value, value_t=now, value_cycle=info_cycle)
 
     return value
 
