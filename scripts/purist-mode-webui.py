@@ -586,13 +586,14 @@ LINK_PANEL_TEMPLATE = """
         <div class="bg-gray-900/40 p-4 cursor-help" title="The Ethernet speed the Host and Target negotiated on the point-to-point cable between them.
 
 &#8226; Sending: what the Host is putting on the wire while music plays, preamble and interframe gap included.
-&#8226; Host to Target only. The speed is per direction, and the Target&#39;s replies do not compete with the audio.">
+&#8226; Host to Target only. The speed is per direction, and the Target&#39;s replies do not compete with the audio.
+&#8226; Yellow: past 90% of the wire. It fits, and nothing shares this cable to take the rest &#8212; a format that does not fit is refused outright, not squeezed in.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Link Speed</dt>
-            <dd class="mt-1 text-lg font-semibold {{ 'text-red-400' if link.sent_saturating else 'text-white' }}">
+            <dd class="mt-1 text-lg font-semibold {{ 'text-yellow-400' if link.sent_tight else 'text-white' }}">
                 {% if link.speed %}{{ link.speed }} Mb/s{% else %}&mdash;{% endif %}
             </dd>
             {% if link.sent_mbps %}
-            <dd class="mt-0.5 text-xs {{ 'text-red-400' if link.sent_saturating else 'text-gray-400' }}">sending {{ link.sent_mbps }} Mb/s{% if link.sent_percent %} &middot; {{ link.sent_percent }}%{% endif %}</dd>
+            <dd class="mt-0.5 text-xs {{ 'text-yellow-400' if link.sent_tight else 'text-gray-400' }}">sending {{ link.sent_mbps }} Mb/s{% if link.sent_percent %} &middot; {{ link.sent_percent }}%{% endif %}</dd>
             {% endif %}
         </div>
         <div class="bg-gray-900/40 p-4 cursor-help" title="The largest Ethernet payload this link will carry.
@@ -1857,7 +1858,19 @@ def get_link_info(measure=True):
         # worth showing next to the speed it is measured against.
         "sent_mbps": f"{sent_mbps:.1f}" if sent_mbps else None,
         "sent_percent": sent_percent,
-        "sent_saturating": bool(sent_percent and sent_percent >= 90),
+        # Yellow rather than red, because a link this full is working. Red on
+        # this panel means broken -- a format that costs more than the budget
+        # is refused outright, taking the endpoint down and the Roon zone with
+        # it for the twenty seconds Diretta takes to restart, so it never shows
+        # up here as a high figure. What a high figure does mean is that the
+        # margin is thin, and on a point-to-point cable where the Target is
+        # denied egress and new SSH is refused while music plays, thin is not
+        # the same as risky: the only other traffic measured on this wire
+        # during playback was about 100 B/s, which is four orders of magnitude
+        # below what is left at 94%. The caution belongs to timing rather than
+        # to bandwidth -- at 94% a frame occupies 1.69 ms of a 1.802 ms cycle,
+        # leaving 110 us for anything that delays the transmit path.
+        "sent_tight": bool(sent_percent and sent_percent >= 90),
         "mtu": mtu,
         "target_mtu": target_mtu,
         # A silent MTU mismatch is the failure this panel most needs to surface:
