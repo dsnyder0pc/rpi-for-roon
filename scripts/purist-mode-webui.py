@@ -16,7 +16,8 @@ import logging
 import sys
 import threading
 from datetime import datetime
-from flask import Flask, render_template_string, request, redirect, url_for, flash
+from flask import (Flask, render_template_string, request, redirect, url_for,
+                   flash, make_response)
 
 # --- Configuration ---
 REMOTE_USER = "purist-app"
@@ -149,6 +150,12 @@ ENFORCEMENT_LOCK = threading.Lock()
 SETTLE_STATE = {"state": None, "since": 0.0}
 SETTLE_LOCK = threading.Lock()
 TRANSITION_STATE = {"active": False}
+# The link panel refreshes slowly on purpose: every figure on it costs a
+# bracket that holds a render open. Playback starting or stopping changes all
+# of them at once, though, and the status endpoint is already asking that
+# question every five seconds -- so it reports the edge and the panel refreshes
+# on it, instead of the figures appearing up to half a minute after the music.
+PLAYBACK_EDGE = {"playing": None}
 STATUS_CACHE = {"data": None, "timestamp": 0.0, "valid": False}
 # MTU only changes across a reboot, so the last value the Target reported stays
 # valid. Caching it lets the link panel refresh without any extra SSH traffic.
@@ -229,31 +236,78 @@ MODAL_FRAME_DROP = 0.05
 # visibly low: at two strays' slack the figure ran 1.5 to 2.6% under an
 # interval a capture timed at 179.6 ms.
 #
-# Roughly one span in five is clean, so a reading is held while later spans are
-# dirty. The InfoCycle does not change on its own, so the memo only has to
-# outlive a run of dirty spans; it is dropped outright when the stream stops or
-# when setting.inf is rewritten under it.
+# A reading is held while later brackets are too contaminated to add to it. The
+# InfoCycle does not change on its own, so the memo only has to outlive a run
+# of dirty brackets; it is dropped outright when the stream stops or when
+# setting.inf is rewritten under it.
 INFO_FRAME_RX_BYTES = 64
-INFO_FRAME_SLACK = 8
 INFO_CYCLE_MEMO = 600.0
-# A span this short is worth about 10%, which is still worth showing: a reader
-# wants to know the Target is reporting on roughly the configured interval, and
-# waiting for a figure good to a percent means showing nothing at all for the
-# first half minute. Renders come in bursts while someone is using the UI, and
-# any pair of them a couple of seconds apart now yields something.
-INFO_CYCLE_MIN_FRAMES = 10
-# Where a span stops being an approximation. The frame it may be out by is
-# worth 1.7% here, which is about what consecutive clean spans actually differ
-# by: report boundaries fall arbitrarily inside a span, so 30-second readings
-# of an interval a capture timed at 179.6 ms ranged over 177.5 to 180.9. A
-# tighter threshold would only promise a precision the reading does not have,
-# and would hold the approximation mark on the panel for longer to do it.
-# Either way this is comfortably inside the 5% _diverges() applies, so a short
-# span cannot raise a false alarm out of its own quantisation.
+# The reports are timed in one self-contained bracket, as the elected cycle is,
+# rather than across the gap between two renders. The gap needed its whole span
+# free of non-report traffic, and this link carries about 0.9 foreign frames a
+# second: measured on office, 19 seconds in 40 were clean, which makes a clean
+# 30-second gap a one-in-a-million event. That is why the reading never
+# appeared at all rather than appearing badly.
+#
+# Sub-windows make contamination local instead of fatal. The span a burst
+# spoils is a quarter of a second rather than the whole gap, and the windows
+# either side of it still count.
+#
+# Measured on office against 90 seconds of its real traffic, every window size
+# scored on the same samples. A quarter-second is the size that works, and it
+# is not a compromise between two failures -- it is exact (150.0 ms against a
+# configured 150) while still keeping 313 windows in 360.
+#
+# Smaller is not finer, it is blind: a window holding one frame satisfies the
+# byte identity whatever that frame was, so the filter stops filtering and the
+# reading collapses towards the rate of every 64-byte frame on the link. Larger
+# rejects too much -- a second keeps 43 windows in 90, two seconds keeps 3 in
+# 45 -- because the foreign traffic arrives in bursts, and a longer window is
+# likelier to catch one.
+#
+# That burstiness is also why a dirty window is dropped rather than corrected
+# by a frame. The link carries non-report frames of exactly the report's size,
+# so no byte test can count them; what makes them harmless is that they arrive
+# alongside frames of other sizes, and a window wide enough to catch the whole
+# burst is rejected on the evidence of its neighbours.
+INFO_SAMPLE_WINDOW = 0.25
+INFO_SAMPLE_WINDOWS = 4
+# The first bracket of a stream looks for longer, because that is the one
+# moment when precision is scarce and the cost of finding it is free. A reading
+# is worth about one part in its frame count, and the reports arrive at only
+# 5.6 a second on Super Purist's 180 ms interval, so a figure good to 5% needs
+# some twenty of them and cannot exist before about four seconds of watching
+# however it is gathered. Spending those four seconds once, inside the card's
+# own fetch where the panel already on screen stays put, buys a first reading
+# a reader can act on instead of one worth 20% that has to be walked back.
+#
+# Only the first: every bracket after it is adding to a figure that already
+# stands, so it goes back to the second the user agreed to.
+INFO_SAMPLE_WINDOWS_COLD = 16
+# Brackets accumulate across renders, so the first is worth roughly 15% and
+# every one after it tightens the same figure. Past this many frames the
+# accumulators are halved rather than grown, so a reading stays a measurement
+# of the link as it is now and not an average over every bracket since the page
+# opened.
+INFO_CYCLE_DECAY_FRAMES = 240
+# What the first bracket clears on its own. The long cold bracket gathers
+# around twenty reports at either interval, so this sits under that while still
+# refusing anything coarser than about 7%: the panel answers on the card's
+# first fetch, and answers with a number worth reading rather than one worth
+# 20% that moves 18 ms under the reader as it settles.
+INFO_CYCLE_MIN_FRAMES = 15
+# Where a reading stops being an approximation. The frame it may be out by is
+# worth 1.7% here, and that is what the pooled brackets are actually good for:
+# reports fall arbitrarily inside a window, so seconds over frames carries a
+# bias that falls as one over the frame count. Measured against the clean-
+# window ground truth on office, the same sampler reads 0.08% high over 464
+# frames and about 1.5% high over the 78 a few minutes of brackets gather --
+# converging, not drifting. A tighter threshold would only promise a precision
+# the reading does not have, and would hold the approximation mark on the panel
+# for longer to do it. Either way this sits well inside the 5% _diverges()
+# applies, so accumulating towards it cannot raise a false alarm on the way.
 INFO_CYCLE_TRUST_FRAMES = 60
-# A baseline older than this has spanned stops, starts and mode changes.
-INFO_CYCLE_MAX_SPAN = 300.0
-INFO_CYCLE_STATE = {"packets": None, "octets": None, "t": None,
+INFO_CYCLE_STATE = {"frames": 0.0, "seconds": 0.0,
                     "divergence_seen": False, "value": None,
                     "value_t": float("-inf"), "value_cycle": None}
 INFO_CYCLE_LOCK = threading.Lock()
@@ -508,7 +562,7 @@ BASE_TEMPLATE = """
 # hx-trigger="load" would re-fire the moment it was swapped in, looping forever.
 LINK_PANEL_CARD = """
 <div id="link-panel" hx-get="/link-status"
-     hx-trigger="every 30s, visibilitychange from:document, focus from:window"
+     hx-trigger="load, load delay:5s, load delay:15s, every 30s, playback-changed from:body, visibilitychange from:document, focus from:window"
      hx-swap="innerHTML" class="bg-gray-800/50 rounded-2xl shadow-lg ring-1 ring-white/10 p-6 sm:p-8">
 {{ link_body | safe }}
 </div>
@@ -1525,19 +1579,75 @@ def _remembered_info_cycle(now, info_cycle):
 
 
 def _forget_info_cycle():
-    """Drops the baseline and the reading, so neither outlives the stream."""
+    """Drops the accumulators and the reading, so neither outlives a stream."""
     with INFO_CYCLE_LOCK:
-        INFO_CYCLE_STATE.update(packets=None, octets=None, t=None,
+        INFO_CYCLE_STATE.update(frames=0.0, seconds=0.0,
                                 divergence_seen=False, value=None,
                                 value_t=float("-inf"), value_cycle=None)
 
 
-def _measure_info_cycle(info_cycle, playing):
-    """Times the Target's InfoCycle reports across the gap since the last render.
+def _sample_info_reports(windows):
+    """Counts the Target's reports across one bracket, keeping clean windows.
+
+    The reports are the only thing this link receives at a steady rate while a
+    stream runs, and every one is the same size, so a window whose bytes are
+    exactly that size times its frames caught nothing else and can be trusted
+    to the frame. A window that is out by any amount caught something that was
+    not a report, and is dropped with its time as well as its frames, so what
+    accumulates is only span that was fully accounted for.
+
+    Contamination cannot be subtracted instead. The foreign frames are a signed
+    mix -- 60-byte neighbour discovery reads below a report as readily as a
+    112-byte frame reads above it -- so the excess says one arrived but never
+    how many bytes were its own, and some of them are the report's own size and
+    leave no excess at all. Rejecting the window they landed in is what catches
+    those, since they travel in bursts alongside frames that do show.
 
     Returns:
-        dict: {"ms", "diverges"}, or None while nothing is playing or no span
-            has yet carried a reading.
+        tuple: (frames, seconds) from the clean windows alone, or None when the
+            bracket found no window it could trust.
+    """
+    frames = 0
+    seconds = 0.0
+    counters = _read_counters("rx")
+    if counters is None:
+        return None
+
+    for _ in range(windows):
+        start = time.monotonic()
+        time.sleep(INFO_SAMPLE_WINDOW)
+        window = _read_counters("rx")
+        if window is None:
+            return None
+        caught = window[0] - counters[0]
+        octets = window[1] - counters[1]
+        span = time.monotonic() - start
+        counters = window
+        # Exact equality is the whole test: a window of nothing but reports
+        # lands on it to the byte, which is what makes a single foreign frame
+        # detectable rather than merely suspected.
+        if caught > 0 and caught * INFO_FRAME_RX_BYTES == octets:
+            frames += caught
+            seconds += span
+
+    if frames <= 0 or seconds <= 0:
+        return None
+    return frames, seconds
+
+
+def _measure_info_cycle(info_cycle, playing):
+    """Times the Target's InfoCycle reports from one self-contained bracket.
+
+    Brackets accumulate, so the first one carries the panel on its own and
+    every one after it tightens the same figure. A second of reports is six or
+    seven of them and worth about 11%, which is enough to say the Target is
+    reporting on roughly the interval it was asked for; waiting instead for the
+    sixty frames that would settle it to a percent means showing nothing for
+    the better part of a minute, and showing nothing is what this used to do.
+
+    Returns:
+        dict: {"ms", "diverges", "rough"}, or None while nothing is playing or
+            no bracket has yet carried a reading.
     """
     # The Target only reports while it has a stream to report on, so with the
     # bridge closed there is nothing to time and nothing a held reading could
@@ -1548,62 +1658,40 @@ def _measure_info_cycle(info_cycle, playing):
         return None
 
     now = time.monotonic()
-    current = _read_counters("rx")
-
-    # A baseline is only spent on a span long enough to read, and only replaced
-    # once it has been. Renders arrive in bursts -- visibilitychange and focus
-    # both fire on waking a tablet, and every page load renders too -- so
-    # advancing it on every render would restart the span each time and, while
-    # someone was using the UI, guarantee it never reached a readable length.
-    with INFO_CYCLE_LOCK:
-        previous = dict(INFO_CYCLE_STATE)
-        span = now - previous["t"] if previous["t"] is not None else None
-        restart = (
-            current is not None
-            and (span is None or span <= 0 or span > INFO_CYCLE_MAX_SPAN)
-        )
-        if restart:
-            INFO_CYCLE_STATE.update(packets=current[0], octets=current[1], t=now)
-
-    if current is None or restart:
+    # Nothing gathered yet means this is a stream's first bracket, which looks
+    # for longer so that the figure it publishes is one worth publishing.
+    cold = not INFO_CYCLE_STATE["frames"]
+    sampled = _sample_info_reports(
+        INFO_SAMPLE_WINDOWS_COLD if cold else INFO_SAMPLE_WINDOWS
+    )
+    if sampled is None:
         return _remembered_info_cycle(now, info_cycle)
 
-    frames = current[0] - previous["packets"]
+    with INFO_CYCLE_LOCK:
+        # A rewrite of setting.inf makes every frame gathered under the old
+        # interval evidence for a figure that no longer applies.
+        if INFO_CYCLE_STATE["value_cycle"] not in (None, info_cycle):
+            INFO_CYCLE_STATE.update(frames=0.0, seconds=0.0,
+                                    divergence_seen=False)
+        frames = INFO_CYCLE_STATE["frames"] + sampled[0]
+        seconds = INFO_CYCLE_STATE["seconds"] + sampled[1]
+        # Halved rather than capped, so the reading keeps the precision it has
+        # earned while still being a measurement of the link as it is now
+        # instead of an average over every bracket since the page opened.
+        if frames > INFO_CYCLE_DECAY_FRAMES:
+            frames, seconds = frames / 2.0, seconds / 2.0
+        INFO_CYCLE_STATE.update(frames=frames, seconds=seconds)
+
     if frames < INFO_CYCLE_MIN_FRAMES:
         return _remembered_info_cycle(now, info_cycle)
 
-    # A short span is a peek, not a consumption: it is worth publishing as an
-    # approximation, but the baseline stays where it is so the span keeps
-    # growing towards a length worth quoting plainly. Spending it here is what
-    # made the approximation mark permanent for anyone using the UI, whose
-    # renders arrive too close together for a span to ever grow between them.
-    #
-    # A dirty span is spent whatever its length, since contamination cannot be
-    # subtracted out and only accumulates from here.
-    octets = current[1] - previous["octets"]
-    dirty = abs(frames * INFO_FRAME_RX_BYTES - octets) > INFO_FRAME_SLACK
-    if dirty or frames >= INFO_CYCLE_TRUST_FRAMES:
-        with INFO_CYCLE_LOCK:
-            INFO_CYCLE_STATE.update(packets=current[0], octets=current[1], t=now)
-
-    if dirty:
-        return _remembered_info_cycle(now, info_cycle)
-
-    measured_us = span * 1e6 / frames
-    diverges = (
-        frames >= INFO_CYCLE_TRUST_FRAMES and _diverges(measured_us, info_cycle)
-    )
-
-    # Confirmed by a second reading before it is called a mismatch, as the
-    # elected cycle is: a span that began while the stream was still filling
-    # the Target reads long, and only the next one can tell that from a Target
-    # that has genuinely elected an interval of its own.
+    measured_us = seconds * 1e6 / frames
     rough = frames < INFO_CYCLE_TRUST_FRAMES
+    diverges = not rough and _diverges(measured_us, info_cycle)
 
-    # An approximation never replaces a reading that was not one. Spans restart
-    # after every trusted reading, so the ones that follow are short again, and
-    # publishing those would flip the panel between marked and unmarked
-    # readings of the same interval for as long as anyone watched it.
+    # An approximation never replaces a reading that was not one, or the panel
+    # would flip between marked and unmarked readings of the same interval for
+    # as long as anyone watched it.
     held = _remembered_info_cycle(now, info_cycle)
     if rough and held and not held.get("rough"):
         return held
@@ -1677,12 +1765,21 @@ def _us_to_ms(microseconds):
     return f"{microseconds / 1000.0:g}"
 
 
-def render_link_panel_body():
-    """Renders the link panel's inner content from the current link state."""
-    return render_template_string(LINK_PANEL_TEMPLATE, link=get_link_info())
+def render_link_panel_body(measure=True):
+    """Renders the link panel's inner content from the current link state.
+
+    The page load renders without measuring. Its brackets would add better than
+    a second to the first paint, and the info cycle cannot produce a figure on
+    a cold render anyway, so the card fetches itself the moment it lands and
+    the measured lines arrive a beat later against a panel that is already on
+    screen. HTMX leaves the existing content in place until a response comes
+    back, so that beat costs a delay and never a blank.
+    """
+    return render_template_string(LINK_PANEL_TEMPLATE,
+                                  link=get_link_info(measure=measure))
 
 
-def get_link_info():
+def get_link_info(measure=True):
     """
     Assembles the point-to-point link panel data from Host-local sources only.
 
@@ -1734,8 +1831,14 @@ def get_link_info():
         budget and playing and playing["payload_rate"] > budget + PAYLOAD_TOLERANCE
     )
 
-    elected = get_elected_cycle(cycle_time, mtu) or {}
-    info_measured = _measure_info_cycle(info_cycle, bool(playing)) or {}
+    # Both figures come from brackets that hold the render open while they are
+    # taken. That is the right cost inside the card's own fetch, where the
+    # panel already on screen stays put until the answer arrives, and the wrong
+    # one on a page load, which has nothing to show in the meantime.
+    elected = (get_elected_cycle(cycle_time, mtu) or {}) if measure else {}
+    info_measured = {}
+    if measure:
+        info_measured = _measure_info_cycle(info_cycle, bool(playing)) or {}
 
     # Against the negotiated speed rather than a fixed figure, so the reading
     # means the same thing on a 10 Mbps Super Purist link as on a gigabit one.
@@ -2348,7 +2451,7 @@ def landing_page():
         music_playing=music_playing,
         current_state=current_state,
         link_panel=render_template_string(
-            LINK_PANEL_CARD, link_body=render_link_panel_body()
+            LINK_PANEL_CARD, link_body=render_link_panel_body(measure=False)
         )
     )
     return render_template_string(
@@ -2447,6 +2550,17 @@ def link_status():
     return render_link_panel_body()
 
 
+def _playback_edge(playing):
+    """True when playback has just started or just stopped.
+
+    The first call only records, so a page opened onto music already playing is
+    not an edge: the panel measures that on its own load trigger.
+    """
+    was = PLAYBACK_EDGE["playing"]
+    PLAYBACK_EDGE["playing"] = playing
+    return was is not None and was != playing
+
+
 @app.route("/status")
 def status():
     """Serves the status panel for HTMX updates."""
@@ -2455,7 +2569,18 @@ def status():
         # race conditions or spinner interrupts
         return "", 204
 
-    if is_music_playing():
+    playing = is_music_playing()
+    # Asked once and answered to both panels: this one renders from it, and the
+    # link panel is told to remeasure when it changed.
+    response = make_response(_status_body(playing))
+    if _playback_edge(playing):
+        response.headers["HX-Trigger"] = "playback-changed"
+    return response
+
+
+def _status_body(playing):
+    """Renders the status panel for the current playback and Target state."""
+    if playing:
         return render_template_string(MUSIC_PLAYING_TEMPLATE)
 
     target_status = get_status_from_target()
