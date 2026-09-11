@@ -28,6 +28,14 @@ language. Repetition is the safe failure here: --apply never writes an
 untranslated entry over an existing translation, so the cost is a reminder that
 outstays its welcome rather than a regression that goes unnoticed.
 
+--verify also reports terminology drift on lines that changed against --ref: a
+term the rest of that translation borrows verbatim from the English, which the
+changed line renders some other way instead. That is advisory and never changes
+the exit status, because whether a substitution is wrong is a question about
+language rather than about structure. It is scoped to the diff on purpose --
+over a whole file it finds dozens of lines per language, and a check that always
+complains is a check nobody reads. On a clean tree it says nothing.
+
 Exit status is non-zero if any file could not be synced, applied, or verified.
 """
 
@@ -563,7 +571,104 @@ def cmd_apply():
 
     return 1 if failures else 0
 
-def cmd_verify():
+# --- Terminology drift -------------------------------------------------------
+#
+# A translation can be structurally perfect and still say the wrong thing. The
+# paragraph that prompted this check rendered "bootloader" as "gestor de
+# arranque" in Spanish and the board as "Platine" in German, where those files
+# say "bootloader" and "Board" everywhere else -- including in the very section
+# the new text points at. Nothing above catches that: verify_translation()
+# reads markdown, not meaning.
+#
+# Rarity is the wrong signal. A changed line is full of words used exactly once
+# and hunting those buries the one that matters under forty that do not. What
+# marks a borrowed term is that it survives translation at roughly its English
+# frequency: "bootloader" appears about as often in the Spanish file as in the
+# English one, while "install" appears a fraction as often because Spanish
+# translates it. So a term counts as established here when the translation
+# keeps it at least half as often as the source uses it, and it is worth
+# reporting when a changed line drops it.
+#
+# Prose only, because counting fenced code makes command names look like
+# vocabulary -- which is exactly how "install" and "board" first passed for
+# borrowed terms while the heuristic was being tuned.
+TERM_MIN_USES = 3
+TERM_BORROW_RATIO = 0.5
+
+
+def prose_only(lines):
+    """Markdown reduced to the text a term would actually be translated in."""
+    out, fenced = [], False
+    for line in lines:
+        stripped = line.lstrip()
+        if stripped.startswith("```"):
+            fenced = not fenced
+            out.append("")
+            continue
+        if fenced or stripped.startswith(("#", "|")):
+            out.append("")
+            continue
+        line = re.sub(r"`[^`]*`", " ", line)
+        line = re.sub(r"https?://\S+", " ", line)
+        out.append(re.sub(r"[*_]+", " ", line))
+    return out
+
+
+def term_uses(word, text):
+    """How many times a whole word appears, ignoring case."""
+    return len(re.findall(r"\b%s\b" % re.escape(word), text, re.IGNORECASE))
+
+
+def changed_line_numbers(ref, path):
+    """1-based line numbers of `path` differing from `ref`; empty if unchanged."""
+    cmd = ["git", "diff", "-U0", ref, "--", path]
+    res = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
+    if res.returncode != 0:
+        return set()
+    numbers = set()
+    for match in re.finditer(r"^@@ -\S+ \+(\d+)(?:,(\d+))? @@", res.stdout, re.M):
+        start = int(match.group(1))
+        numbers.update(range(start, start + int(match.group(2) or 1)))
+    return numbers
+
+
+def report_term_drift(src_lines, target_lines, target_path, ref):
+    """Warns where a changed line drops a term the rest of the file borrows.
+
+    Advisory only: it never fails --verify, because whether a substitution is
+    wrong is a question about language that only a reader can settle. Scoped to
+    what changed against `ref` -- run over a whole file this finds dozens of
+    lines per language, and a check that always complains is one nobody reads.
+    """
+    changed = changed_line_numbers(ref, target_path)
+    if not changed:
+        return 0
+
+    src_prose, tgt_prose = prose_only(src_lines), prose_only(target_lines)
+    src_text, tgt_text = " ".join(src_prose), " ".join(tgt_prose)
+
+    warnings = 0
+    for number in sorted(changed):
+        index = number - 1
+        if index >= len(src_prose) or index >= len(tgt_prose):
+            continue
+        if not tgt_prose[index].strip():
+            continue
+        for word in sorted(set(re.findall(r"[A-Za-z]{5,}", src_prose[index]))):
+            kept, original = term_uses(word, tgt_text), term_uses(word, src_text)
+            if kept < TERM_MIN_USES or not original:
+                continue
+            if kept < TERM_BORROW_RATIO * original:
+                continue
+            if term_uses(word, tgt_prose[index]):
+                continue
+            print(f"  [term] line {number}: this file keeps '{word}' {kept} times "
+                  f"against {original} in English, but this line does not.")
+            warnings += 1
+    return warnings
+
+
+def cmd_verify(ref="HEAD"):
     """Verify all translation files against Diretta.md."""
     with open(SRC_PATH, 'r', encoding='utf-8') as f:
         src_lines = f.read().splitlines()
@@ -581,6 +686,7 @@ def cmd_verify():
         else:
             print(f"  [FAIL] {target_path} contains alignment or format mismatches.")
             failures += 1
+        report_term_drift(src_lines, target_lines, target_path, ref)
 
     return 1 if failures else 0
 
@@ -591,7 +697,7 @@ def main():
     group.add_argument("--apply", action="store_true", help="Apply translations from todo_*.json files")
     group.add_argument("--verify", action="store_true", help="Verify all translation files against master")
     
-    parser.add_argument("--ref", default="HEAD", help="Git revision to diff against when syncing (default: HEAD)")
+    parser.add_argument("--ref", default="HEAD", help="Git revision to diff against when syncing, or to scope --verify's terminology check to (default: HEAD)")
     parser.add_argument("--dry-run", action="store_true", help="Report what --sync would do without modifying any files")
 
     args = parser.parse_args()
@@ -599,7 +705,7 @@ def main():
     if args.apply:
         rc = cmd_apply()
     elif args.verify:
-        rc = cmd_verify()
+        rc = cmd_verify(args.ref)
     else:
         rc = cmd_sync(args.ref, dry_run=args.dry_run)
 
