@@ -176,6 +176,27 @@ ELECTED_CYCLE_HYSTERESIS = 0.01
 # burst. One measurement serves the whole burst.
 ELECTED_CYCLE_MEMO = 5.0
 
+# The mean frame the link sends when a bracket catches nothing but audio. A
+# stray non-audio packet is tens of bytes against thousands, so strays only
+# ever pull a bracket's mean down: the largest mean seen recently is the clean
+# one. Holding it lets the audio frame count be recovered from the byte delta,
+# which strays barely move, rather than from the packet count, which they move
+# a lot -- two strays in the 200 packets of an MTU 9000 bracket is a full 1%,
+# exactly the hysteresis below, which is why that tier was the first to show a
+# stray as a cycle that had apparently changed and then stayed changed.
+#
+# Seeded from the first bracket rather than waited for. On that bracket the
+# division is an identity and the answer is precisely what the packet counter
+# alone would have given, so the panel has a cycle to show on the render that
+# opens the page and every bracket after it refines that figure instead of
+# replacing a blank.
+MODAL_FRAME_STATE = {"bytes": None}
+# Strays cost a bracket's mean a couple of percent at most: three of them in
+# the 167 packets of an 1800 us Super Purist bracket is 1.8%. The smallest real
+# format step is 48 kHz to 44.1 kHz, which moves the frame by 8%. A drop past
+# this is the music changing rather than the measurement, and is taken at once.
+MODAL_FRAME_DROP = 0.05
+
 # The Target reports to the Host once per InfoCycle, as UDP over IPv6
 # link-local, and while a stream runs those reports are the only thing this
 # link receives. That makes the receive counters a clock: no capture, no
@@ -1296,8 +1317,34 @@ def _measure_packet_rate():
     return packets / (end - start), (last[1] - first[1]) / packets
 
 
-def _cycle_from_rate(pps, bytes_per_packet, cycle_time, mtu):
+def _modal_frame_bytes(bytes_per_packet):
+    """The clean frame size to divide by, carried between brackets.
+
+    Rises to meet any larger reading at once, since nothing inflates a
+    bracket's mean, and falls only when the drop is too large for strays to
+    explain -- that is the music changing format, which the panel should follow
+    on the next render rather than a memo later.
+    """
+    known = MODAL_FRAME_STATE["bytes"]
+    if (known is None or bytes_per_packet > known
+            or bytes_per_packet < known * (1.0 - MODAL_FRAME_DROP)):
+        known = bytes_per_packet
+    MODAL_FRAME_STATE["bytes"] = known
+    return known
+
+
+def _forget_modal_frame():
+    """Drops the frame size, so one stream is never measured against the last."""
+    MODAL_FRAME_STATE["bytes"] = None
+
+
+def _cycle_from_rate(pps, bytes_per_packet, cycle_time, mtu, modal_bytes=None):
     """Turns a measured packet rate into the cycle it implies.
+
+    Args:
+        modal_bytes: the mean frame of a bracket that caught only audio, used
+            to recover the audio frame count from the byte rate. Omitted, the
+            packet count is trusted as it stands.
 
     Returns:
         dict: {"us", "frames", "diverges"} describing the cycle. "us" is None
@@ -1306,6 +1353,17 @@ def _cycle_from_rate(pps, bytes_per_packet, cycle_time, mtu):
             that is not a whole multiple of the configured cycle proves the two
             disagree. None when the shape of the stream says nothing at all.
     """
+    # The packet counter counts every frame the link sent, but only the audio
+    # frames mark the cycle. A stray carries tens of bytes against thousands,
+    # so recovering the audio count from the byte rate leaves it out where
+    # counting packets cannot: bytes per second over one clean frame is audio
+    # frames per second. It costs nothing, both counters already arriving from
+    # a single read, and it is an identity on the first bracket, where the
+    # clean frame is that bracket's own mean.
+    if modal_bytes:
+        pps = pps * bytes_per_packet / modal_bytes
+        bytes_per_packet = modal_bytes
+
     # Diretta splits a cycle's payload across the fewest frames that fit the
     # MTU, so a frame no larger than half the usable payload cannot have been
     # split: one frame per cycle, and the cycle is just the packet interval.
@@ -1370,8 +1428,13 @@ def _measure_elected_cycle(cycle_time, mtu):
     """
     measured = _measure_packet_rate()
     if measured is None:
+        # Nothing playing, so the next stream starts without a frame size
+        # inherited from a format that is no longer on the link.
+        _forget_modal_frame()
         return None
-    return _cycle_from_rate(measured[0], measured[1], cycle_time, mtu)
+    pps, bytes_per_packet = measured
+    return _cycle_from_rate(pps, bytes_per_packet, cycle_time, mtu,
+                            _modal_frame_bytes(bytes_per_packet))
 
 
 def _same_cycle(previous, current):
