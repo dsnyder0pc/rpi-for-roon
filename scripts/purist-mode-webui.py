@@ -1214,16 +1214,32 @@ def _pcm_payload_rate(rate_khz, sample_bytes=PCM_DEFAULT_SAMPLE_BYTES):
 
 
 def _read_counters(direction):
-    """Reads end0's cumulative counters for one direction, or None."""
+    """Reads end0's cumulative packet and byte counters, or None.
+
+    Both figures come from one read of /proc/net/dev, which the kernel renders
+    in a single pass, so the two describe the same instant. The per-counter
+    files under /sys/class/net cannot: a frame completing between the read of
+    packets and the read of bytes lands in one delta and not the other, and the
+    mean frame size computed from the pair is then wrong by a whole frame
+    spread across the bracket. At MTU 1500 that was a few bytes on a ~1460-byte
+    mean and invisible; at MTU 9000 it is ~42 bytes on 200 packets, enough to
+    make a steady 8488 read as 8446 or 8530 from one refresh to the next.
+
+    Each interface line carries eight receive fields then eight transmit ones,
+    each group beginning with bytes and then packets.
+    """
+    offset = 0 if direction == "rx" else 8
     try:
-        base = f"/sys/class/net/{LINK_INTERFACE}/statistics/{direction}_"
-        with open(base + "packets", encoding="utf-8") as file_handle:
-            packets = int(file_handle.read())
-        with open(base + "bytes", encoding="utf-8") as file_handle:
-            octets = int(file_handle.read())
-        return packets, octets
-    except (OSError, ValueError):
+        with open("/proc/net/dev", encoding="utf-8") as file_handle:
+            for line in file_handle:
+                name, separator, counters = line.partition(":")
+                if not separator or name.strip() != LINK_INTERFACE:
+                    continue
+                fields = counters.split()
+                return int(fields[offset + 1]), int(fields[offset])
+    except (OSError, ValueError, IndexError):
         return None
+    return None
 
 
 def _read_tx_counters():
