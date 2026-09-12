@@ -74,7 +74,7 @@ print_rerun_summary() {
         return
     fi
 
-    local entry label remedy line
+    local entry label remedy
     if [ ${#TARGETED_FIXES[@]} -gt 0 ]; then
         echo -e "\n${C_BOLD}${C_YELLOW}--- What to Fix ---${C_RESET}"
         echo -e "  These failures do not need a whole section re-run. Run the"
@@ -83,10 +83,12 @@ print_rerun_summary() {
             label=${entry%%$'\x1f'*}
             remedy=${entry#*$'\x1f'}
             echo -e "\n    ${C_BLUE}*${C_RESET} ${C_RED}FAILED:${C_RESET} ${C_BOLD}${label}${C_RESET}"
-            while IFS= read -r line; do
-                [ -z "$line" ] && continue
-                echo "        $line"
-            done <<< "$remedy"
+            # The commands print flush left on purpose. A remedy can contain a
+            # heredoc, and a heredoc terminator only ends the block when it is
+            # alone on its line, so indenting these for looks would leave anyone
+            # who pastes the block stuck at a continuation prompt.
+            echo
+            printf '%s\n' "$remedy"
         done
     fi
 
