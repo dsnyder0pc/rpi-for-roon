@@ -213,6 +213,17 @@ run_appendix4_checks() {
     header "Appendix 4" "Optional: Purist Mode Web UI"
     check "'avahi-daemon' service is enabled" "systemctl is-enabled avahi-daemon.service"
     check "Avahi is configured for USB LAN" "[ -f /etc/avahi/avahi-daemon.conf.d/interface-scoping.conf ]"
+    check "Avahi restarts if it dies" "systemctl show avahi-daemon.service -p Restart --value | grep -q '^always$'" \
+        "sudo mkdir -p /etc/systemd/system/avahi-daemon.service.d
+cat <<EOT | sudo tee /etc/systemd/system/avahi-daemon.service.d/restart.conf
+[Unit]
+StartLimitIntervalSec=0
+
+[Service]
+Restart=always
+RestartSec=2
+EOT
+sudo systemctl daemon-reload"
     check "Web UI SSH key exists" "[ -f /home/audiolinux/.ssh/purist_app_key ]"
     check "Web UI app file is up-to-date" "check_hash /home/audiolinux/purist-mode-webui/app.py https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py" \
         "curl -L https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/purist-mode-webui.py -o /home/audiolinux/purist-mode-webui/app.py

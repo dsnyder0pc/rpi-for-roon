@@ -2314,6 +2314,18 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
     deny-interfaces=end0
     EOT
 
+    # Avahi publie le seul nom auquel l'interface web répond, il faut donc le redémarrer s'il s'arrête
+    sudo mkdir -p /etc/systemd/system/avahi-daemon.service.d
+    cat <<EOT | sudo tee /etc/systemd/system/avahi-daemon.service.d/restart.conf
+    [Unit]
+    StartLimitIntervalSec=0
+
+    [Service]
+    Restart=always
+    RestartSec=2
+    EOT
+    sudo systemctl daemon-reload
+
     # Activer et démarrer le démon Avahi
     sudo systemctl enable --now avahi-daemon.service
 

@@ -2314,6 +2314,18 @@ Ahora, en el **Diretta Host**, realizaremos todos los pasos para instalar y conf
     deny-interfaces=end0
     EOT
 
+    # Avahi publica el único nombre al que responde la interfaz web, así que reinícielo si falla
+    sudo mkdir -p /etc/systemd/system/avahi-daemon.service.d
+    cat <<EOT | sudo tee /etc/systemd/system/avahi-daemon.service.d/restart.conf
+    [Unit]
+    StartLimitIntervalSec=0
+
+    [Service]
+    Restart=always
+    RestartSec=2
+    EOT
+    sudo systemctl daemon-reload
+
     # Habilitar e iniciar el demonio Avahi
     sudo systemctl enable --now avahi-daemon.service
 

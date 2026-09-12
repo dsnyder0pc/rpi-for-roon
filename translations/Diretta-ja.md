@@ -2314,6 +2314,18 @@ source ~/.bashrc
     deny-interfaces=end0
     EOT
 
+    # Avahi は Web UI が応答する唯一の名前を公開しているため、停止した場合は再起動する
+    sudo mkdir -p /etc/systemd/system/avahi-daemon.service.d
+    cat <<EOT | sudo tee /etc/systemd/system/avahi-daemon.service.d/restart.conf
+    [Unit]
+    StartLimitIntervalSec=0
+
+    [Service]
+    Restart=always
+    RestartSec=2
+    EOT
+    sudo systemctl daemon-reload
+
     # Avahiデーモンを有効化して起動する
     sudo systemctl enable --now avahi-daemon.service
 

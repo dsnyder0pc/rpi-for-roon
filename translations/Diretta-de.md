@@ -2314,6 +2314,18 @@ Nun führen wir auf dem **Diretta-Host** alle Schritte zur Installation und Konf
     deny-interfaces=end0
     EOT
 
+    # Avahi veröffentlicht den einzigen Namen, auf den die Web-UI antwortet, also bei einem Absturz neu starten
+    sudo mkdir -p /etc/systemd/system/avahi-daemon.service.d
+    cat <<EOT | sudo tee /etc/systemd/system/avahi-daemon.service.d/restart.conf
+    [Unit]
+    StartLimitIntervalSec=0
+
+    [Service]
+    Restart=always
+    RestartSec=2
+    EOT
+    sudo systemctl daemon-reload
+
     # Den Avahi-Daemon aktivieren und starten
     sudo systemctl enable --now avahi-daemon.service
 

@@ -2314,6 +2314,18 @@ Now, on the **Diretta Host**, we will perform all the steps to install and confi
     deny-interfaces=end0
     EOT
 
+    # Avahi publishes the only name the Web UI answers to, so restart it if it dies
+    sudo mkdir -p /etc/systemd/system/avahi-daemon.service.d
+    cat <<EOT | sudo tee /etc/systemd/system/avahi-daemon.service.d/restart.conf
+    [Unit]
+    StartLimitIntervalSec=0
+
+    [Service]
+    Restart=always
+    RestartSec=2
+    EOT
+    sudo systemctl daemon-reload
+
     # Enable and start the Avahi daemon
     sudo systemctl enable --now avahi-daemon.service
 
