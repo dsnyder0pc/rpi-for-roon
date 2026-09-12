@@ -3148,7 +3148,7 @@ Il processo di aggiornamento del sistema richiede una sequenza rigorosa per gara
 
 #### **Parte 3:** Sovrascrivere i limiti di corrente USB (Solo Raspberry Pi 5)
 
-Se state utilizzando un Raspberry Pi 5 e lo alimentate con un alimentatore di terze parti di qualità (ad es. iFi SilentPower Elite 5V o un alimentatore lineare in grado di erogare 5A) anziché con l'alimentatore ufficiale Raspberry Pi 27W USB-C, il Pi eseguirà di default una negoziazione di sicurezza a 5V/3A. Questo limita il consumo di corrente combinato su tutte e quattro le porte USB a 600mA.
+Se state utilizzando un Raspberry Pi 5 e lo alimentate con un alimentatore di terze parti di qualità (ad es. iFi SilentPower iPower Elite 5V o un alimentatore lineare in grado di erogare 5A) anziché con l'alimentatore ufficiale Raspberry Pi 27W o 45W USB-C, il Pi eseguirà di default una negoziazione di sicurezza a 5V/3A. Questo limita il consumo di corrente combinato su tutte e quattro le porte USB a 600mA.
 
 Sebbene sia solitamente irrilevante per i trasporti audio puri, se sapete che il vostro alimentatore è in grado di erogare continuamente almeno 5A a 5V, potete bypassare questa restrizione in sicurezza.
 
@@ -3157,8 +3157,8 @@ Sebbene sia solitamente irrilevante per i trasporti audio puri, se sapete che il
 ```bash
 if ! grep -q "^usb_max_current_enable=" /boot/config.txt; then
   echo "usb_max_current_enable=1" | sudo tee -a /boot/config.txt
+  sudo sync && sudo reboot
 else
   echo "Ottimizzazione già presente in /boot/config.txt. Configurazione saltata."
 fi
-sudo sync && sudo reboot
 ```

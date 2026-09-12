@@ -3148,7 +3148,7 @@ The system update process requires a strict sequence to ensure the custom kernel
 
 #### **Part 3:** Override USB Current Limits (Raspberry Pi 5 Only)
 
-If you are utilizing a Raspberry Pi 5 and powering it with a premium third-party supply (e.g., iFi SilentPower Elite 5V or a 5A-capable Linear Power Supply) rather than the official Raspberry Pi 27W USB-C supply, the Pi will default to a safe 5V/3A negotiation. This restricts the combined current draw across all four USB ports to 600mA.
+If you are utilizing a Raspberry Pi 5 and powering it with a premium third-party supply (e.g., iFi SilentPower iPower Elite 5V or a 5A-capable Linear Power Supply) rather than the official Raspberry Pi 27W or 45W USB-C supply, the Pi will default to a safe 5V/3A negotiation. This restricts the combined current draw across all four USB ports to 600mA.
 
 While usually inconsequential for pure audio transports, if you know your power supply is capable of continuously delivering at least 5A at 5V, you can safely bypass this restriction.
 
@@ -3157,8 +3157,8 @@ While usually inconsequential for pure audio transports, if you know your power 
 ```bash
 if ! grep -q "^usb_max_current_enable=" /boot/config.txt; then
   echo "usb_max_current_enable=1" | sudo tee -a /boot/config.txt
+  sudo sync && sudo reboot
 else
   echo "Optimization already present in /boot/config.txt. Skipping configuration."
 fi
-sudo sync && sudo reboot
 ```

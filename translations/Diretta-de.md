@@ -3148,7 +3148,7 @@ Der Systemaktualisierungsprozess erfordert eine strikte Reihenfolge, um sicherzu
 
 #### **Teil 3:** USB-Stromgrenzen überschreiben (nur Raspberry Pi 5)
 
-Wenn Sie einen Raspberry Pi 5 verwenden und ihn mit einem erstklassigen Netzteil eines Drittanbieters (z. B. iFi SilentPower Elite 5V oder ein lineares Netzteil mit 5A Nennstrom) anstelle des offiziellen Raspberry Pi 27W USB-C-Netzteils betreiben, verhandelt der Pi standardmäßig sichere 5V/3A. Dadurch wird die kombinierte Stromaufnahme über alle vier USB-Anschlüsse hinweg auf 600mA begrenzt.
+Wenn Sie einen Raspberry Pi 5 verwenden und ihn mit einem erstklassigen Netzteil eines Drittanbieters (z. B. iFi SilentPower iPower Elite 5V oder ein lineares Netzteil mit 5A Nennstrom) anstelle des offiziellen Raspberry Pi 27W- oder 45W-USB-C-Netzteils betreiben, verhandelt der Pi standardmäßig sichere 5V/3A. Dadurch wird die kombinierte Stromaufnahme über alle vier USB-Anschlüsse hinweg auf 600mA begrenzt.
 
 Dies ist für reine Audio-Transporte in der Regel belanglos, aber wenn Sie wissen, dass Ihr Netzteil kontinuierlich mindestens 5A bei 5V liefern kann, können Sie diese Einschränkung sicher umgehen.
 
@@ -3157,8 +3157,8 @@ Dies ist für reine Audio-Transporte in der Regel belanglos, aber wenn Sie wisse
 ```bash
 if ! grep -q "^usb_max_current_enable=" /boot/config.txt; then
   echo "usb_max_current_enable=1" | sudo tee -a /boot/config.txt
+  sudo sync && sudo reboot
 else
   echo "Optimierung in /boot/config.txt bereits vorhanden. Konfiguration wird übersprungen."
 fi
-sudo sync && sudo reboot
 ```

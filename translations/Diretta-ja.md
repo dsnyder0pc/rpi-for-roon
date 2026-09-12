@@ -3148,7 +3148,7 @@ vcgencmd bootloader_version
 
 #### **パート 3：** USB電流制限のオーバーライド（Raspberry Pi 5のみ）
 
-Raspberry Pi 5を使用していて、公式のRaspberry Pi 27W USB-C電源の代わりにプレミアムなサードパーティ製電源（例：iFi SilentPower Elite 5Vや5A出力対応の安定化リニア電源）を使用している場合、Piはデフォルトで安全な5V/3Aネゴシエーションを行います。これにより、4つのUSBポートすべての合計電流ドローは600mAに制限されます。
+Raspberry Pi 5を使用していて、公式のRaspberry Pi 27Wまたは45W USB-C電源の代わりにプレミアムなサードパーティ製電源（例：iFi SilentPower iPower Elite 5Vや5A出力対応の安定化リニア電源）を使用している場合、Piはデフォルトで安全な5V/3Aネゴシエーションを行います。これにより、4つのUSBポートすべての合計電流ドローは600mAに制限されます。
 
 純粋なオーディオトランスポート用としては通常問題ありませんが、ご使用の電源が5Vで少なくとも5Aを継続して供給できることがわかっている場合は、この制限を安全にバイパスできます。
 
@@ -3157,8 +3157,8 @@ Raspberry Pi 5を使用していて、公式のRaspberry Pi 27W USB-C電源の�
 ```bash
 if ! grep -q "^usb_max_current_enable=" /boot/config.txt; then
   echo "usb_max_current_enable=1" | sudo tee -a /boot/config.txt
+  sudo sync && sudo reboot
 else
   echo "/boot/config.txtに最適化は既に存在します。設定をスキップします。"
 fi
-sudo sync && sudo reboot
 ```
