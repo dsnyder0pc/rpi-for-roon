@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Link Regression Check v1.0.0
+# Diretta Link Regression Check v1.0.1
 #
 # Run this from the workstation before committing a change to the guide and
 # before building an image. It answers one question the QA scripts cannot:
@@ -184,6 +184,14 @@ GOT=$(timeout "$BUDGET" ssh "${SSHO[@]}" "$TGT" \
     "cat > /tmp/linkcheck.bin; md5sum /tmp/linkcheck.bin | cut -d' ' -f1" \
     < "$WORK/payload" 2>/dev/null)
 RC=$?; t1=$(date +%s.%N)
+# Read the jumbo counters here rather than in Stage 3. The concurrent-streams
+# stage below pushes a further 9 x PAYLOAD/4 to the Target, and counting those
+# frames against a PAYLOAD-sized numerator understated the frame size by ~3.25x
+# -- a 9000-tier link reported ~2580 bytes per frame while actually carrying
+# ~8400. Ending the window with the push keeps numerator and denominator
+# describing the same transfer. The pull burst does not touch the Target's rx
+# counters, so nothing is lost by stopping here.
+counters "$TGT" "$JUMBOKEYS" > "$WORK/t.jmb.after"
 PUSH_MBPS=$(wire "$(echo "$t1-$t0" | bc -l)")
 PUSH_OK=1
 if [ $RC -ne 0 ]; then
@@ -261,7 +269,6 @@ fi
 # --- Stage 3: what the wire says about it -----------------------------------
 counters "$TGT" "$ERRKEYS" > "$WORK/t.err.after"
 counters "$HOST" "$ERRKEYS" > "$WORK/h.err.after"
-counters "$TGT" "$JUMBOKEYS" > "$WORK/t.jmb.after"
 
 COUNTERFIX="Frames are reaching the wire and being rejected. rx_length_errors means
 the far end received frames larger than its buffer accepts -- the two ends
