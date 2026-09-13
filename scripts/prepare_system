@@ -13,9 +13,23 @@ MIRRORLIST_PATH="/etc/pacman.d/mirrorlist"
 DEFAULT_MIRROR="http://mirror.archlinuxarm.org/\$arch/\$repo"
 CUSTOM_MIRROR="http://ca.us.mirror.archlinuxarm.org/\$arch/\$repo"
 MOTD_FILE="/etc/motd"
-# Images are prepped on RPi5 pairs but must also boot on an RPi4, where end0
-# enumerates as 27 and 28 on the current kernel.
-RPI4_END0_IRQS="27 28"
+# end0's interrupts on the two boards this project supports: 27 and 28 on a
+# Pi 4, 103 on a Pi 5. Written verbatim so a card ships naming both boards
+# whichever one it was prepped on.
+#
+# Maintained by hand. The numbers are assigned by the kernel and have moved
+# between releases -- end0 was 104 on one and 103 on the next -- so check them
+# after a kernel bump against the office pair, which has one of each board:
+#
+#   for h in office office-target; do
+#     ssh $h 'grep end0 /proc/interrupts | awk "{print \$1}" | tr -d :'
+#   done
+#
+# Being stale costs nothing at runtime. AudioLinux's isolated_app.sh rebuilds
+# IRQ1 from DEVICES1 on every boot and pins from what it resolves there, never
+# from this file, so this is the value a card ships with and not what pins
+# anything. DEVICES1 is the field that has to be right.
+END0_IRQS="27 28 103"
 
 # --- Colors ---
 RED_BOLD='\033[1;31m'
@@ -43,22 +57,6 @@ update_config_key() {
     fi
 }
 
-resolve_isolated_irqs() {
-    # Echoes the IRQ numbers currently serving the named devices, plus the
-    # RPi4 end0 pair, deduped and in numeric order. IRQ numbers are assigned
-    # by the kernel and move between releases (end0 was 104 on one kernel and
-    # 103 on the next), so they are resolved here rather than baked in. The
-    # RPi4 pair rides along so affinity is right on that board too, from the
-    # first boot until isolated_app.sh regenerates IRQ1 from DEVICES1.
-    local devices="$1"
-    local dev found irqs=""
-
-    for dev in $devices; do
-        found=$(grep "$dev" /proc/interrupts | awk '{print $1}' | tr -d ':')
-        [ -n "$found" ] && irqs="${irqs} ${found}"
-    done
-    echo "$irqs $RPI4_END0_IRQS" | xargs -n1 | sort -un | xargs
-}
 
 update_network_mtu() {
     local mtu="$1"
@@ -263,7 +261,7 @@ if [ -d "/opt/diretta-alsa-target" ]; then
         # every boot and rewrites IRQ1 from what it finds.
         ISO_DEVICES="end0 xhci-hcd:usb1 xhci-hcd:usb3"
         update_config_key "$ISO_CONF" "DEVICES1" "\"${ISO_DEVICES}\""
-        update_config_key "$ISO_CONF" "IRQ1" "\"$(resolve_isolated_irqs "$ISO_DEVICES")\""
+        update_config_key "$ISO_CONF" "IRQ1" "\"${END0_IRQS}\""
     else
         echo "   - ⚠️  Warning: Isolated config file not found at $ISO_CONF"
     fi
@@ -289,12 +287,9 @@ if [ -d "/opt/diretta-alsa" ]; then
 
     ISO_CONF="/opt/configuration/isolated.conf"
     if [ -f "$ISO_CONF" ]; then
-        # The AudioLinux menu writes DEVICES1 itself when core isolation is
-        # applied, pinning the end0 IRQs alongside the Diretta app, so resolve
-        # IRQ1 from whatever it listed rather than assuming a device set. A
-        # Host has no DAC, so there is no xhci bus to cover here.
-        ISO_DEVICES=$(awk -F'"' '/^DEVICES1=/ {print $2}' "$ISO_CONF")
-        update_config_key "$ISO_CONF" "IRQ1" "\"$(resolve_isolated_irqs "$ISO_DEVICES")\""
+        # DEVICES1 is left as the AudioLinux menu wrote it when core isolation
+        # was applied; a Host has no DAC, so there is no xhci bus to add.
+        update_config_key "$ISO_CONF" "IRQ1" "\"${END0_IRQS}\""
     else
         echo "   - ⚠️  Warning: Isolated config file not found at $ISO_CONF"
     fi
