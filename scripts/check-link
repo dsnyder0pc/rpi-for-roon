@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Link Regression Check v1.0.1
+# Diretta Link Regression Check v1.0.2
 #
 # Run this from the workstation before committing a change to the guide and
 # before building an image. It answers one question the QA scripts cannot:
@@ -58,11 +58,26 @@ WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 FAILURES=0
 NOTES=()
 
-# Error counters only. rx_oversize and tx_oversize count frames over 1518 on
-# bcmgenet -- they rise during a healthy jumbo transfer and mean nothing is
-# wrong, so they are reported separately as evidence the frames were full size.
-ERRKEYS='rx_errors|tx_errors|rx_dropped|tx_dropped|rx_length_errors|rx_over_errors|rx_crc_errors|rx_frame_errors|rx_missed_errors|rx_mtu_err|rbuf_err_cnt|rxq0_length_errors|rxq0_over_errors|rxq0_dropped|txq0_dropped|txq0_errors'
-JUMBOKEYS='rx_oversize|tx_oversize'
+# Error counters only, and the two drivers spell almost nothing the same way.
+# An RPi4 end is bcmgenet; an RPi5 end is macb, whose names are entirely
+# different -- of the bcmgenet list below only q0_rx_dropped and q0_tx_dropped
+# match it at all (as substrings of rx_dropped/tx_dropped). Until 2026-09-13
+# that was the whole error check on an RPi5 end: every genuine macb error
+# counter -- FCS, symbol, alignment, resource, overrun, jabber -- went
+# unwatched, so the theater pair was being gated on almost nothing. The macb
+# names are appended here.
+#
+# The jumbo counters are the trap. On bcmgenet, rx_oversize/tx_oversize count
+# frames over 1518 and rise during a healthy jumbo transfer, so they are
+# reported separately as evidence the frames were full size. macb has
+# rx_oversize_frames, which sounds like the same thing and is NOT: it is an
+# error counter, sitting among the jabber and undersized counters, and it stays
+# at 0 through a healthy jumbo run. It therefore belongs in ERRKEYS, while the
+# benign size bucket on macb is rx_greater_than_1518_byte_frames. The bcmgenet
+# jumbo keys are anchored with a trailing colon so they cannot also match
+# macb's rx_oversize_frames.
+ERRKEYS='rx_errors|tx_errors|rx_dropped|tx_dropped|rx_length_errors|rx_over_errors|rx_crc_errors|rx_frame_errors|rx_missed_errors|rx_mtu_err|rbuf_err_cnt|rxq0_length_errors|rxq0_over_errors|rxq0_dropped|txq0_dropped|txq0_errors|rx_undersized_frames|rx_oversize_frames|rx_jabbers|rx_frame_check_sequence_errors|rx_length_field_frame_errors|rx_symbol_errors|rx_alignment_errors|rx_resource_errors|rx_overruns|rx_ip_header_checksum_errors|rx_tcp_checksum_errors|rx_udp_checksum_errors|tx_underrun|tx_carrier_sense_errors|tx_excessive_collisions|tx_late_collisions'
+JUMBOKEYS='rx_oversize:|tx_oversize:|rx_greater_than_1518_byte_frames|tx_greater_than_1518_byte_frames'
 
 check() {
     printf "  ${C_BLUE}*${C_RESET} %-58s" "$1"
@@ -305,7 +320,8 @@ IFS='|' read -r jtotal jmoved <<< "$(delta_report "$WORK/t.jmb.before" "$WORK/t.
 # Only meaningful when the payload actually arrived; on a stalled burst the
 # arithmetic divides a full payload by the handful of frames that got through.
 if [ $PUSH_OK -eq 1 ] && [ "$TMTU" -gt 1518 ] && [ "${jtotal:-0}" -gt 0 ]; then
-    RXJ=$(echo "$jmoved" | grep -o 'rx_oversize+[0-9]*' | cut -d+ -f2)
+    RXJ=$(echo "$jmoved" | grep -oE 'rx_(oversize|greater_than_1518_byte_frames)\+[0-9]+' \
+            | head -1 | cut -d+ -f2)
     [ -n "$RXJ" ] && [ "$RXJ" -gt 0 ] && \
         echo -e "      ${C_BLUE}note:${C_RESET} $RXJ frames over 1518 bytes received, ~$((PAYLOAD/RXJ)) bytes each"
 fi
