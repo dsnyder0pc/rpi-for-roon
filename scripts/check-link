@@ -1,0 +1,319 @@
+#!/bin/bash
+#
+# Diretta Link Regression Check v1.0.0
+#
+# Run this from the workstation before committing a change to the guide and
+# before building an image. It answers one question the QA scripts cannot:
+# does the point-to-point link actually carry sustained traffic?
+#
+# On 2026-09-12 an RPi4 pair on kernel 6.18.48-1-rpi passed every Appendix 9
+# check, including a 3796-byte DF ping at 0.827 ms, on a link that could not
+# move 40 KB in either direction. A single ping does not discriminate: it fits
+# in the driver's receive path whether or not that path survives back-to-back
+# frames. Only a burst finds it.
+#
+# Usage:
+#   scripts/check-link <host-alias> <target-alias> [payload-bytes]
+#
+#   scripts/check-link host2 target2          # a pair on the bench
+#   scripts/check-link office office-target   # 10 Mb/s Super Purist pair
+#
+# The aliases are ssh config entries. The target alias must reach the Target
+# through the Host -- a ProxyJump entry, which is how the ssh config here is
+# already written -- so the burst crosses the link under test. Only the
+# audiolinux login is needed; nothing here requires root or changes any
+# setting on either box.
+#
+# Payload defaults to 4 MB, or 1 MB on a 10 Mb/s Super Purist link. Pass a
+# byte count to override.
+#
+# When to run it:
+#   * Before pushing a commit that touches Appendix 8, Appendix 9, or the
+#     tuning blocks in Appendix 6 -- anything that moves MTU, link speed, or
+#     CycleTime.
+#   * Before building and releasing images. Flash the pair, complete the
+#     build, then run this. A pair that passes the QA scripts can still be
+#     unable to carry music.
+#
+# Exit status is 0 only if every check passes, so it can gate a release.
+#
+# Validated 2026-09-12 against three pairs (RPi4+RPi4 at 100 Mb/s, RPi5+RPi4
+# and RPi5+RPi5 at 10 Mb/s) and at all three jumbo tiers, and against an
+# injected one-way blackhole -- an iptables rule dropping inbound TCP over
+# 4000 bytes on the Target, which reproduces the signature exactly: the DF
+# ping still passes, the burst stalls, the run exits 1.
+
+C_RESET=$'\033[0m'; C_RED=$'\033[0;31m'; C_GREEN=$'\033[0;32m'
+C_YELLOW=$'\033[1;33m'; C_BLUE=$'\033[0;34m'; C_BOLD=$'\033[1m'
+
+HOST=${1:?usage: check-link <host-alias> <target-alias> [payload-bytes]}
+TGT=${2:?usage: check-link <host-alias> <target-alias> [payload-bytes]}
+PAYLOAD=$3
+
+# ControlPath=none is deliberate. A burst that stalls wedges a shared
+# multiplexed connection, and every later command on it -- the counter reads,
+# the cleanup -- then hangs too. This check must stay able to report.
+SSHO=(-o BatchMode=yes -o ConnectTimeout=8 -o ControlPath=none)
+WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
+FAILURES=0
+NOTES=()
+
+# Error counters only. rx_oversize and tx_oversize count frames over 1518 on
+# bcmgenet -- they rise during a healthy jumbo transfer and mean nothing is
+# wrong, so they are reported separately as evidence the frames were full size.
+ERRKEYS='rx_errors|tx_errors|rx_dropped|tx_dropped|rx_length_errors|rx_over_errors|rx_crc_errors|rx_frame_errors|rx_missed_errors|rx_mtu_err|rbuf_err_cnt|rxq0_length_errors|rxq0_over_errors|rxq0_dropped|txq0_dropped|txq0_errors'
+JUMBOKEYS='rx_oversize|tx_oversize'
+
+check() {
+    printf "  ${C_BLUE}*${C_RESET} %-58s" "$1"
+    if [ "$2" == "pass" ]; then
+        printf '[%sPASS%s] %s\n' "$C_GREEN" "$C_RESET" "$3"
+    else
+        printf '[%sFAIL%s] %s\n' "$C_RED" "$C_RESET" "$3"
+        FAILURES=$((FAILURES+1))
+        [ -n "$4" ] && NOTES+=("$1"$'\x1f'"$4")
+    fi
+}
+
+rssh() { timeout "${3:-25}" ssh "${SSHO[@]}" "$1" "$2" 2>/dev/null; }
+counters() { rssh "$1" "ethtool -S end0 2>/dev/null | grep -E '$2' | tr -d ' '"; }
+
+# Sum the deltas of every counter in a before/after pair, and name the ones
+# that moved.
+delta_report() {
+    local before=$1 after=$2 total=0 moved=""
+    while IFS=: read -r k v; do
+        local b; b=$(grep -m1 "^$k:" "$before" | cut -d: -f2)
+        [ -z "$b" ] && continue
+        [[ "$v" =~ ^[0-9]+$ && "$b" =~ ^[0-9]+$ ]] || continue
+        if [ "$v" -gt "$b" ]; then
+            total=$((total + v - b)); moved="$moved $k+$((v-b))"
+        fi
+    done < "$after"
+    echo "$total|$moved"
+}
+
+echo -e "\n${C_BOLD}${C_YELLOW}--- Diretta Link Regression Check ---${C_RESET}"
+echo -e "  Host: ${C_BOLD}${HOST}${C_RESET}   Target: ${C_BOLD}${TGT}${C_RESET}"
+
+# --- Reachability and link state -------------------------------------------
+probe='printf "%s|%s|%s|%s|%s\n" \
+    "$(hostname)" \
+    "$(ip -o link show end0 2>/dev/null | grep -o "mtu [0-9]*" | cut -d" " -f2)" \
+    "$(ethtool end0 2>/dev/null | awk "/Speed:/{print \$2}")" \
+    "$(uname -r)" \
+    "$(tr -d "\0" < /proc/device-tree/model 2>/dev/null)"'
+
+HINFO=$(rssh "$HOST" "$probe"); TINFO=$(rssh "$TGT" "$probe")
+
+if [ -z "$HINFO" ] || [ -z "$TINFO" ]; then
+    check "Both ends reachable over ssh" fail \
+        "host='${HINFO:-unreachable}' target='${TINFO:-unreachable}'" \
+        "Check the ssh aliases and that both boxes are powered up."
+    echo -e "\n${C_RED}Cannot continue.${C_RESET}"; exit 1
+fi
+check "Both ends reachable over ssh" pass
+
+IFS='|' read -r HNAME HMTU HSPD HKERN HMODEL <<< "$HINFO"
+IFS='|' read -r TNAME TMTU TSPD TKERN TMODEL <<< "$TINFO"
+echo -e "      ${HNAME}: mtu=${HMTU} ${HSPD} ${HKERN} (${HMODEL})"
+echo -e "      ${TNAME}: mtu=${TMTU} ${TSPD} ${TKERN} (${TMODEL})"
+
+if [ "$HMTU" == "$TMTU" ]; then
+    check "Both ends agree on MTU" pass "($HMTU)"
+else
+    check "Both ends agree on MTU" fail "host=$HMTU target=$TMTU" \
+"The link comes up and every full-size frame is discarded. Set both ends to
+the same tier in /etc/systemd/network/end0.network, then re-run Appendix 9 so
+CycleTime matches the tier."
+fi
+
+SPEEDNUM=${TSPD%Mb/s}
+[[ "$SPEEDNUM" =~ ^[0-9]+$ ]] || SPEEDNUM=100
+if [ -z "$PAYLOAD" ]; then
+    if [ "$SPEEDNUM" -le 10 ]; then PAYLOAD=1048576; else PAYLOAD=4194304; fi
+fi
+
+# --- Stage 1: the ping the ladder already does ------------------------------
+PSZ=$((TMTU-28))
+PING=$(rssh "$TGT" "ping -c 1 -w 4 -M do -s $PSZ 172.20.0.1 2>&1 | grep -E 'bytes from|100% packet loss'" 20)
+if [[ "$PING" == *"bytes from"* ]]; then
+    check "Single DF ping at $PSZ bytes" pass "$(echo "$PING" | grep -o 'time=[0-9.]* ms')"
+else
+    check "Single DF ping at $PSZ bytes" fail "no reply" \
+"The tier is wrong for this kernel. Re-run Appendix 9 to re-probe the ladder."
+fi
+
+# --- Stage 2: the burst the ladder does not ---------------------------------
+head -c "$PAYLOAD" /dev/urandom > "$WORK/payload"
+SUM=$(md5sum "$WORK/payload" | awk '{print $1}')
+MB=$(echo "scale=1; $PAYLOAD/1048576" | bc)
+# Ten times the time the payload needs at line rate, floored at 20s. A healthy
+# link finishes in well under a second of this; a dead one gives up quickly
+# enough that the run still reaches its verdict.
+BUDGET=$(echo "t=$PAYLOAD*8/1000000/$SPEEDNUM*10; if (t<20) 20 else t" | bc -l | cut -d. -f1)
+
+# Each burst opens its own ssh connection, so the handshake sits inside the
+# elapsed time and would be charged to the wire -- at 100 Mb/s a 4 MB payload
+# moves in ~0.4s, and a ~0.2s handshake would halve the reported rate. Measure
+# a do-nothing connection and subtract it. Take the best of three so a single
+# scheduling hiccup does not inflate the baseline and flatter the link.
+BASE=9
+for _ in 1 2 3; do
+    b0=$(date +%s.%N); timeout 20 ssh "${SSHO[@]}" "$TGT" true 2>/dev/null; b1=$(date +%s.%N)
+    this=$(echo "$b1-$b0" | bc -l)
+    [ "$(echo "$this < $BASE" | bc -l)" == "1" ] && BASE=$this
+done
+wire() { # elapsed -> Mb/s over the link alone
+    local w; w=$(echo "$1 - $BASE" | bc -l)
+    [ "$(echo "$w <= 0.001" | bc -l)" == "1" ] && w=0.001
+    echo "scale=1; $PAYLOAD*8/1000000/$w" | bc -l
+}
+
+counters "$TGT" "$ERRKEYS" > "$WORK/t.err.before"
+counters "$HOST" "$ERRKEYS" > "$WORK/h.err.before"
+counters "$TGT" "$JUMBOKEYS" > "$WORK/t.jmb.before"
+
+BURSTFIX="The link passes a single frame but stalls on sustained traffic. This is
+the failure a ping cannot see. Check the kernel on both ends: on RPi4 the
+bcmgenet jumbo patch landed unevenly, and 6.18.48-1-rpi blackholes the 3824
+tier while passing every other Appendix 9 check."
+
+t0=$(date +%s.%N)
+GOT=$(timeout "$BUDGET" ssh "${SSHO[@]}" "$TGT" \
+    "cat > /tmp/linkcheck.bin; md5sum /tmp/linkcheck.bin | cut -d' ' -f1" \
+    < "$WORK/payload" 2>/dev/null)
+RC=$?; t1=$(date +%s.%N)
+PUSH_MBPS=$(wire "$(echo "$t1-$t0" | bc -l)")
+PUSH_OK=1
+if [ $RC -ne 0 ]; then
+    PUSH_OK=0
+    check "Burst push host -> target ($MB MB)" fail "STALLED after $(printf '%.0f' "$(echo "$t1-$t0"|bc)")s" "$BURSTFIX"
+elif [ "$GOT" != "$SUM" ]; then
+    PUSH_OK=0
+    check "Burst push host -> target ($MB MB)" fail "corrupt (md5 differs)" "$BURSTFIX"
+else
+    check "Burst push host -> target ($MB MB)" pass "${PUSH_MBPS} Mb/s"
+fi
+
+if [ $PUSH_OK -eq 0 ]; then
+    printf "  ${C_BLUE}*${C_RESET} %-58s[${C_YELLOW}SKIP${C_RESET}] push already proved the link bad\n" \
+        "Burst pull target -> host ($MB MB)"
+    PULL_MBPS=$PUSH_MBPS
+else
+t0=$(date +%s.%N)
+GOT=$(timeout "$BUDGET" ssh "${SSHO[@]}" "$TGT" "cat /tmp/linkcheck.bin" 2>/dev/null | md5sum | awk '{print $1}')
+t1=$(date +%s.%N)
+PULL_MBPS=$(wire "$(echo "$t1-$t0" | bc -l)")
+if [ "$GOT" != "$SUM" ]; then
+    check "Burst pull target -> host ($MB MB)" fail "stalled or corrupt" "$BURSTFIX"
+else
+    check "Burst pull target -> host ($MB MB)" pass "${PULL_MBPS} Mb/s"
+fi
+fi
+
+rssh "$TGT" 'rm -f /tmp/linkcheck.bin' >/dev/null
+
+# --- Stage 2b: concurrent streams -------------------------------------------
+# A single stream at line rate is not enough. On 2026-09-12 an RPi4 pair on the
+# v148/3824 image moved 96 MB single-stream at 92 Mb/s and then wedged
+# individual streams as soon as several ran at once -- one stream stopping dead
+# while its siblings finished in two seconds, error counters flat throughout.
+# That is what a terminal redraw competing with other traffic looks like, and
+# it is why 'menu' froze. The far end counts bytes rather than writing a file,
+# so a slow SD card cannot be mistaken for a slow link. It is intermittent at
+# roughly one run in three, hence the rounds.
+CONCFIX="Individual streams wedge when several share the link, while a single stream
+runs at line rate. The pair is not safe to ship. Check the kernel: on RPi4 the
+bcmgenet jumbo patch landed unevenly and 6.18.48-1-rpi shows this at the 3824
+tier. Re-test after moving both ends to a patched kernel."
+
+CONC_SZ=$((PAYLOAD/4)); CONC_N=3; CONC_ROUNDS=3
+CONC_TO=$(echo "t=$CONC_SZ*8/1000000/$SPEEDNUM*20; if (t<15) 15 else t" | bc -l | cut -d. -f1)
+head -c "$CONC_SZ" /dev/urandom > "$WORK/conc"
+stalls=0; slowest=0
+if [ $PUSH_OK -eq 1 ]; then
+    for round in $(seq 1 $CONC_ROUNDS); do
+        for i in $(seq 1 $CONC_N); do
+            ( cs=$(date +%s.%N)
+              got=$(timeout "$CONC_TO" ssh "${SSHO[@]}" "$TGT" "wc -c" < "$WORK/conc" 2>/dev/null | tr -d ' ')
+              ce=$(date +%s.%N)
+              if [ "$got" == "$CONC_SZ" ]; then echo "ok $(echo "$ce-$cs"|bc)"; else echo "stall $(echo "$ce-$cs"|bc)"; fi                   > "$WORK/c.$round.$i" ) &
+        done
+        wait
+    done
+    for f in "$WORK"/c.*; do
+        read -r verdict secs < "$f"
+        [ "$verdict" == "stall" ] && stalls=$((stalls+1))
+        [ "$(echo "$secs > $slowest" | bc -l)" == "1" ] && slowest=$secs
+    done
+    total=$((CONC_N*CONC_ROUNDS))
+    if [ $stalls -eq 0 ]; then
+        check "Concurrent streams ($total of them)" pass "$(printf 'slowest %.1fs' "$slowest")"
+    else
+        check "Concurrent streams ($total of them)" fail "$stalls of $total wedged" "$CONCFIX"
+    fi
+else
+    printf "  ${C_BLUE}*${C_RESET} %-58s[${C_YELLOW}SKIP${C_RESET}] single stream already failed\n" \
+        "Concurrent streams"
+fi
+
+# --- Stage 3: what the wire says about it -----------------------------------
+counters "$TGT" "$ERRKEYS" > "$WORK/t.err.after"
+counters "$HOST" "$ERRKEYS" > "$WORK/h.err.after"
+counters "$TGT" "$JUMBOKEYS" > "$WORK/t.jmb.after"
+
+COUNTERFIX="Frames are reaching the wire and being rejected. rx_length_errors means
+the far end received frames larger than its buffer accepts -- the two ends
+disagree about the tier, or the driver cannot receive what it advertises."
+
+for side in t h; do
+    [ "$side" == t ] && who="target" || who="host"
+    IFS='|' read -r total moved <<< "$(delta_report "$WORK/$side.err.before" "$WORK/$side.err.after")"
+    if [ "${total:-0}" -eq 0 ]; then
+        check "No error counters moved on the $who" pass
+    else
+        check "No error counters moved on the $who" fail "$moved" "$COUNTERFIX"
+    fi
+done
+
+# Throughput floor. A link that technically completes but crawls is also a
+# regression; half of the negotiated rate is generous for ssh over TCP.
+FLOOR=$(echo "scale=1; $SPEEDNUM * 0.5" | bc)
+SLOW=$(echo "$PUSH_MBPS < $FLOOR || $PULL_MBPS < $FLOOR" | bc -l)
+if [ $PUSH_OK -eq 0 ]; then
+    :
+elif [ "$SLOW" == "1" ]; then
+    check "Throughput is at least half of ${SPEEDNUM}Mb/s" fail \
+        "push=${PUSH_MBPS} pull=${PULL_MBPS}, floor=${FLOOR}" \
+"Sustained traffic is moving but far below line rate. Suspect EEE, a duplex
+mismatch, or retransmits from partial frame loss."
+else
+    check "Throughput is at least half of ${SPEEDNUM}Mb/s" pass "push=${PUSH_MBPS} pull=${PULL_MBPS}"
+    printf "      ${C_BLUE}note:${C_RESET} ssh handshake baseline %.2fs excluded; rates are approximate\n" "$BASE"
+fi
+
+# Evidence that the burst used full-size frames rather than fragmenting quietly.
+IFS='|' read -r jtotal jmoved <<< "$(delta_report "$WORK/t.jmb.before" "$WORK/t.jmb.after")"
+# Only meaningful when the payload actually arrived; on a stalled burst the
+# arithmetic divides a full payload by the handful of frames that got through.
+if [ $PUSH_OK -eq 1 ] && [ "$TMTU" -gt 1518 ] && [ "${jtotal:-0}" -gt 0 ]; then
+    RXJ=$(echo "$jmoved" | grep -o 'rx_oversize+[0-9]*' | cut -d+ -f2)
+    [ -n "$RXJ" ] && [ "$RXJ" -gt 0 ] && \
+        echo -e "      ${C_BLUE}note:${C_RESET} $RXJ frames over 1518 bytes received, ~$((PAYLOAD/RXJ)) bytes each"
+fi
+
+# --- Verdict ----------------------------------------------------------------
+if [ $FAILURES -eq 0 ]; then
+    echo -e "\n${C_GREEN}${C_BOLD}LINK OK${C_RESET} - carries sustained traffic at the ${TMTU} tier. Safe to build images."
+    exit 0
+fi
+
+echo -e "\n${C_BOLD}${C_YELLOW}--- What Failed ---${C_RESET}"
+for entry in "${NOTES[@]}"; do
+    echo -e "\n    ${C_BLUE}*${C_RESET} ${C_RED}FAILED:${C_RESET} ${C_BOLD}${entry%%$'\x1f'*}${C_RESET}"
+    echo
+    printf '%s\n' "${entry#*$'\x1f'}"
+done
+echo -e "\n${C_RED}${C_BOLD}LINK NOT OK${C_RESET} - $FAILURES check(s) failed. Do not release images from this build."
+exit 1
