@@ -95,14 +95,20 @@ fi
 echo "🚀 Starting remote system preparation..."
 echo "------------------------------------------------"
 
-# Step 1: Remove personal SSH public key
-SSH_KEYS_FILE="/home/$TARGET_USER/.ssh/authorized_keys"
-echo "🔐 Removing SSH public key for user '$TARGET_USER'..."
-if [ -f "$SSH_KEYS_FILE" ]; then
-    rm -fv "$SSH_KEYS_FILE"
-else
-    echo "   - No authorized_keys file found. Skipping."
-fi
+# Step 1: Remove personal SSH public keys
+# Both accounts collect them. The build workstation's key lands in the
+# audiolinux account, and root picks one up whenever bench work needs
+# privileged access -- changing an MTU, say, which cannot be done over sudo
+# from a script. Either one would let the builder into every card shipped
+# from this image, so both go.
+echo "🔐 Removing SSH public keys..."
+for keys_file in "/home/$TARGET_USER/.ssh/authorized_keys" "/root/.ssh/authorized_keys"; do
+    if [ -f "$keys_file" ]; then
+        rm -fv "$keys_file"
+    else
+        echo "   - No $keys_file found. Skipping."
+    fi
+done
 
 # Step 2: Restore default pacman mirrorlist
 echo "🌐 Restoring default pacman mirrorlist..."
