@@ -390,8 +390,8 @@ fi
 
 echo "------------------------------------------------"
 
-# Step 16: Drop the machine ID so every install generates its own
-echo "🧹 Removing /etc/machine-id..."
+# Step 16: Empty the machine ID so every install generates its own
+echo "🧹 Emptying /etc/machine-id..."
 # AudioLinux images ship with one already in place, so two systems restored
 # from the same image present the same DHCP identifier and a DHCP server hands
 # them both the same address. systemd writes a fresh one at the next boot, and
@@ -410,7 +410,7 @@ echo "🧹 Removing /etc/machine-id..."
 # boot" in the journal. shrink-image has always emptied rather than removed,
 # which is why images built through it were never affected.
 : > /etc/machine-id
-echo "   - Emptied /etc/machine-id (a fresh ID is written at the next boot)"
+echo "   - A fresh ID is written at the next boot."
 
 echo "------------------------------------------------"
 
