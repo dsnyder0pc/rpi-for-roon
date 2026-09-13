@@ -240,7 +240,23 @@ MODAL_FRAME_DROP = 0.05
 # InfoCycle does not change on its own, so the memo only has to outlive a run
 # of dirty brackets; it is dropped outright when the stream stops or when
 # setting.inf is rewritten under it.
-INFO_FRAME_RX_BYTES = 64
+# Whether rx_bytes carries the 14-byte Ethernet header is a property of the
+# driver, not of the frame. Measured 2026-09-12 with matched six-second
+# windows, fifty pings of a 142-byte frame, background reports cancelled by
+# subtraction: bcmgenet counted 140.3 bytes per reply and macb 127.4. So the
+# same 78-byte report adds 78 to rx_bytes on a Pi 4 and 64 on a Pi 5, and a
+# Pi 4 Host held to 64 rejects every window it ever samples -- the panel then
+# shows an em dash forever, which is what it did before this.
+#
+# A driver we have not measured gets both sizes rather than a guess. That
+# weakens the test there to the degree that a contaminated window could land
+# on the other size exactly, and leaves the panel working; the alternative is
+# a blank panel on the first board we meet that is not one of these two.
+INFO_FRAME_RX_BYTES_BY_DRIVER = {
+    "bcmgenet": 78,   # Raspberry Pi 4 -- header counted
+    "macb": 64,       # Raspberry Pi 5 (RP1) -- header stripped
+}
+INFO_FRAME_RX_SIZES_MEMO = {}
 INFO_CYCLE_MEMO = 600.0
 # The reports are timed in one self-contained bracket, as the elected cycle is,
 # rather than across the gap between two renders. The gap needed its whole span
@@ -1587,6 +1603,37 @@ def _forget_info_cycle():
                                 value_t=float("-inf"), value_cycle=None)
 
 
+def _info_frame_rx_sizes():
+    """Byte totals a single Target report may add to rx_bytes on this Host.
+
+    One syscall, resolved once: a driver cannot change under a running kernel.
+    Read from sysfs rather than ethtool because this is the same class of fact
+    as the mtu and speed the panel already reads there, and because spawning a
+    process to learn a constant would cost more than every measurement it
+    serves.
+
+    Returns:
+        tuple: the accepted sizes -- one value for a driver we have measured,
+            both for one we have not.
+    """
+    if "sizes" not in INFO_FRAME_RX_SIZES_MEMO:
+        try:
+            driver = os.path.basename(os.path.realpath(
+                f"/sys/class/net/{LINK_INTERFACE}/device/driver"))
+        except OSError:
+            driver = ""
+        counted = INFO_FRAME_RX_BYTES_BY_DRIVER.get(driver)
+        if counted is None:
+            app.logger.info(
+                "Unmeasured NIC driver %r; accepting both report sizes.",
+                driver or "unknown")
+            sizes = tuple(sorted(set(INFO_FRAME_RX_BYTES_BY_DRIVER.values())))
+        else:
+            sizes = (counted,)
+        INFO_FRAME_RX_SIZES_MEMO["sizes"] = sizes
+    return INFO_FRAME_RX_SIZES_MEMO["sizes"]
+
+
 def _sample_info_reports(windows):
     """Counts the Target's reports across one bracket, keeping clean windows.
 
@@ -1610,6 +1657,7 @@ def _sample_info_reports(windows):
     """
     frames = 0
     seconds = 0.0
+    sizes = _info_frame_rx_sizes()
     counters = _read_counters("rx")
     if counters is None:
         return None
@@ -1627,7 +1675,7 @@ def _sample_info_reports(windows):
         # Exact equality is the whole test: a window of nothing but reports
         # lands on it to the byte, which is what makes a single foreign frame
         # detectable rather than merely suspected.
-        if caught > 0 and caught * INFO_FRAME_RX_BYTES == octets:
+        if caught > 0 and any(caught * size == octets for size in sizes):
             frames += caught
             seconds += span
 
