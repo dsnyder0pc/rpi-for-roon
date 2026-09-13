@@ -395,10 +395,22 @@ echo "🧹 Removing /etc/machine-id..."
 # AudioLinux images ship with one already in place, so two systems restored
 # from the same image present the same DHCP identifier and a DHCP server hands
 # them both the same address. systemd writes a fresh one at the next boot, and
-# /var/lib/dbus/machine-id is a symlink to this file, so one removal covers
+# /var/lib/dbus/machine-id is a symlink to this file, so one truncation covers
 # both. shrink-image does the same to the mounted image; doing it here keeps a
 # card that is handed to someone else clean on its own.
-rm -fv /etc/machine-id
+#
+# Emptied rather than removed, which is not the same thing to systemd.
+# ConditionFirstBoot is met when the file is missing or reads "uninitialized",
+# and a first boot applies preset policy to populate what systemd takes to be
+# an unconfigured /etc -- 90-systemd.preset carries
+# "enable systemd-networkd-wait-online.service", so removing the file undoes
+# Section 7 on the next boot and every boot after. An empty file is populated
+# just the same, with a fresh unique ID, and no first boot is declared: verified
+# on a prepped pair, which came back with different IDs and no "Detected first
+# boot" in the journal. shrink-image has always emptied rather than removed,
+# which is why images built through it were never affected.
+: > /etc/machine-id
+echo "   - Emptied /etc/machine-id (a fresh ID is written at the next boot)"
 
 echo "------------------------------------------------"
 
