@@ -237,12 +237,15 @@ if [ -d "/opt/diretta-alsa-target" ]; then
     echo "   - Target system detected."
     TARGET_CONF="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
     if [ -f "$TARGET_CONF" ]; then
-        # Medium Jumbo (Appendix 9). 3824 is the largest MTU the Raspberry Pi
-        # 4's bcmgenet driver can actually receive: its 3840-byte RX buffer
-        # less the 2-byte pad and the 14-byte Ethernet header. ExtEtherMTU is
-        # the same figure plus that header.
-        update_config_key "$TARGET_CONF" "ExtEtherMTU" "3838"
-        update_config_key "$TARGET_CONF" "EtherMTU" "3824"
+        # Full Jumbo (Appendix 9). The 3824 tier existed because that was the
+        # largest MTU a Raspberry Pi 4's bcmgenet driver could receive -- its
+        # 3840-byte RX buffer less the 2-byte pad and the 14-byte Ethernet
+        # header. The realtime LTS kernel these images ship carries the patch
+        # that gives the same hardware the full 9000, so both boards reach it
+        # and there is no reason to hand a customer the smaller tier.
+        # ExtEtherMTU is the same figure plus that header.
+        update_config_key "$TARGET_CONF" "ExtEtherMTU" "9014"
+        update_config_key "$TARGET_CONF" "EtherMTU" "9000"
         update_config_key "$TARGET_CONF" "TrgetName" "AnCaolas Link"
         update_config_key "$TARGET_CONF" "VolumeCtl" "disable"
         update_config_key "$TARGET_CONF" "AlsaLatency" "30"
@@ -251,7 +254,7 @@ if [ -d "/opt/diretta-alsa-target" ]; then
     else
         echo "   - ⚠️  Warning: Target config file not found at $TARGET_CONF"
     fi
-    update_network_mtu "3824"
+    update_network_mtu "9000"
 
     ISO_CONF="/opt/configuration/isolated.conf"
     if [ -f "$ISO_CONF" ]; then
@@ -278,12 +281,12 @@ if [ -d "/opt/diretta-alsa" ]; then
         # silently ignoring the values below.
         update_config_key "$HOST_CONF" "TargetProfileLimitTime" "0"
         update_config_key "$HOST_CONF" "FlexCycle" "enable"
-        update_config_key "$HOST_CONF" "InfoCycle" "130000"
-        update_config_key "$HOST_CONF" "CycleTime" "1300"
+        update_config_key "$HOST_CONF" "InfoCycle" "150000"
+        update_config_key "$HOST_CONF" "CycleTime" "1500"
     else
         echo "   - ⚠️  Warning: Host config file not found at $HOST_CONF"
     fi
-    update_network_mtu "3824"
+    update_network_mtu "9000"
 
     ISO_CONF="/opt/configuration/isolated.conf"
     if [ -f "$ISO_CONF" ]; then
