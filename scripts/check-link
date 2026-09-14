@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Link Regression Check v1.0.2
+# Diretta Link Regression Check v1.0.3
 #
 # Run this from the workstation before committing a change to the guide and
 # before building an image. It answers one question the QA scripts cannot:
@@ -13,9 +13,10 @@
 # frames. Only a burst finds it.
 #
 # Usage:
-#   scripts/check-link <host-alias> <target-alias> [payload-bytes]
+#   scripts/check-link <host-alias> <target-alias> [payload-bytes] [--soak[=pings]]
 #
 #   scripts/check-link host2 target2          # a pair on the bench
+#   scripts/check-link host2 target2 --soak   # add the frame loss soak (2000 frames)
 #   scripts/check-link office office-target   # 10 Mb/s Super Purist pair
 #
 # The aliases are ssh config entries. The target alias must reach the Target
@@ -46,9 +47,22 @@
 C_RESET=$'\033[0m'; C_RED=$'\033[0;31m'; C_GREEN=$'\033[0;32m'
 C_YELLOW=$'\033[1;33m'; C_BLUE=$'\033[0;34m'; C_BOLD=$'\033[1m'
 
-HOST=${1:?usage: check-link <host-alias> <target-alias> [payload-bytes]}
-TGT=${2:?usage: check-link <host-alias> <target-alias> [payload-bytes]}
+# --soak[=N] may appear anywhere, so strip it before reading the positionals.
+SOAK=0; ARGS=()
+for a in "$@"; do
+    case $a in
+        --soak)   SOAK=2000 ;;
+        --soak=*) SOAK=${a#--soak=} ;;
+        *)        ARGS+=("$a") ;;
+    esac
+done
+set -- "${ARGS[@]}"
+
+USAGE='usage: check-link <host-alias> <target-alias> [payload-bytes] [--soak[=pings]]'
+HOST=${1:?$USAGE}
+TGT=${2:?$USAGE}
 PAYLOAD=$3
+[[ "$SOAK" =~ ^[0-9]+$ ]] || { echo "check-link: --soak wants a whole number of pings" >&2; exit 2; }
 
 # ControlPath=none is deliberate. A burst that stalls wedges a shared
 # multiplexed connection, and every later command on it -- the counter reads,
@@ -112,12 +126,14 @@ echo -e "\n${C_BOLD}${C_YELLOW}--- Diretta Link Regression Check ---${C_RESET}"
 echo -e "  Host: ${C_BOLD}${HOST}${C_RESET}   Target: ${C_BOLD}${TGT}${C_RESET}"
 
 # --- Reachability and link state -------------------------------------------
-probe='printf "%s|%s|%s|%s|%s\n" \
+probe='printf "%s|%s|%s|%s|%s|%s|%s\n" \
     "$(hostname)" \
     "$(ip -o link show end0 2>/dev/null | grep -o "mtu [0-9]*" | cut -d" " -f2)" \
     "$(ethtool end0 2>/dev/null | awk "/Speed:/{print \$2}")" \
     "$(uname -r)" \
-    "$(tr -d "\0" < /proc/device-tree/model 2>/dev/null)"'
+    "$(tr -d "\0" < /proc/device-tree/model 2>/dev/null)" \
+    "$(basename "$(readlink -f /sys/class/net/end0/device/driver 2>/dev/null)")" \
+    "$(ip -d link show end0 2>/dev/null | grep -o "maxmtu [0-9]*" | cut -d" " -f2)"'
 
 HINFO=$(rssh "$HOST" "$probe"); TINFO=$(rssh "$TGT" "$probe")
 
@@ -129,10 +145,45 @@ if [ -z "$HINFO" ] || [ -z "$TINFO" ]; then
 fi
 check "Both ends reachable over ssh" pass
 
-IFS='|' read -r HNAME HMTU HSPD HKERN HMODEL <<< "$HINFO"
-IFS='|' read -r TNAME TMTU TSPD TKERN TMODEL <<< "$TINFO"
-echo -e "      ${HNAME}: mtu=${HMTU} ${HSPD} ${HKERN} (${HMODEL})"
-echo -e "      ${TNAME}: mtu=${TMTU} ${TSPD} ${TKERN} (${TMODEL})"
+IFS='|' read -r HNAME HMTU HSPD HKERN HMODEL HDRV HMAX <<< "$HINFO"
+IFS='|' read -r TNAME TMTU TSPD TKERN TMODEL TDRV TMAX <<< "$TINFO"
+echo -e "      ${HNAME}: mtu=${HMTU} ${HSPD} ${HKERN} (${HMODEL}) ${HDRV} maxmtu=${HMAX}"
+echo -e "      ${TNAME}: mtu=${TMTU} ${TSPD} ${TKERN} (${TMODEL}) ${TDRV} maxmtu=${TMAX}"
+
+# The driver's advertised ceiling is the only way to tell two kernels apart when
+# they carry the same version string, which is exactly the case here: the 16000
+# test kernel of 2026-09 reports 16347 on bcmgenet where the validated one
+# reports 9000, and uname is byte-identical in both. Read from `ip -d link`
+# rather than ethtool because ethtool prints the link-mode block across three
+# lines and a grep of the labelled line silently sees only the first.
+expected_maxmtu() {
+    case $1 in
+        bcmgenet) echo 9000  ;;  # Raspberry Pi 4
+        macb)     echo 10222 ;;  # Raspberry Pi 5 / RP1
+        *)        echo ""    ;;
+    esac
+}
+MAXFIX="This is not the kernel these images were validated against, and uname cannot tell
+them apart -- both report the same version. A ceiling ABOVE the expected value means a patch
+raising the MTU cap is installed; on bcmgenet, 16347 is the 2026-09 test kernel, which
+corrupts frames above roughly MTU 9060 at 100 Mb/s while setting no length, drop or tx error
+counter at all. A ceiling BELOW it means this kernel lacks the tier the images configure.
+Reinstall the validated kernel, or update expected_maxmtu() if a new ceiling has been
+validated by a --soak run at every link speed the pair will negotiate."
+
+for entry in "${HNAME}|${HDRV}|${HMAX}" "${TNAME}|${TDRV}|${TMAX}"; do
+    IFS='|' read -r _n _d _m <<< "$entry"
+    _e=$(expected_maxmtu "$_d")
+    if [ -z "$_e" ]; then
+        printf "  ${C_BLUE}*${C_RESET} %-58s[${C_YELLOW}SKIP${C_RESET}] %s is not in the table\n" \
+            "Driver MTU ceiling on ${_n}" "${_d:-unknown driver}"
+    elif [ "$_m" == "$_e" ]; then
+        check "Driver MTU ceiling on ${_n}" pass "${_d} ${_m}, as validated"
+    else
+        check "Driver MTU ceiling on ${_n}" fail \
+            "${_d} reports ${_m:-unknown}, expected ${_e}" "$MAXFIX"
+    fi
+done
 
 if [ "$HMTU" == "$TMTU" ]; then
     check "Both ends agree on MTU" pass "($HMTU)"
@@ -324,6 +375,66 @@ if [ $PUSH_OK -eq 1 ] && [ "$TMTU" -gt 1518 ] && [ "${jtotal:-0}" -gt 0 ]; then
             | head -1 | cut -d+ -f2)
     [ -n "$RXJ" ] && [ "$RXJ" -gt 0 ] && \
         echo -e "      ${C_BLUE}note:${C_RESET} $RXJ frames over 1518 bytes received, ~$((PAYLOAD/RXJ)) bytes each"
+fi
+
+# --- Stage 4: frame loss, one frame at a time -------------------------------
+# Every stage above moves bulk traffic over TCP, which retransmits, so a low
+# frame loss rate is repaired before the md5 ever sees it and surfaces only as
+# slightly lower throughput. It is also far too small a sample: a 4 MB burst at
+# MTU 9000 carries about 470 frames, so a 0.04% loss rate is expected to produce
+# 0.19 errors. Both effects hide exactly the fault that matters most here.
+#
+# Diretta is raw L2 with no retransmission, so a lost frame is gone and lands in
+# the audio. At CycleTime 1500 us one frame in a million is a 1.5 ms dropout
+# every 25 minutes, which is audible -- so "almost no loss" is not a pass.
+#
+# Found the hard way on 2026-09-13: a kernel raising the MTU cap to 16347 lost
+# 2 frames in 5000 at MTU 9057, 4 in 5000 at 9058 and 28 in 5000 at 9059, while
+# passing every other check in this script, on both boards, with flat length and
+# drop counters. Only unacknowledged single frames find it, hence DF pings
+# counted one at a time at the largest size the configured MTU allows.
+SOAKFIX="Single frames are lost where the bulk transfers above pass, because TCP retransmits
+and conceals it. Diretta cannot: it is raw L2 with no retransmission, so this rate reaches the
+audio -- at CycleTime 1500 us, one frame per million is a 1.5 ms dropout every 25 minutes.
+If CRC or framing counters moved, frames are arriving corrupted rather than being refused,
+which means the MTU is above what this kernel and this link speed actually carry. That ceiling
+is speed dependent: measured on RPi4 it was about 9060 at 100 Mb/s, 13478 at 1 Gb/s and at
+least 16000 at 10 Mb/s. Lower the tier or install a kernel whose cap matches the hardware."
+
+if [ "$SOAK" -gt 0 ] && [ $PUSH_OK -eq 1 ]; then
+    counters "$TGT" "$ERRKEYS" > "$WORK/t.soak.before"
+    counters "$HOST" "$ERRKEYS" > "$WORK/h.soak.before"
+    # Ten a second: brisk enough to finish, slow enough not to become a burst
+    # test. A full-size frame at 10 Mb/s already needs 26 ms round trip, so the
+    # interval paces the run rather than the wire.
+    SOAKTO=$(( SOAK / 5 + 60 ))
+    SRES=$(rssh "$TGT" "ping -c $SOAK -i 0.1 -M do -s $PSZ 172.20.0.1 2>&1 | awk '/packets transmitted/{print \$1\" \"\$4}'" "$SOAKTO")
+    read -r STX SRX <<< "$SRES"
+    counters "$TGT" "$ERRKEYS" > "$WORK/t.soak.after"
+    counters "$HOST" "$ERRKEYS" > "$WORK/h.soak.after"
+    IFS='|' read -r TTOT TMOVED <<< "$(delta_report "$WORK/t.soak.before" "$WORK/t.soak.after")"
+    IFS='|' read -r HTOT HMOVED <<< "$(delta_report "$WORK/h.soak.before" "$WORK/h.soak.after")"
+    SOAKLABEL="Frame loss soak ($SOAK single frames at $PSZ bytes)"
+    if [ -z "$STX" ] || [ "$STX" != "$SOAK" ]; then
+        check "$SOAKLABEL" fail "incomplete: ${STX:-0} of $SOAK sent" "$SOAKFIX"
+    else
+        SLOST=$((STX - SRX))
+        if [ "$SLOST" -eq 0 ] && [ "${TTOT:-0}" -eq 0 ] && [ "${HTOT:-0}" -eq 0 ]; then
+            check "$SOAKLABEL" pass "0 lost, no counters moved"
+        else
+            check "$SOAKLABEL" fail \
+                "lost $SLOST ($(echo "scale=3; $SLOST*100/$STX" | bc -l)%)${TMOVED:+; target${TMOVED}}${HMOVED:+; host${HMOVED}}" \
+                "$SOAKFIX"
+        fi
+        # A clean soak is only as strong as its sample size, and the rates that
+        # matter here are smaller than a short run can see.
+        [ "$SLOST" -eq 0 ] && printf "      ${C_BLUE}note:${C_RESET} %s frames cannot exclude a rate below ~%s%%; the shipped tier has run 25000 clean\n" \
+            "$SOAK" "$(echo "scale=3; 100/$SOAK" | bc -l)"
+    fi
+elif [ "$SOAK" -gt 0 ]; then
+    printf "  ${C_BLUE}*${C_RESET} %-58s[${C_YELLOW}SKIP${C_RESET}] the burst already proved the link bad\n" "Frame loss soak"
+else
+    printf "  ${C_BLUE}*${C_RESET} %-58s[${C_YELLOW}SKIP${C_RESET}] pass --soak to run it\n" "Frame loss soak"
 fi
 
 # --- Verdict ----------------------------------------------------------------
