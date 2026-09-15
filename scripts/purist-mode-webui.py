@@ -13,6 +13,7 @@ import time
 import subprocess
 import json
 import logging
+import glob
 import sys
 import threading
 from datetime import datetime
@@ -102,7 +103,14 @@ TX_BYTES_OVERHEAD = 20
 # exactly. Reported on that basis so a capture can confirm it without arithmetic.
 FCS_BYTES = 4
 
-ALSA_STATUS_PATH = "/proc/asound/card0/pcm0p/sub0/status"
+# The Host registers one ALSA card per DAC the Target enumerates, and the index
+# follows discovery order, so adding a second DAC can renumber the first.
+# Measured 2026-09-14 on host2 with two DACs on the Target: the one that had been
+# card0 alone became card1, and playing to it left card0 closed -- which read
+# here as nothing playing at all, blanking the panel's two live lines and
+# offering a Purist transition mid-track. So the substream is resolved by driver
+# and by which one is open, never by index.
+ALSA_BRIDGE_DRIVER = "DAlsaBridge"
 
 # Absorbs binary rounding where a format lands exactly on the ceiling, as
 # DSD256 does at CycleTime 514 and again at MTU 2032. A stream sitting exactly
@@ -907,9 +915,66 @@ def ping_target(timeout=1, blocking=False, block_timeout=15):
     return False
 
 
+def _bridge_card_indices():
+    """Indices of the cards the Diretta ALSA bridge has registered, lowest first.
+
+    Read from /proc/asound/cards, where a card's first line opens with its index
+    and names its driver after the bracketed id, and its second line is an
+    unindexed continuation. A Host whose Target has no DAC enumerated registers
+    no card at all, which yields an empty list.
+    """
+    indices = []
+    try:
+        with open("/proc/asound/cards", "r", encoding="utf-8") as file_handle:
+            for line in file_handle:
+                index, _, rest = line.strip().partition(" ")
+                if index.isdigit() and ALSA_BRIDGE_DRIVER in rest:
+                    indices.append(int(index))
+    except OSError:
+        return []
+    return sorted(indices)
+
+
+def _bridge_substream():
+    """Directory to read playback state from, for the DAC actually in use.
+
+    The substream that is RUNNING, so the reading follows the stream rather than
+    whichever DAC enumerated first. With none running, the lowest-indexed bridge
+    substream stands in: that is the path a single-DAC Host has always read, and
+    it reports closed while nothing plays.
+
+    Resolved on every call rather than memoised, because a DAC hotplug or a
+    Target restart renumbers the cards under a running kernel.
+
+    Returns:
+        str: a /proc/asound substream directory, or None when the bridge has
+            registered no card at all. That is a Target with no DAC enumerated,
+            where there is no playback state to read -- which this reports as
+            nothing playing, the same as a closed device.
+    """
+    paths = []
+    for index in _bridge_card_indices():
+        paths.extend(sorted(glob.glob(f"/proc/asound/card{index}/pcm*p/sub*")))
+    for path in paths:
+        try:
+            with open(os.path.join(path, "status"), "r", encoding="utf-8") as handle:
+                if "state: RUNNING" in handle.read():
+                    return path
+        except OSError:
+            continue
+    return paths[0] if paths else None
+
+
 def is_music_playing():
     """Checks if music is actively playing by inspecting /proc/asound/."""
-    status_file_path = ALSA_STATUS_PATH
+    substream = _bridge_substream()
+    if substream is None:
+        app.logger.info(
+            "No %s card registered, so the Target has no DAC enumerated. "
+            "Assuming no playback.", ALSA_BRIDGE_DRIVER
+        )
+        return False
+    status_file_path = os.path.join(substream, "status")
     try:
         with open(status_file_path, "r", encoding="utf-8") as file_handle:
             status_content = file_handle.read()
@@ -991,7 +1056,10 @@ def get_playing_format():
             names which Max PCM figure applies. None when the device is closed
             or the format is not one we can name.
     """
-    hw_params_path = "/proc/asound/card0/pcm0p/sub0/hw_params"
+    substream = _bridge_substream()
+    if substream is None:
+        return None
+    hw_params_path = os.path.join(substream, "hw_params")
     try:
         with open(hw_params_path, "r", encoding="utf-8") as file_handle:
             # A closed device reports a single word rather than key: value
