@@ -333,7 +333,8 @@ INFO_CYCLE_MIN_FRAMES = 15
 INFO_CYCLE_TRUST_FRAMES = 60
 INFO_CYCLE_STATE = {"frames": 0.0, "seconds": 0.0,
                     "divergence_seen": False, "value": None,
-                    "value_t": float("-inf"), "value_cycle": None}
+                    "value_t": float("-inf"), "value_cycle": None,
+                    "value_streams": None}
 INFO_CYCLE_LOCK = threading.Lock()
 STATUS_CACHE_LOCK = threading.Lock()
 STATUS_FETCH_LOCK = threading.Lock()
@@ -595,6 +596,16 @@ LINK_PANEL_CARD = """
 LINK_PANEL_TEMPLATE = """
     <div class="flex items-center justify-between mb-4">
         <h2 class="font-semibold text-xl text-white">Point-to-Point Link</h2>
+        <div class="flex items-center gap-4">
+        {% if link.dacs_streaming > 1 %}
+            <span class="inline-flex items-center gap-2 text-xs font-semibold text-yellow-400 cursor-help" title="{{ link.dacs_streaming }} DACs on the Target are receiving audio at once.
+
+&#8226; Play to one at a time. Nothing is wrong with the link &#8212; this is a reminder, not a fault.
+&#8226; Every figure below describes one of the streams, not the pair.
+&#8226; Info Cycle reads short while this shows, because one wire carries both sets of Target reports.">
+                <span class="h-2 w-2 rounded-full bg-yellow-400"></span>{{ link.dacs_streaming }} DACs streaming
+            </span>
+        {% endif %}
         {% if link.up %}
             <span class="inline-flex items-center gap-2 text-xs font-semibold text-green-400">
                 <span class="h-2 w-2 rounded-full bg-green-400"></span>Up
@@ -604,6 +615,7 @@ LINK_PANEL_TEMPLATE = """
                 <span class="h-2 w-2 rounded-full bg-red-400"></span>Down
             </span>
         {% endif %}
+        </div>
     </div>
 
     <dl class="grid grid-cols-2 gap-px bg-gray-700/50 rounded-xl overflow-hidden border border-gray-700">
@@ -935,6 +947,33 @@ def _bridge_card_indices():
     return sorted(indices)
 
 
+def _bridge_substreams():
+    """Every playback substream the bridge offers, in card-index order."""
+    paths = []
+    for index in _bridge_card_indices():
+        paths.extend(sorted(glob.glob(f"/proc/asound/card{index}/pcm*p/sub*")))
+    return paths
+
+
+def _running_bridge_substreams():
+    """Those of them carrying audio, in card-index order.
+
+    More than one means more than one DAC on the Target is receiving at once,
+    which the guide asks a listener not to do. The panel says so rather than
+    trying to account for it: the tiles can describe only one of the streams,
+    and Info Cycle reads short because one wire carries both sets of reports.
+    """
+    running = []
+    for path in _bridge_substreams():
+        try:
+            with open(os.path.join(path, "status"), "r", encoding="utf-8") as handle:
+                if "state: RUNNING" in handle.read():
+                    running.append(path)
+        except OSError:
+            continue
+    return running
+
+
 def _bridge_substream():
     """Directory to read playback state from, for the DAC actually in use.
 
@@ -952,16 +991,10 @@ def _bridge_substream():
             where there is no playback state to read -- which this reports as
             nothing playing, the same as a closed device.
     """
-    paths = []
-    for index in _bridge_card_indices():
-        paths.extend(sorted(glob.glob(f"/proc/asound/card{index}/pcm*p/sub*")))
-    for path in paths:
-        try:
-            with open(os.path.join(path, "status"), "r", encoding="utf-8") as handle:
-                if "state: RUNNING" in handle.read():
-                    return path
-        except OSError:
-            continue
+    running = _running_bridge_substreams()
+    if running:
+        return running[0]
+    paths = _bridge_substreams()
     return paths[0] if paths else None
 
 
@@ -1663,12 +1696,17 @@ def _remembered_info_cycle(now, info_cycle):
         return INFO_CYCLE_STATE["value"]
 
 
+def _drop_info_cycle_locked():
+    """Drops the accumulators and the reading. The caller holds the lock."""
+    INFO_CYCLE_STATE.update(frames=0.0, seconds=0.0,
+                            divergence_seen=False, value=None,
+                            value_t=float("-inf"), value_cycle=None)
+
+
 def _forget_info_cycle():
     """Drops the accumulators and the reading, so neither outlives a stream."""
     with INFO_CYCLE_LOCK:
-        INFO_CYCLE_STATE.update(frames=0.0, seconds=0.0,
-                                divergence_seen=False, value=None,
-                                value_t=float("-inf"), value_cycle=None)
+        _drop_info_cycle_locked()
 
 
 def _info_frame_rx_sizes():
@@ -1752,7 +1790,7 @@ def _sample_info_reports(windows):
     return frames, seconds
 
 
-def _measure_info_cycle(info_cycle, playing):
+def _measure_info_cycle(info_cycle, playing, streaming):
     """Times the Target's InfoCycle reports from one self-contained bracket.
 
     Brackets accumulate, so the first one carries the panel on its own and
@@ -1761,6 +1799,10 @@ def _measure_info_cycle(info_cycle, playing):
     reporting on roughly the interval it was asked for; waiting instead for the
     sixty frames that would settle it to a percent means showing nothing for
     the better part of a minute, and showing nothing is what this used to do.
+
+    Args:
+        streaming: how many DACs are receiving at once, which scales the frame
+            count and so the figure it implies.
 
     Returns:
         dict: {"ms", "diverges", "rough"}, or None while nothing is playing or
@@ -1773,6 +1815,18 @@ def _measure_info_cycle(info_cycle, playing):
     if not playing:
         _forget_info_cycle()
         return None
+
+    # Frames gathered while a second DAC was streaming are evidence for an
+    # interval that no longer applies, exactly as a rewrite of setting.inf is:
+    # two sets of Target reports on one wire double the frame count and halve
+    # the figure. Dropped here rather than left to the accumulator's halving,
+    # which took 90 ms back up to only 111 over six brackets and stayed red the
+    # whole way. Checked before the bracket, so no stale reading can be served
+    # from the memo on the way past either.
+    with INFO_CYCLE_LOCK:
+        if INFO_CYCLE_STATE["value_streams"] not in (None, streaming):
+            _drop_info_cycle_locked()
+        INFO_CYCLE_STATE["value_streams"] = streaming
 
     now = time.monotonic()
     # Nothing gathered yet means this is a stream's first bracket, which looks
@@ -1916,6 +1970,7 @@ def get_link_info(measure=True):
     # there is no container to speak of, so the widest one stands as the
     # conservative default.
     playing = get_playing_format()
+    streaming = len(_running_bridge_substreams())
     pcm_playing = playing if playing and not playing["is_dsd"] else None
     sample_bytes = pcm_playing["sample_bytes"] if pcm_playing else PCM_DEFAULT_SAMPLE_BYTES
 
@@ -1955,7 +2010,7 @@ def get_link_info(measure=True):
     elected = (get_elected_cycle(cycle_time, mtu) or {}) if measure else {}
     info_measured = {}
     if measure:
-        info_measured = _measure_info_cycle(info_cycle, bool(playing)) or {}
+        info_measured = _measure_info_cycle(info_cycle, bool(playing), streaming) or {}
 
     # Against the negotiated speed rather than a fixed figure, so the reading
     # means the same thing on a 10 Mbps Super Purist link as on a gigabit one.
@@ -1967,6 +2022,11 @@ def get_link_info(measure=True):
 
     return {
         "up": link_up,
+        # How many DACs on the Target are receiving at once. Above one the panel
+        # warns rather than compensates: the tiles describe whichever stream
+        # _bridge_substream() settled on, and Info Cycle reads short. Cleared as
+        # soon as the second stream stops, so it reports the link as it is now.
+        "dacs_streaming": streaming,
         "speed": speed,
         # Transmit only, framing included. The wire limit is the one that stops
         # playback outright rather than merely fragmenting it, and on the
