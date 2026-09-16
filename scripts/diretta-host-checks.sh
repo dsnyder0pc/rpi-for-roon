@@ -124,6 +124,30 @@ check_hash() {
     rm -f "$tmp"
     return $rc
 }
+
+# A git checkout is current when it is missing no commit from its upstream.
+#
+# Behind is the only failing state. A Host carrying local commits or uncommitted
+# edits is someone's work in progress, not a stale copy, and a pull is not the
+# remedy for that. Only commits count, so a Host that has been poked at still
+# passes as long as it has everything upstream has.
+#
+# git refuses to run as root in a directory owned by someone else, and fetching
+# as root would leave root-owned files behind in .git, so this drops to the
+# owner for every git call.
+check_repo_current() {
+    local dir=$1
+    local owner=$2
+    local upstream behind
+    # Not a checkout at all: nothing to compare, and a pull is not the answer.
+    [ -d "$dir/.git" ] || return $CHECK_SKIP_CODE
+    # An unreachable remote says the network is down, not that the checkout is
+    # stale, so report it as a skip instead of sending the user to git pull.
+    sudo -u "$owner" timeout 20 git -C "$dir" fetch -q origin 2>/dev/null || return $CHECK_SKIP_CODE
+    upstream=$(sudo -u "$owner" git -C "$dir" rev-parse --abbrev-ref '@{u}' 2>/dev/null) || return $CHECK_SKIP_CODE
+    behind=$(sudo -u "$owner" git -C "$dir" rev-list --count "HEAD..$upstream" 2>/dev/null) || return $CHECK_SKIP_CODE
+    [ "$behind" -eq 0 ]
+}
 is_kernel_6_18_or_newer() {
     local kver
     kver=$(uname -r | cut -d'-' -f1)
@@ -169,6 +193,16 @@ run_appendix2_checks() {
     header "Appendix 2" "Optional: IR Remote Control"
     check "'audiolinux' user is in 'input' group" "groups audiolinux | grep -q '\<input\>'"
     check "'roon-ir-remote' directory exists" "[ -d /home/audiolinux/roon-ir-remote ]"
+
+    # The remote is a git clone, updated by Step 3. A Host left on an older
+    # commit passes every other check here - enabled, active, correctly wired -
+    # while running code that, for instance, exits the service on a remote
+    # button the config does not map. Nothing else in this section would say so,
+    # and a file hash would not either: an update spans the whole repo.
+    check "'roon-ir-remote' repo is up-to-date" \
+        "check_repo_current /home/audiolinux/roon-ir-remote audiolinux" \
+        "cd ~/roon-ir-remote && git pull
+sudo systemctl restart roon-ir-remote.service"
     check "Roon IR config 'app_info.json' exists" "[ -f /home/audiolinux/roon-ir-remote/app_info.json ]"
     check "'roon-ir-remote' service is enabled" "systemctl is-enabled roon-ir-remote.service"
 
