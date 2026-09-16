@@ -1540,7 +1540,7 @@ pyenv global "$PYVER"
 
 ### **Étape 3 : Télécharger le dépôt du logiciel `roon-ir-remote`**
 
-Clonez le dépôt du script et récupérez un patch pour gérer correctement les codes de touches par nom plutôt que par numéro.
+Clonez le dépôt du script, ou mettez-le à jour si vous en avez déjà une copie.
 
 ```bash
 cd

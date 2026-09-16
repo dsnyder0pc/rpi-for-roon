@@ -1540,7 +1540,7 @@ pyenv global "$PYVER"
 
 ### **Paso 3: Descargar el repositorio del software `roon-ir-remote`**
 
-Clone el repositorio del script y obtenga un parche para manejar correctamente los códigos de teclas por nombre en lugar de por número.
+Clone el repositorio del script o actualícelo si ya tiene una copia.
 
 ```bash
 cd

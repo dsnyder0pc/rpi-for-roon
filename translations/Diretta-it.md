@@ -1540,7 +1540,7 @@ pyenv global "$PYVER"
 
 ### **Passaggio 3: Scaricare il repository software `roon-ir-remote`**
 
-Clonate il repository dello script e scaricate una patch per gestire correttamente i keycode tramite nome invece che tramite numero.
+Clonate il repository dello script, oppure aggiornatelo se ne avete già una copia.
 
 ```bash
 cd

@@ -1540,7 +1540,7 @@ pyenv global "$PYVER"
 
 ### **Schritt 3: Das `roon-ir-remote`-Software-Repository herunterladen**
 
-Klonen Sie das Skript-Repository und rufen Sie einen Patch ab, um Tastencodes korrekt über den Namen statt über die Nummer zu verarbeiten.
+Klonen Sie das Skript-Repository oder aktualisieren Sie es, falls Sie bereits eine Kopie haben.
 
 ```bash
 cd
