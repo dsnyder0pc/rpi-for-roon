@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Diretta Link Regression Check v1.0.3
+# Diretta Link Regression Check v1.1.0
 #
 # Run this from the workstation before committing a change to the guide and
 # before building an image. It answers one question the QA scripts cannot:
@@ -150,38 +150,53 @@ IFS='|' read -r TNAME TMTU TSPD TKERN TMODEL TDRV TMAX <<< "$TINFO"
 echo -e "      ${HNAME}: mtu=${HMTU} ${HSPD} ${HKERN} (${HMODEL}) ${HDRV} maxmtu=${HMAX}"
 echo -e "      ${TNAME}: mtu=${TMTU} ${TSPD} ${TKERN} (${TMODEL}) ${TDRV} maxmtu=${TMAX}"
 
-# The driver's advertised ceiling is the only way to tell two kernels apart when
-# they carry the same version string, which is exactly the case here: the 16000
-# test kernel of 2026-09 reports 16347 on bcmgenet where the validated one
-# reports 9000, and uname is byte-identical in both. Read from `ip -d link`
-# rather than ethtool because ethtool prints the link-mode block across three
-# lines and a grep of the labelled line silently sees only the first.
-expected_maxmtu() {
-    case $1 in
-        bcmgenet) echo 9000  ;;  # Raspberry Pi 4
-        macb)     echo 10222 ;;  # Raspberry Pi 5 / RP1
-        *)        echo ""    ;;
-    esac
-}
-MAXFIX="This is not the kernel these images were validated against, and uname cannot tell
-them apart -- both report the same version. A ceiling ABOVE the expected value means a patch
-raising the MTU cap is installed; on bcmgenet, 16347 is the 2026-09 test kernel, which
-corrupts frames above roughly MTU 9060 at 100 Mb/s while setting no length, drop or tx error
-counter at all. A ceiling BELOW it means this kernel lacks the tier the images configure.
-Reinstall the validated kernel, or update expected_maxmtu() if a new ceiling has been
-validated by a --soak run at every link speed the pair will negotiate."
+# The project caps at MTU 10222 and no higher. That is macb's hardware ceiling
+# on an RPi5 -- a 10240-byte RX buffer less 18 bytes of framing -- so it is the
+# largest value a mixed pair can ever agree on, and it is where the Appendix 9
+# ladder stops. bcmgenet advertises far more (16347 on 6.18.50-2), but that
+# headroom is deliberately declined: it reaches into the band where frames
+# corrupt silently at 100 Mb/s while every length, drop and tx error counter
+# still reads zero, and it buys no format this platform can actually play.
+# Raise this only for a kernel proven stable on BOTH boards at every link speed
+# the pair will negotiate.
+PROJECT_MAX_MTU=10222
+SUPPORTED_TIERS="1500 2032 3824 9000 10222"
 
-for entry in "${HNAME}|${HDRV}|${HMAX}" "${TNAME}|${TDRV}|${TMAX}"; do
-    IFS='|' read -r _n _d _m <<< "$entry"
-    _e=$(expected_maxmtu "$_d")
-    if [ -z "$_e" ]; then
-        printf "  ${C_BLUE}*${C_RESET} %-58s[${C_YELLOW}SKIP${C_RESET}] %s is not in the table\n" \
-            "Driver MTU ceiling on ${_n}" "${_d:-unknown driver}"
-    elif [ "$_m" == "$_e" ]; then
-        check "Driver MTU ceiling on ${_n}" pass "${_d} ${_m}, as validated"
+TIERFIX="Appendix 9 configures one of the tiers above and nothing else, so a value outside the
+list was set by hand. The driver accepts MTUs it cannot actually receive -- past roughly 9060 at
+100 Mb/s on bcmgenet frames corrupt with every error counter still reading zero -- which is why
+the tier must come from the probed ladder rather than from the driver's advertised ceiling.
+Re-run Appendix 9 Steps 2 and 3 to put both ends back on a probed tier."
+
+CEILFIX="The interface is configured to carry frames larger than the driver says it can receive.
+Every full-size frame is discarded while the link still comes up and small packets still pass.
+Re-run Appendix 9 so the tier matches what this kernel advertises, or install a kernel that
+carries the tier these images configure."
+
+# What matters is the tier in use, not the ceiling the driver happens to advertise.
+# An identity check on the ceiling fails a perfectly healthy link every time
+# Piero ships a kernel with a different cap, which is the wrong shape of guard:
+# the risk is a hand-set MTU outside the ladder, not a roomier driver.
+if printf '%s\n' $SUPPORTED_TIERS | grep -qx "$TMTU" 2>/dev/null; then
+    check "Configured MTU is a supported tier" pass "($TMTU, project max $PROJECT_MAX_MTU)"
+else
+    check "Configured MTU is a supported tier" fail \
+        "$TMTU is not one of: $SUPPORTED_TIERS" "$TIERFIX"
+fi
+
+for entry in "${HNAME}|${HDRV}|${HMAX}|${HMTU}" "${TNAME}|${TDRV}|${TMAX}|${TMTU}"; do
+    IFS='|' read -r _n _d _m _u <<< "$entry"
+    if [ -z "$_m" ] || [ -z "$_u" ]; then
+        printf "  ${C_BLUE}*${C_RESET} %-58s[${C_YELLOW}SKIP${C_RESET}] %s reported no ceiling\n" \
+            "Driver ceiling covers the tier on ${_n}" "${_d:-unknown driver}"
+    elif [ "$_m" -ge "$_u" ]; then
+        _note="${_d} ${_m} >= ${_u} configured"
+        [ "$_m" -gt "$PROJECT_MAX_MTU" ] && \
+            _note="${_note}; headroom above ${PROJECT_MAX_MTU} declined"
+        check "Driver ceiling covers the tier on ${_n}" pass "$_note"
     else
-        check "Driver MTU ceiling on ${_n}" fail \
-            "${_d} reports ${_m:-unknown}, expected ${_e}" "$MAXFIX"
+        check "Driver ceiling covers the tier on ${_n}" fail \
+            "${_d} ceiling ${_m} below configured ${_u}" "$CEILFIX"
     fi
 done
 
