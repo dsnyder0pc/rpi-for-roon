@@ -708,14 +708,17 @@ LINK_PANEL_TEMPLATE = """
         </div>
         <div class="bg-gray-900/40 p-4 cursor-help" title="Diretta's information interval, set alongside CycleTime in setting.inf.
 
-• Measured: timed from the Target's reports, which arrive one per interval over UDP/IPv6 and are all this link receives while music plays.
-• It appears a refresh after playback starts, and needs a few seconds of reports to be worth quoting.">
+• Measured: timed from the Target's reports, which arrive two per interval over UDP/IPv6 and are all this link receives while music plays.
+• It appears a refresh after playback starts, and needs a few seconds of reports to be worth quoting.
+• Measuring: something that was not a report landed in the sample, so it was discarded. Expect this for a few seconds after a mode change; it clears itself.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Info Cycle</dt>
             <dd class="mt-1 text-lg font-semibold {{ 'text-red-400' if link.info_mismatch else 'text-white' }}">
                 {% if link.info_cycle_ms %}{{ link.info_cycle_ms }} ms{% else %}&mdash;{% endif %}
             </dd>
             {% if link.info_measured_ms %}
             <dd class="mt-0.5 text-xs {{ 'text-red-400' if link.info_mismatch else 'text-gray-400' }}">measured {{ link.info_measured_ms }} ms</dd>
+            {% elif link.info_measuring %}
+            <dd class="mt-0.5 text-xs text-gray-500">measuring&hellip;</dd>
             {% endif %}
         </div>
         <div class="bg-gray-900/40 p-4 cursor-help" title="Highest stereo PCM rate that fits one transmission per cycle here.
@@ -2142,6 +2145,19 @@ def get_link_info(measure=True):
             if info_measured.get("ms") else None
         ),
         "info_mismatch": bool(info_measured.get("diverges")),
+        # A blank measured line has two causes that look identical and mean
+        # opposite things. Nothing playing means there is nothing to time, and
+        # the line is right to say nothing. Playing with no figure means the
+        # sampler is throwing windows away, which it does deliberately whenever
+        # a frame that is not a report lands in one -- so it happens for a few
+        # seconds after any mode change, after anything else that talks to the
+        # Target, and while the link renegotiates speed, and it clears itself.
+        # The other reason it can happen is that the report size has moved and
+        # no window will ever match again, which does not clear and wants
+        # investigating. Saying "measuring" while a stream is running separates
+        # the two: a reader who sees it settle learns nothing is wrong, and a
+        # reader who watches it sit there has found the real fault.
+        "info_measuring": bool(playing) and not info_measured.get("ms"),
         "max_dsd": max_dsd,
         "max_pcm": max_pcm,
         # Filed under whichever ceiling it belongs beneath, so the reader sees
@@ -2461,11 +2477,11 @@ def get_target_profile(current_state):
     # Read the physical hardware environment first
     mtu = get_host_mtu()
     if mtu == 2032:
-        return 700, 70000  # Baby Jumbo optimization layer
+        return 700, 70000  # MTU 2032
     if mtu == 3824:
-        return 1300, 130000  # Medium Jumbo optimization layer
+        return 1300, 130000  # MTU 3824
     if mtu >= 9000:
-        return 1500, 150000  # Full Jumbo optimization layer
+        return 1500, 150000  # MTU 9000 and 10222 share this cycle
 
     # If we are on standard MTU, check if we have the green light for isolation timings
     if is_diretta_isolated() or _get_current_cycletime() == 514:
