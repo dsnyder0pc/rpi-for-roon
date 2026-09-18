@@ -260,10 +260,47 @@ MODAL_FRAME_DROP = 0.05
 # weakens the test there to the degree that a contaminated window could land
 # on the other size exactly, and leaves the panel working; the alternative is
 # a blank panel on the first board we meet that is not one of these two.
+# A Target report is one IPv6 datagram: 40 bytes of IPv6 header, 8 of UDP, and
+# a Diretta payload -- 80 bytes on the wire as of library 150, where it was 64
+# when these figures were first taken, the payload having gone from 16 bytes to
+# 32. The two drivers disagree about what to add to that: bcmgenet counts the
+# 14-byte Ethernet header in rx_bytes and macb strips it, which is the whole of
+# the 14-byte gap between the entries below and the only reason this is a table
+# rather than a constant.
+#
+# So the rule, rather than two magic numbers: **macb's value is the IPv6 packet
+# length; bcmgenet's is that plus 14.** Both are checkable on any running box
+# without a capture tool, from the per-interface IPv6 counters:
+#
+#   cp /proc/net/dev_snmp6/end0 /tmp/a; sleep 10; cp /proc/net/dev_snmp6/end0 /tmp/b
+#   join /tmp/a /tmp/b | awk '{d=$3-$2; if(d>0) print $1, d}'
+#
+# Ip6InOctets divided by Ip6InReceives is the IPv6 packet length directly -- it
+# read exactly 80.0 when this was written. A library update that moves the
+# payload again makes the Info Cycle line vanish rather than read wrong, because
+# _sample_info_reports() accepts a window only on an exact byte match, so that
+# silent blank is the symptom to bring back here.
 INFO_FRAME_RX_BYTES_BY_DRIVER = {
-    "bcmgenet": 78,   # Raspberry Pi 4 -- header counted
-    "macb": 64,       # Raspberry Pi 5 (RP1) -- header stripped
+    "bcmgenet": 94,   # Raspberry Pi 4 -- IPv6 length + 14, header counted
+    "macb": 80,       # Raspberry Pi 5 (RP1) -- IPv6 length, header stripped
 }
+# The Target sends TWO of those datagrams per InfoCycle, emitted together rather
+# than spaced across it, so the mean gap between reports is half the interval and
+# has to be doubled to name it. Measured 2026-09-17 on the office pair at two
+# settings, which is what makes it the protocol's ratio and not a coincidence of
+# one configuration:
+#
+#   InfoCycle=150000 -> 13.50 frames/s, gap  74.1 ms
+#   InfoCycle=300000 ->  6.75 frames/s, gap 148.1 ms   (ratio 1.999)
+#
+# Sampling at 50 ms shows the shape plainly: two 80-byte packets arriving in the
+# same bucket every ~150.5 ms, never one and never spread. It is independent of
+# the MTU -- identical at the 9000 and 10222 tiers -- so it belongs to the
+# library, not the link. Why two is not knowable from outside: the Host holds
+# three link-facing UDP sockets, which is consistent with a pair going to two of
+# them but does not establish it, and the payload cannot be decoded without the
+# structures.
+INFO_REPORTS_PER_CYCLE = 2
 INFO_FRAME_RX_SIZES_MEMO = {}
 INFO_CYCLE_MEMO = 600.0
 # The reports are timed in one self-contained bracket, as the elected cycle is,
@@ -1794,10 +1831,10 @@ def _measure_info_cycle(info_cycle, playing, streaming):
     """Times the Target's InfoCycle reports from one self-contained bracket.
 
     Brackets accumulate, so the first one carries the panel on its own and
-    every one after it tightens the same figure. A second of reports is six or
-    seven of them and worth about 11%, which is enough to say the Target is
-    reporting on roughly the interval it was asked for; waiting instead for the
-    sixty frames that would settle it to a percent means showing nothing for
+    every one after it tightens the same figure. A second of reports is thirteen
+    or fourteen of them -- two per interval -- which is enough to say the Target
+    is reporting on roughly the interval it was asked for; waiting instead for
+    the sixty frames that would settle it to a percent means showing nothing for
     the better part of a minute, and showing nothing is what this used to do.
 
     Args:
@@ -1856,7 +1893,7 @@ def _measure_info_cycle(info_cycle, playing, streaming):
     if frames < INFO_CYCLE_MIN_FRAMES:
         return _remembered_info_cycle(now, info_cycle)
 
-    measured_us = seconds * 1e6 / frames
+    measured_us = seconds * 1e6 / frames * INFO_REPORTS_PER_CYCLE
     rough = frames < INFO_CYCLE_TRUST_FRAMES
     diverges = not rough and _diverges(measured_us, info_cycle)
 
