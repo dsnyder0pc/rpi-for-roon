@@ -316,14 +316,21 @@ run_appendix8_checks() {
 }
 run_appendix9_checks() {
     header "Appendix 9" "Optional: Jumbo Frames Optimization"
-    if ip link show end0 | grep -qE 'mtu (2032|3824|9000)'; then
-        CURRENT_MTU=$(ip link show end0 | grep -o 'mtu [0-9]*' | awk '{print $2}')
-        check "Interface end0 configured for Jumbo (MTU $CURRENT_MTU)" "true"
-    else
-        check "Interface end0 configured for Jumbo (MTU 2032, 3824 or 9000)" "false"
+    CURRENT_MTU=$(ip link show end0 | grep -o 'mtu [0-9]*' | awk '{print $2}')
+    # 1500 is the floor of the ladder, reached by changing nothing. Appendix 9
+    # is optional, so a stock link is a valid outcome and not a failure -- but
+    # every jumbo assertion below would be meaningless, so stop here.
+    if [ "$CURRENT_MTU" -eq 1500 ]; then
+        check "Appendix 9 not applied (MTU 1500, optional)" "true"
         return
     fi
-    if grep -qE '^MTUBytes=(2032|3824|9000)' /etc/systemd/network/end0.network; then
+    if ip link show end0 | grep -qE 'mtu (2032|3824|9000|10222)'; then
+        check "Interface end0 configured for Jumbo (MTU $CURRENT_MTU)" "true"
+    else
+        check "Interface end0 configured for Jumbo (MTU 2032, 3824, 9000 or 10222)" "false"
+        return
+    fi
+    if grep -qE '^MTUBytes=(2032|3824|9000|10222)' /etc/systemd/network/end0.network; then
         check "Systemd network config contains MTUBytes setting" "true"
     else
         check "Systemd network config contains MTUBytes setting" "false"
@@ -331,7 +338,11 @@ run_appendix9_checks() {
 
     CONFIG="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
 
-    if [ "$CURRENT_MTU" -eq 9000 ]; then
+    if [ "$CURRENT_MTU" -eq 10222 ]; then
+        check "Link passes Max Jumbo Ping (10194 bytes)" "ping -c 1 -w 1 -M do -s 10194 host"
+        check "ExtEtherMTU is 10236" "grep -q '^ExtEtherMTU=10236' $CONFIG"
+        check "EtherMTU is 10222" "grep -q '^EtherMTU=10222' $CONFIG"
+    elif [ "$CURRENT_MTU" -eq 9000 ]; then
         check "Link passes Full Jumbo Ping (8972 bytes)" "ping -c 1 -w 1 -M do -s 8972 host"
         check "ExtEtherMTU is 9014" "grep -q '^ExtEtherMTU=9014' $CONFIG"
         check "EtherMTU is 9000" "grep -q '^EtherMTU=9000' $CONFIG"
