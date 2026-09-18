@@ -370,13 +370,13 @@ run_appendix9_checks() {
     fi
 
     if [ "$CURRENT_MTU" -eq 10222 ]; then
-        check "Link passes Max Jumbo Ping (10194 bytes)" "ping -c 1 -w 1 -M do -s 10194 diretta-target"
+        check "Link carries a 10194-byte frame (MTU 10222)" "ping -c 1 -w 1 -M do -s 10194 diretta-target"
     elif [ "$CURRENT_MTU" -eq 9000 ]; then
-        check "Link passes Full Jumbo Ping (8972 bytes)" "ping -c 1 -w 1 -M do -s 8972 diretta-target"
+        check "Link carries a 8972-byte frame (MTU 9000)" "ping -c 1 -w 1 -M do -s 8972 diretta-target"
     elif [ "$CURRENT_MTU" -eq 3824 ]; then
-        check "Link passes Medium Jumbo Ping (3796 bytes)" "ping -c 1 -w 1 -M do -s 3796 diretta-target"
+        check "Link carries a 3796-byte frame (MTU 3824)" "ping -c 1 -w 1 -M do -s 3796 diretta-target"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
-        check "Link passes Baby Jumbo Ping (2004 bytes)" "ping -c 1 -w 1 -M do -s 2004 diretta-target"
+        check "Link carries a 2004-byte frame (MTU 2032)" "ping -c 1 -w 1 -M do -s 2004 diretta-target"
     fi
 
     CONFIG="/opt/diretta-alsa/setting.inf"
@@ -402,13 +402,13 @@ run_appendix9_checks() {
         # 10222 keeps the 1500us cycle: it exists to fit 32-bit/768 kHz into one
         # transmission per cycle (6.144 B/us x 1500 = 9216 + 2 = 9218 bytes), not
         # to lengthen the cycle further.
-        check "CycleTime is optimized (1500us for Max Jumbo)" "grep -q '^CycleTime=1500' $CONFIG"
+        check "CycleTime is optimized (1500us for MTU 10222)" "grep -q '^CycleTime=1500' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 9000 ]; then
-        check "CycleTime is optimized (1500us for Full Jumbo)" "grep -q '^CycleTime=1500' $CONFIG"
+        check "CycleTime is optimized (1500us for MTU 9000)" "grep -q '^CycleTime=1500' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 3824 ]; then
-        check "CycleTime is optimized (1300us for Medium Jumbo)" "grep -q '^CycleTime=1300' $CONFIG"
+        check "CycleTime is optimized (1300us for MTU 3824)" "grep -q '^CycleTime=1300' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
-        check "CycleTime is optimized (700us for Baby Jumbo)" "grep -q '^CycleTime=700' $CONFIG"
+        check "CycleTime is optimized (700us for MTU 2032)" "grep -q '^CycleTime=700' $CONFIG"
     else
         check "CycleTime is optimized" "false"
     fi

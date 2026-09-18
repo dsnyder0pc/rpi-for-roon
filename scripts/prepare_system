@@ -237,11 +237,11 @@ if [ -d "/opt/diretta-alsa-target" ]; then
     echo "   - Target system detected."
     TARGET_CONF="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
     if [ -f "$TARGET_CONF" ]; then
-        # Full Jumbo (Appendix 9). The 3824 tier existed because that was the
+        # Appendix 9's jumbo MTU. The 3824 tier existed because that was the
         # largest MTU a Raspberry Pi 4's bcmgenet driver could receive -- its
         # 3840-byte RX buffer less the 2-byte pad and the 14-byte Ethernet
         # header. The realtime LTS kernel these images ship carries the patch
-        # that gives the same hardware the full 9000, so both boards reach it
+        # that gives the same hardware 9000, so both boards reach it
         # and there is no reason to hand a customer the smaller tier.
         # ExtEtherMTU is the same figure plus that header.
         update_config_key "$TARGET_CONF" "ExtEtherMTU" "9014"

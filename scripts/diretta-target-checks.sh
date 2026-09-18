@@ -339,19 +339,19 @@ run_appendix9_checks() {
     CONFIG="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
 
     if [ "$CURRENT_MTU" -eq 10222 ]; then
-        check "Link passes Max Jumbo Ping (10194 bytes)" "ping -c 1 -w 1 -M do -s 10194 host"
+        check "Link carries a 10194-byte frame (MTU 10222)" "ping -c 1 -w 1 -M do -s 10194 host"
         check "ExtEtherMTU is 10236" "grep -q '^ExtEtherMTU=10236' $CONFIG"
         check "EtherMTU is 10222" "grep -q '^EtherMTU=10222' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 9000 ]; then
-        check "Link passes Full Jumbo Ping (8972 bytes)" "ping -c 1 -w 1 -M do -s 8972 host"
+        check "Link carries a 8972-byte frame (MTU 9000)" "ping -c 1 -w 1 -M do -s 8972 host"
         check "ExtEtherMTU is 9014" "grep -q '^ExtEtherMTU=9014' $CONFIG"
         check "EtherMTU is 9000" "grep -q '^EtherMTU=9000' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 3824 ]; then
-        check "Link passes Medium Jumbo Ping (3796 bytes)" "ping -c 1 -w 1 -M do -s 3796 host"
+        check "Link carries a 3796-byte frame (MTU 3824)" "ping -c 1 -w 1 -M do -s 3796 host"
         check "ExtEtherMTU is 3838" "grep -q '^ExtEtherMTU=3838' $CONFIG"
         check "EtherMTU is 3824" "grep -q '^EtherMTU=3824' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
-        check "Link passes Baby Jumbo Ping (2004 bytes)" "ping -c 1 -w 1 -M do -s 2004 host"
+        check "Link carries a 2004-byte frame (MTU 2032)" "ping -c 1 -w 1 -M do -s 2004 host"
         check "ExtEtherMTU is 2046" "grep -q '^ExtEtherMTU=2046' $CONFIG"
         check "EtherMTU is 2032" "grep -q '^EtherMTU=2032' $CONFIG"
     fi
