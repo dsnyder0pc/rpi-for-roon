@@ -167,7 +167,15 @@ PLAYBACK_EDGE = {"playing": None}
 STATUS_CACHE = {"data": None, "timestamp": 0.0, "valid": False}
 # MTU only changes across a reboot, so the last value the Target reported stays
 # valid. Caching it lets the link panel refresh without any extra SSH traffic.
-TARGET_LINK_CACHE = {"mtu": None, "license_needs_activation": None}
+# What the Purist tab learned about the Target, kept for the pages that are not
+# allowed to ask. Only the Purist tab opens an SSH connection to the Target, and
+# only while nothing is playing, so every other page renders from what is
+# remembered here or from nothing at all. "status" is the last status that came
+# back whole; the two fields beside it predate it and the link panel still reads
+# them by name. Deliberately in memory only: a restart empties it, and showing
+# the defaults until someone opens the Purist tab is better than showing a
+# remembered mode that may have changed while we were not looking.
+TARGET_LINK_CACHE = {"mtu": None, "license_needs_activation": None, "status": None}
 
 # Without an activated Diretta license the Target stops PCM above this rate
 # after six minutes. Native DSD is always above it.
@@ -1340,6 +1348,8 @@ def get_status_from_target(bypass_cache=False):
             TARGET_LINK_CACHE["license_needs_activation"] = status_data.get(
                 "license_needs_activation"
             )
+            # Kept whole for the Home page, which may not ask for itself.
+            TARGET_LINK_CACHE["status"] = status_data
 
             _write_status_cache(status_data, now)
             return status_data
@@ -2088,6 +2098,12 @@ def get_link_info(measure=True):
         "target_mtu": target_mtu,
         # A silent MTU mismatch is the failure this panel most needs to surface:
         # the link still comes up, but every full-size frame is discarded.
+        # Silence is agreement. The Target's MTU is only learned when the Purist
+        # tab fetches its status, so before that has happened there is nothing to
+        # compare and the panel assumes the two ends match rather than accusing a
+        # link it has not measured. The MTU is a configuration fact that changes
+        # only when someone re-runs Appendix 9, so a remembered one stays true
+        # far longer than a remembered mode would.
         "mtu_mismatch": target_mtu is not None and target_mtu != mtu,
         # Both cycle figures come straight from setting.inf, as periods rather
         # than as a packet rate. InfoCycle's transport is not the L2 stream: it
@@ -2659,13 +2675,23 @@ def landing_page():
     """Serves the main landing page with activation details if required."""
     roon_configured = roon_is_available()
 
-    target_status = get_status_from_target()
-    if not target_status:
-        target_status = {
-            "purist_mode_active": False,
-            "license_needs_activation": False,
-            "activation_url": ""
-        }
+    # This page does not talk to the Target. It used to, and a visit while music
+    # was playing put an SSH session's worth of foreign frames on the link --
+    # about 24 inbound frames and 5.4 KB, measured -- on a wire that otherwise
+    # carries nothing but audio and two 80-byte reports every 150 ms. Worse, it
+    # was unavoidable: the poll happened on page load, before anything could ask
+    # whether it was a good moment. So the Purist tab is now the only page that
+    # opens a connection, and it already declines to while a stream is running.
+    #
+    # The cost is that Home shows the defaults below until the Purist tab has
+    # been opened once. That understates rather than misleads: Standard, no
+    # activation banner, and a link panel that assumes the Target agrees about
+    # the MTU. The alternative -- asking -- is the thing being removed.
+    target_status = TARGET_LINK_CACHE["status"] or {
+        "purist_mode_active": False,
+        "license_needs_activation": False,
+        "activation_url": ""
+    }
 
     music_playing = is_music_playing()
     current_state = get_current_system_state(target_status)
