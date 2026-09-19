@@ -175,7 +175,8 @@ STATUS_CACHE = {"data": None, "timestamp": 0.0, "valid": False}
 # them by name. Deliberately in memory only: a restart empties it, and showing
 # the defaults until someone opens the Purist tab is better than showing a
 # remembered mode that may have changed while we were not looking.
-TARGET_LINK_CACHE = {"mtu": None, "license_needs_activation": None, "status": None}
+TARGET_LINK_CACHE = {"mtu": None, "mtu_host": None,
+                     "license_needs_activation": None, "status": None}
 
 # Without an activated Diretta license the Target stops PCM above this rate
 # after six minutes. Native DSD is always above it.
@@ -1325,6 +1326,9 @@ def get_status_from_target(bypass_cache=False):
             # simply omits the agreement check rather than guessing.
             if status_data.get("mtu"):
                 TARGET_LINK_CACHE["mtu"] = status_data["mtu"]
+                # Stamped with the Host MTU in force when the Target answered,
+                # which is what makes the figure checkable later.
+                TARGET_LINK_CACHE["mtu_host"] = get_host_mtu()
             TARGET_LINK_CACHE["license_needs_activation"] = status_data.get(
                 "license_needs_activation"
             )
@@ -2071,6 +2075,18 @@ def get_link_info(measure=True):
     cycle_time = _get_current_cycletime()
     info_cycle = _get_current_infocycle()
     target_mtu = TARGET_LINK_CACHE["mtu"]
+    # A cached Target MTU is evidence only about the link it was read on.
+    # Appendix 9 changes the Host's MTU too, and the Home page never talks to
+    # the Target, so after a run the cache still holds the old figure -- which
+    # read as a mismatch and named a number that was no longer true. Observed
+    # 2026-09-18 on host2: both ends at 10222, panel accusing them of 9000.
+    #
+    # So the Host MTU in force when the Target last answered is stamped
+    # alongside it, and the comparison counts only while the two still agree.
+    # Otherwise the ends are assumed to match, which they nearly always do, and
+    # the check returns on the next trip through the Purist tab -- the only page
+    # that asks the Target anything. That leaves the check for the tinkerer who
+    # changed one end on purpose, and silence for everyone who changed both.
     link_up = get_host_link_up()
 
     # The PCM ceiling is quoted for the container actually on the wire, since a
@@ -2166,7 +2182,9 @@ def get_link_info(measure=True):
         # link it has not measured. The MTU is a configuration fact that changes
         # only when someone re-runs Appendix 9, so a remembered one stays true
         # far longer than a remembered mode would.
-        "mtu_mismatch": target_mtu is not None and target_mtu != mtu,
+        "mtu_mismatch": (target_mtu is not None
+                         and TARGET_LINK_CACHE["mtu_host"] == mtu
+                         and target_mtu != mtu),
         # Both cycle figures come straight from setting.inf, as periods rather
         # than as a packet rate. InfoCycle's transport is not the L2 stream: it
         # is UDP over IPv6 link-local, one 78-byte report from the Target per
