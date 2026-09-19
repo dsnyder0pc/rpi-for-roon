@@ -60,6 +60,10 @@ HOST_POWER_DELAY_SECONDS = 10
 # from the UI having hung. Caching the failure too keeps the queue empty.
 STATUS_CACHE_TTL = 3.0
 STATUS_FAILURE_CACHE_TTL = 10.0
+# How often the startup probe retries while the Target has not answered yet.
+# It stops at the first answer, so this is the interval of a boot-time wait,
+# not a background poll: a reachable pair pays one attempt and never returns.
+TARGET_PRIME_RETRY_SECONDS = 60
 
 # Every elapsed-time measurement below uses time.monotonic(), never time.time().
 # Neither machine has a battery-backed clock: both boot at the fake-hwclock time
@@ -1363,6 +1367,43 @@ def invalidate_status_cache():
         STATUS_CACHE["data"] = None
         STATUS_CACHE["timestamp"] = 0.0
         STATUS_CACHE["valid"] = False
+
+
+def _prime_target_cache():
+    """Learns the Target's state once at startup, so Home has something to show.
+
+    Home is not allowed to ask the Target anything. It used to, and a visit
+    while music was playing put an SSH session's worth of foreign frames on the
+    link, unavoidably, because the poll happened on page load before anything
+    could ask whether it was a good moment -- so landing_page() stopped doing
+    it and renders from TARGET_LINK_CACHE instead.
+
+    The cost was that the activation banner stayed invisible until the Purist
+    tab had been opened once, and that banner is the one thing a brand-new
+    owner most needs on their very first page view: without a licence, hi-res
+    simply stops after six minutes, with nothing on screen to explain why.
+
+    This is the same call the Purist tab makes, on a different trigger. It runs
+    at startup, before any stream exists, which is also when the Target is
+    running diretta-cache.service to fetch its own licence URL inside the boot
+    DNS window -- the cheapest and safest moment there is to ask. Nothing is
+    written to disk: it fills the same in-memory cache the Purist tab fills, so
+    a crash or a restart simply leaves it to be primed again.
+
+    Unbounded rather than capped, because giving up would leave the banner
+    missing, which is the failure this exists to prevent. A Target that never
+    answers is one that is off or unplugged, so there is no audio on the link
+    to disturb meanwhile, and is_music_playing() covers a restart mid-session.
+    """
+    while True:
+        if not is_music_playing():
+            if get_status_from_target(bypass_cache=True) is not None:
+                # WARNING, not info: the Flask logger sits at WARNING, so an
+                # info line never reaches the journal and there would be no way
+                # to confirm from the logs that the probe ever ran.
+                app.logger.warning("Primed Target cache at startup.")
+                return
+        time.sleep(TARGET_PRIME_RETRY_SECONDS)
 
 
 def roon_bridge_is_installed():
@@ -3292,4 +3333,9 @@ if __name__ == "__main__":
     is_interactive = sys.stdout.isatty()
     APP_PORT = 8080 if is_interactive else 80
     APP_DEBUG_MODE = is_interactive
+    # The debug reloader runs this module twice, so start the probe only in the
+    # process that serves requests. Under systemd debug is off and the first
+    # branch is the one that applies.
+    if not APP_DEBUG_MODE or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        threading.Thread(target=_prime_target_cache, daemon=True).start()
     app.run(host="0.0.0.0", port=APP_PORT, debug=APP_DEBUG_MODE)
