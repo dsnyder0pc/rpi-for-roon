@@ -187,7 +187,10 @@ ACTIVATION_URL_CACHE = {"url": ""}
 
 # The elected cycle is measured inside the render that displays it, from two
 # short transmit-counter brackets taken back to back. Nothing is sampled in the
-# background: with no browser open the Host does no work at all for this.
+# background: with no browser open the Host does no work at all for this. The
+# Info Cycle sampler does run between renders, because a figure gathered a
+# second per refresh takes minutes to settle -- but it is armed by panel
+# fetches and stops without them, so it keeps the same bargain.
 ELECTED_CYCLE_CACHE = {"value": None, "t": float("-inf"), "divergence_seen": False}
 TX_SAMPLE_WINDOW = 0.15     # bracket for one packet-rate reading, in seconds
 TX_IDLE_PPS = 20.0          # below this the link is not carrying a stream
@@ -256,103 +259,75 @@ MODAL_FRAME_DROP = 0.05
 # InfoCycle does not change on its own, so the memo only has to outlive a run
 # of dirty brackets; it is dropped outright when the stream stops or when
 # setting.inf is rewritten under it.
-# Whether rx_bytes carries the 14-byte Ethernet header is a property of the
-# driver, not of the frame. Measured 2026-09-12 with matched six-second
-# windows, fifty pings of a 142-byte frame, background reports cancelled by
-# subtraction: bcmgenet counted 140.3 bytes per reply and macb 127.4. So the
-# same 78-byte report adds 78 to rx_bytes on a Pi 4 and 64 on a Pi 5, and a
-# Pi 4 Host held to 64 rejects every window it ever samples -- the panel then
-# shows an em dash forever, which is what it did before this.
+# The Target's reports are counted from the interface's IPv6 counters, not from
+# /proc/net/dev, and that one change removes a whole class of magic number.
+# rx_bytes carries the 14-byte Ethernet header on bcmgenet and not on macb,
+# which was the only reason this ever needed a per-driver table; Ip6InOctets is
+# the IPv6 packet length on every driver. The same read yields Icmp6InMsgs, so
+# neighbour discovery -- the commonest contaminant on a quiet point-to-point
+# link -- is excluded by name rather than inferred from a byte total.
 #
-# A driver we have not measured gets both sizes rather than a guess. That
-# weakens the test there to the degree that a contaminated window could land
-# on the other size exactly, and leaves the panel working; the alternative is
-# a blank panel on the first board we meet that is not one of these two.
-# A Target report is one IPv6 datagram: 40 bytes of IPv6 header, 8 of UDP, and
-# a Diretta payload -- 80 bytes on the wire as of library 150, where it was 64
-# when these figures were first taken, the payload having gone from 16 bytes to
-# 32. The two drivers disagree about what to add to that: bcmgenet counts the
-# 14-byte Ethernet header in rx_bytes and macb strips it, which is the whole of
-# the 14-byte gap between the entries below and the only reason this is a table
-# rather than a constant.
+# Nothing about the report is hardcoded, because nothing about it can be.
+# Measured 2026-09-18 on two pairs whose Diretta binaries are byte-identical at
+# both ends (Host syncAlsa 743a52b3, Target diretta_app_target 67a6fda9):
 #
-# So the rule, rather than two magic numbers: **macb's value is the IPv6 packet
-# length; bcmgenet's is that plus 14.** Both are checkable on any running box
-# without a capture tool, from the per-interface IPv6 counters:
+#   host2/target2   kernel 6.18.50-1, MTU 9000    ->  64 bytes, 1 per interval
+#   office          kernel 6.18.50-2, MTU 10222   ->  80 bytes, 2 per interval
 #
-#   cp /proc/net/dev_snmp6/end0 /tmp/a; sleep 10; cp /proc/net/dev_snmp6/end0 /tmp/b
-#   join /tmp/a /tmp/b | awk '{d=$3-$2; if(d>0) print $1, d}'
+# Same code, two wire formats, so the format is negotiated at run time and
+# cannot be keyed to a library release, a driver or a kernel. An earlier commit
+# read the 80-byte pair as a property of library 150 and hardcoded it, which
+# blanked the Info Cycle line on every 9000-tier build in the fleet -- and the
+# QA script hands those builds this very file. So it is learned from the wire
+# instead: a future library that ships three 96-byte reports is learned as 96
+# and 3 with no edit here.
 #
-# Ip6InOctets divided by Ip6InReceives is the IPv6 packet length directly -- it
-# read exactly 80.0 when this was written. A library update that moves the
-# payload again makes the Info Cycle line vanish rather than read wrong, because
-# _sample_info_reports() accepts a window only on an exact byte match, so that
-# silent blank is the symptom to bring back here.
-INFO_FRAME_RX_BYTES_BY_DRIVER = {
-    "bcmgenet": 94,   # Raspberry Pi 4 -- IPv6 length + 14, header counted
-    "macb": 80,       # Raspberry Pi 5 (RP1) -- IPv6 length, header stripped
-}
-# The Target sends TWO of those datagrams per InfoCycle, emitted together rather
-# than spaced across it, so the mean gap between reports is half the interval and
-# has to be doubled to name it. Measured 2026-09-17 on the office pair at two
-# settings, which is what makes it the protocol's ratio and not a coincidence of
-# one configuration:
+# Both figures are modes rather than exact matches, because a quiet link is not
+# a silent one. Office carries about half a foreign frame a second, which showed
+# up as 22 odd buckets in 1589 -- quotients of 64 and 96 either side of the real
+# 80 -- and moved neither mode.
+INFO_LEARN_BUCKET = 0.025
+# Fine enough to resolve a burst: the reports of one interval are emitted
+# together, so a bucket well under the interval holds either none of them or all
+# of them, and the modal non-empty occupancy is the count per interval. At 25 ms
+# against intervals of 150 and 180 ms, office showed {1: 22, 2: 209} and host2
+# {1: 200} -- the pair and the singleton, each unmistakable.
 #
-#   InfoCycle=150000 -> 13.50 frames/s, gap  74.1 ms
-#   InfoCycle=300000 ->  6.75 frames/s, gap 148.1 ms   (ratio 1.999)
-#
-# Sampling at 50 ms shows the shape plainly: two 80-byte packets arriving in the
-# same bucket every ~150.5 ms, never one and never spread. It is independent of
-# the MTU -- identical at the 9000 and 10222 tiers -- so it belongs to the
-# library, not the link. Why two is not knowable from outside: the Host holds
-# three link-facing UDP sockets, which is consistent with a pair going to two of
-# them but does not establish it, and the payload cannot be decoded without the
-# structures.
-INFO_REPORTS_PER_CYCLE = 2
-INFO_FRAME_RX_SIZES_MEMO = {}
+# Deriving that count from the configured InfoCycle would be circular. The panel
+# exists to show an interval the Target elected for itself, and a count fitted
+# to the configured figure would hide exactly the divergence it looks for.
+INFO_LEARN_HITS = 16
+INFO_LEARN_SECONDS = 6.0
+# A mode is only worth trusting if it is actually dominant. Below this the learn
+# pass reports nothing and is retried, rather than publishing a size that a
+# burst of foreign traffic happened to win.
+INFO_LEARN_MAJORITY = 0.6
+INFO_REPORT_SHAPE = {"size": None, "per_cycle": None}
 INFO_CYCLE_MEMO = 600.0
-# The reports are timed in one self-contained bracket, as the elected cycle is,
-# rather than across the gap between two renders. The gap needed its whole span
-# free of non-report traffic, and this link carries about 0.9 foreign frames a
-# second: measured on office, 19 seconds in 40 were clean, which makes a clean
-# 30-second gap a one-in-a-million event. That is why the reading never
-# appeared at all rather than appearing badly.
+# Reports are accumulated in one-second windows, and a window is kept only when
+# its byte total is exactly its frame count times the learned size and no ICMP
+# arrived in it. Contamination is rejected rather than subtracted: the foreign
+# frames are a signed mix -- a 60-byte neighbour solicit reads below a report as
+# readily as a 112-byte frame reads above it -- so an excess says one arrived
+# but never how many bytes were its own.
 #
-# Sub-windows make contamination local instead of fatal. The span a burst
-# spoils is a quarter of a second rather than the whole gap, and the windows
-# either side of it still count.
-#
-# Measured on office against 90 seconds of its real traffic, every window size
-# scored on the same samples. A quarter-second is the size that works, and it
-# is not a compromise between two failures -- it is exact (150.0 ms against a
-# configured 150) while still keeping 313 windows in 360.
-#
-# Smaller is not finer, it is blind: a window holding one frame satisfies the
-# byte identity whatever that frame was, so the filter stops filtering and the
-# reading collapses towards the rate of every 64-byte frame on the link. Larger
-# rejects too much -- a second keeps 43 windows in 90, two seconds keeps 3 in
-# 45 -- because the foreign traffic arrives in bursts, and a longer window is
-# likelier to catch one.
-#
-# That burstiness is also why a dirty window is dropped rather than corrected
-# by a frame. The link carries non-report frames of exactly the report's size,
-# so no byte test can count them; what makes them harmless is that they arrive
-# alongside frames of other sizes, and a window wide enough to catch the whole
-# burst is rejected on the evidence of its neighbours.
-INFO_SAMPLE_WINDOW = 0.25
-INFO_SAMPLE_WINDOWS = 4
-# The first bracket of a stream looks for longer, because that is the one
-# moment when precision is scarce and the cost of finding it is free. A reading
-# is worth about one part in its frame count, and the reports arrive at only
-# 5.6 a second on Super Purist's 180 ms interval, so a figure good to 5% needs
-# some twenty of them and cannot exist before about four seconds of watching
-# however it is gathered. Spending those four seconds once, inside the card's
-# own fetch where the panel already on screen stays put, buys a first reading
-# a reader can act on instead of one worth 20% that has to be walked back.
-#
-# Only the first: every bracket after it is adding to a figure that already
-# stands, so it goes back to the second the user agreed to.
-INFO_SAMPLE_WINDOWS_COLD = 16
+# A second is the right window now that the sampler runs back to back rather
+# than in four-window brackets inside a render. The old quarter-second existed
+# to make contamination local within a bracket that had only one second to
+# spend; with windows arriving continuously, a rejected second costs a second
+# and the next one starts immediately. On office's real traffic a second keeps
+# roughly half its windows, and on host2's quieter link nearly all of them.
+INFO_ACCUM_WINDOW = 1.0
+# Once the figure is trusted there is nothing left to converge on, so the
+# sampler drops to one window at this spacing -- often enough that the reading
+# still describes the link as it is now, cheap enough to leave running for as
+# long as a panel is open.
+INFO_MAINTAIN_PERIOD = 30.0
+# The sampler takes its licence from panel fetches, not from playback, so the
+# bargain the elected cycle keeps holds here too: with no browser open the Host
+# does no work at all. Every fetch re-arms it and it falls out this long after
+# the last one, which is three missed refreshes at the panel's 30-second cadence.
+INFO_SAMPLER_IDLE = 90.0
 # Brackets accumulate across renders, so the first is worth roughly 15% and
 # every one after it tightens the same figure. Past this many frames the
 # accumulators are halved rather than grown, so a reading stays a measurement
@@ -381,6 +356,8 @@ INFO_CYCLE_STATE = {"frames": 0.0, "seconds": 0.0,
                     "value_t": float("-inf"), "value_cycle": None,
                     "value_streams": None}
 INFO_CYCLE_LOCK = threading.Lock()
+INFO_SAMPLER = {"thread": None, "wanted_t": float("-inf")}
+INFO_SAMPLER_LOCK = threading.Lock()
 STATUS_CACHE_LOCK = threading.Lock()
 STATUS_FETCH_LOCK = threading.Lock()
 
@@ -708,9 +685,9 @@ LINK_PANEL_TEMPLATE = """
         </div>
         <div class="bg-gray-900/40 p-4 cursor-help" title="Diretta's information interval, set alongside CycleTime in setting.inf.
 
-• Measured: timed from the Target's reports, which arrive two per interval over UDP/IPv6 and are all this link receives while music plays.
-• It appears a refresh after playback starts, and needs a few seconds of reports to be worth quoting.
-• Measuring: something that was not a report landed in the sample, so it was discarded. Expect this for a few seconds after a mode change; it clears itself.">
+• Measured: timed from the Target's reports, which are all this link receives over UDP/IPv6 while music plays. Their size, and how many arrive per interval, are learned from the wire rather than assumed.
+• It appears a few seconds after playback starts and tightens for about ten more; a tilde marks it until then.
+• Measuring: no clean sample yet. Expect this for a few seconds after playback starts or a mode change; it clears itself.">
             <dt class="text-xs uppercase tracking-wide text-gray-500">Info Cycle</dt>
             <dd class="mt-1 text-lg font-semibold {{ 'text-red-400' if link.info_mismatch else 'text-white' }}">
                 {% if link.info_cycle_ms %}{{ link.info_cycle_ms }} ms{% else %}&mdash;{% endif %}
@@ -1759,96 +1736,192 @@ def _forget_info_cycle():
         _drop_info_cycle_locked()
 
 
-def _info_frame_rx_sizes():
-    """Byte totals a single Target report may add to rx_bytes on this Host.
+def _read_ip6_counters():
+    """Reads the link's cumulative IPv6 receive counters, or None.
 
-    One syscall, resolved once: a driver cannot change under a running kernel.
-    Read from sysfs rather than ethtool because this is the same class of fact
-    as the mtu and speed the panel already reads there, and because spawning a
-    process to learn a constant would cost more than every measurement it
-    serves.
-
-    Returns:
-        tuple: the accepted sizes -- one value for a driver we have measured,
-            both for one we have not.
-    """
-    if "sizes" not in INFO_FRAME_RX_SIZES_MEMO:
-        try:
-            driver = os.path.basename(os.path.realpath(
-                f"/sys/class/net/{LINK_INTERFACE}/device/driver"))
-        except OSError:
-            driver = ""
-        counted = INFO_FRAME_RX_BYTES_BY_DRIVER.get(driver)
-        if counted is None:
-            app.logger.info(
-                "Unmeasured NIC driver %r; accepting both report sizes.",
-                driver or "unknown")
-            sizes = tuple(sorted(set(INFO_FRAME_RX_BYTES_BY_DRIVER.values())))
-        else:
-            sizes = (counted,)
-        INFO_FRAME_RX_SIZES_MEMO["sizes"] = sizes
-    return INFO_FRAME_RX_SIZES_MEMO["sizes"]
-
-
-def _sample_info_reports(windows):
-    """Counts the Target's reports across one bracket, keeping clean windows.
-
-    The reports are the only thing this link receives at a steady rate while a
-    stream runs, and every one is the same size, so a window whose bytes are
-    exactly that size times its frames caught nothing else and can be trusted
-    to the frame. A window that is out by any amount caught something that was
-    not a report, and is dropped with its time as well as its frames, so what
-    accumulates is only span that was fully accounted for.
-
-    Contamination cannot be subtracted instead. The foreign frames are a signed
-    mix -- 60-byte neighbour discovery reads below a report as readily as a
-    112-byte frame reads above it -- so the excess says one arrived but never
-    how many bytes were its own, and some of them are the report's own size and
-    leave no excess at all. Rejecting the window they landed in is what catches
-    those, since they travel in bursts alongside frames that do show.
+    One read of /proc/net/dev_snmp6 renders every counter in a single pass, so
+    receives, octets and ICMP all describe the same instant -- the same reason
+    _read_counters() prefers /proc/net/dev over the per-counter sysfs files,
+    where a frame completing between two reads lands in one delta and not the
+    other.
 
     Returns:
-        tuple: (frames, seconds) from the clean windows alone, or None when the
-            bracket found no window it could trust.
+        tuple: (receives, octets, icmp_msgs), or None if the file did not read.
     """
-    frames = 0
-    seconds = 0.0
-    sizes = _info_frame_rx_sizes()
-    counters = _read_counters("rx")
+    wanted = ("Ip6InReceives", "Ip6InOctets", "Icmp6InMsgs")
+    found = {}
+    try:
+        with open(f"/proc/net/dev_snmp6/{LINK_INTERFACE}",
+                  encoding="utf-8") as file_handle:
+            for line in file_handle:
+                fields = line.split()
+                if len(fields) == 2 and fields[0] in wanted:
+                    found[fields[0]] = int(fields[1])
+    except (OSError, ValueError):
+        return None
+    if len(found) != len(wanted):
+        return None
+    return tuple(found[name] for name in wanted)
+
+
+def _dominant(tally, total):
+    """The dominant key in a tally, or None when nothing dominates it."""
+    if not tally:
+        return None
+    key = max(tally, key=tally.get)
+    return key if tally[key] >= total * INFO_LEARN_MAJORITY else None
+
+
+def _learn_report_shape():
+    """Learns the report size and the count per interval from the wire itself.
+
+    Returns:
+        tuple: (size, per_cycle), or None when the wire did not say clearly
+            enough -- no reports arrived, or no mode was dominant enough to act
+            on, in which case the caller simply asks again.
+    """
+    counters = _read_ip6_counters()
     if counters is None:
         return None
 
-    for _ in range(windows):
-        start = time.monotonic()
-        time.sleep(INFO_SAMPLE_WINDOW)
-        window = _read_counters("rx")
-        if window is None:
+    sizes = {}
+    occupancy = {}
+    hits = 0
+    deadline = time.monotonic() + INFO_LEARN_SECONDS
+    while hits < INFO_LEARN_HITS and time.monotonic() < deadline:
+        time.sleep(INFO_LEARN_BUCKET)
+        bucket = _read_ip6_counters()
+        if bucket is None:
             return None
-        caught = window[0] - counters[0]
-        octets = window[1] - counters[1]
-        span = time.monotonic() - start
-        counters = window
-        # Exact equality is the whole test: a window of nothing but reports
-        # lands on it to the byte, which is what makes a single foreign frame
-        # detectable rather than merely suspected.
-        if caught > 0 and any(caught * size == octets for size in sizes):
-            frames += caught
-            seconds += span
+        caught = bucket[0] - counters[0]
+        octets = bucket[1] - counters[1]
+        icmp = bucket[2] - counters[2]
+        counters = bucket
+        # A bucket that caught ICMP, caught nothing, or does not divide evenly
+        # is not evidence about a report. It is discarded rather than reasoned
+        # about, which is what leaves both modes standing on clean buckets only.
+        if icmp or caught <= 0 or octets <= 0 or octets % caught:
+            continue
+        size = octets // caught
+        sizes[size] = sizes.get(size, 0) + 1
+        occupancy[caught] = occupancy.get(caught, 0) + 1
+        hits += 1
 
-    if frames <= 0 or seconds <= 0:
+    size = _dominant(sizes, hits)
+    per_cycle = _dominant(occupancy, hits)
+    if not size or not per_cycle:
         return None
-    return frames, seconds
+    return size, per_cycle
+
+
+def _accumulate_info_window(size):
+    """Adds one clean window of reports to the accumulators.
+
+    Returns:
+        bool: True when the window counted, False when it was contaminated,
+            empty, or the counters would not read.
+    """
+    counters = _read_ip6_counters()
+    if counters is None:
+        return False
+    start = time.monotonic()
+    time.sleep(INFO_ACCUM_WINDOW)
+    window = _read_ip6_counters()
+    if window is None:
+        return False
+    caught = window[0] - counters[0]
+    octets = window[1] - counters[1]
+    icmp = window[2] - counters[2]
+    span = time.monotonic() - start
+    # Exact equality is the whole test: a window of nothing but reports lands on
+    # it to the byte, which is what makes a single foreign frame detectable
+    # rather than merely suspected.
+    if icmp or caught <= 0 or octets != caught * size:
+        return False
+
+    with INFO_CYCLE_LOCK:
+        frames = INFO_CYCLE_STATE["frames"] + caught
+        seconds = INFO_CYCLE_STATE["seconds"] + span
+        # Halved rather than capped, so the reading keeps the precision it has
+        # earned while still being a measurement of the link as it is now
+        # instead of an average over every window since the panel opened.
+        if frames > INFO_CYCLE_DECAY_FRAMES:
+            frames, seconds = frames / 2.0, seconds / 2.0
+        INFO_CYCLE_STATE.update(frames=frames, seconds=seconds)
+    return True
+
+
+def _arm_info_sampler():
+    """Records that a panel is watching, starting the sampler if it is not."""
+    with INFO_SAMPLER_LOCK:
+        INFO_SAMPLER["wanted_t"] = time.monotonic()
+        thread = INFO_SAMPLER["thread"]
+        if thread is not None and thread.is_alive():
+            return
+        thread = threading.Thread(target=_info_sampler_loop, daemon=True,
+                                  name="info-cycle-sampler")
+        INFO_SAMPLER["thread"] = thread
+        thread.start()
+
+
+def _info_sampler_loop():
+    """Watches the link while a panel is open, and stops once none is.
+
+    Measuring here rather than inside the render is what makes the figure
+    arrive in seconds instead of minutes. A bracket taken during a fetch can
+    only watch for the second it holds that render open, once every thirty --
+    three percent of the reports that cross the wire, which is why sixty frames
+    used to take eight refreshes and the better part of three minutes. Watching
+    between fetches costs the same reads per second and catches all of them.
+
+    The licence to run comes from panel fetches rather than from playback, so
+    the bargain the elected cycle keeps holds here too: with no browser open
+    the Host does no work at all, whatever is playing.
+    """
+    while True:
+        with INFO_SAMPLER_LOCK:
+            idle = time.monotonic() - INFO_SAMPLER["wanted_t"]
+        if idle > INFO_SAMPLER_IDLE:
+            return
+
+        # The Target reports only while it has a stream to report on, and a
+        # shape learned from one stream is not evidence about the next.
+        if not _running_bridge_substreams():
+            _forget_info_cycle()
+            INFO_REPORT_SHAPE.update(size=None, per_cycle=None)
+            time.sleep(INFO_ACCUM_WINDOW)
+            continue
+
+        if not INFO_REPORT_SHAPE["size"]:
+            shape = _learn_report_shape()
+            if shape is None:
+                time.sleep(INFO_ACCUM_WINDOW)
+                continue
+            INFO_REPORT_SHAPE.update(size=shape[0], per_cycle=shape[1])
+            # At warning because Flask's own logger sits there and INFO from it
+            # does not reach the journal. This is the one line that says what
+            # the panel decided the wire looks like, and it is where a blank
+            # Info Cycle line should be diagnosed from.
+            app.logger.warning(
+                "Info Cycle: learned %d-byte reports, %d per interval.",
+                shape[0], shape[1])
+            continue
+
+        _accumulate_info_window(INFO_REPORT_SHAPE["size"])
+        with INFO_CYCLE_LOCK:
+            settled = INFO_CYCLE_STATE["frames"] >= INFO_CYCLE_TRUST_FRAMES
+        if settled:
+            time.sleep(INFO_MAINTAIN_PERIOD)
 
 
 def _measure_info_cycle(info_cycle, playing, streaming):
-    """Times the Target's InfoCycle reports from one self-contained bracket.
+    """Reports the Target's InfoCycle from what the sampler has gathered.
 
-    Brackets accumulate, so the first one carries the panel on its own and
-    every one after it tightens the same figure. A second of reports is thirteen
-    or fourteen of them -- two per interval -- which is enough to say the Target
-    is reporting on roughly the interval it was asked for; waiting instead for
-    the sixty frames that would settle it to a percent means showing nothing for
-    the better part of a minute, and showing nothing is what this used to do.
+    The render does no sampling of its own. It arms the background sampler,
+    reads the accumulators that sampler is filling, and returns -- so a fetch
+    that used to hold open for four seconds on a stream's first bracket now
+    answers at once, and the figure it is waiting for arrives within a refresh
+    or two instead of within minutes.
 
     Args:
         streaming: how many DACs are receiving at once, which scales the frame
@@ -1856,7 +1929,7 @@ def _measure_info_cycle(info_cycle, playing, streaming):
 
     Returns:
         dict: {"ms", "diverges", "rough"}, or None while nothing is playing or
-            no bracket has yet carried a reading.
+            too little has been gathered to say anything.
     """
     # The Target only reports while it has a stream to report on, so with the
     # bridge closed there is nothing to time and nothing a held reading could
@@ -1869,24 +1942,15 @@ def _measure_info_cycle(info_cycle, playing, streaming):
     # Frames gathered while a second DAC was streaming are evidence for an
     # interval that no longer applies, exactly as a rewrite of setting.inf is:
     # two sets of Target reports on one wire double the frame count and halve
-    # the figure. Dropped here rather than left to the accumulator's halving,
-    # which took 90 ms back up to only 111 over six brackets and stayed red the
-    # whole way. Checked before the bracket, so no stale reading can be served
-    # from the memo on the way past either.
+    # the figure. Checked before anything is read, so no stale reading can be
+    # served from the memo on the way past either.
     with INFO_CYCLE_LOCK:
         if INFO_CYCLE_STATE["value_streams"] not in (None, streaming):
             _drop_info_cycle_locked()
         INFO_CYCLE_STATE["value_streams"] = streaming
 
+    _arm_info_sampler()
     now = time.monotonic()
-    # Nothing gathered yet means this is a stream's first bracket, which looks
-    # for longer so that the figure it publishes is one worth publishing.
-    cold = not INFO_CYCLE_STATE["frames"]
-    sampled = _sample_info_reports(
-        INFO_SAMPLE_WINDOWS_COLD if cold else INFO_SAMPLE_WINDOWS
-    )
-    if sampled is None:
-        return _remembered_info_cycle(now, info_cycle)
 
     with INFO_CYCLE_LOCK:
         # A rewrite of setting.inf makes every frame gathered under the old
@@ -1894,19 +1958,14 @@ def _measure_info_cycle(info_cycle, playing, streaming):
         if INFO_CYCLE_STATE["value_cycle"] not in (None, info_cycle):
             INFO_CYCLE_STATE.update(frames=0.0, seconds=0.0,
                                     divergence_seen=False)
-        frames = INFO_CYCLE_STATE["frames"] + sampled[0]
-        seconds = INFO_CYCLE_STATE["seconds"] + sampled[1]
-        # Halved rather than capped, so the reading keeps the precision it has
-        # earned while still being a measurement of the link as it is now
-        # instead of an average over every bracket since the page opened.
-        if frames > INFO_CYCLE_DECAY_FRAMES:
-            frames, seconds = frames / 2.0, seconds / 2.0
-        INFO_CYCLE_STATE.update(frames=frames, seconds=seconds)
+        frames = INFO_CYCLE_STATE["frames"]
+        seconds = INFO_CYCLE_STATE["seconds"]
 
-    if frames < INFO_CYCLE_MIN_FRAMES:
+    per_cycle = INFO_REPORT_SHAPE["per_cycle"]
+    if not per_cycle or seconds <= 0 or frames < INFO_CYCLE_MIN_FRAMES:
         return _remembered_info_cycle(now, info_cycle)
 
-    measured_us = seconds * 1e6 / frames * INFO_REPORTS_PER_CYCLE
+    measured_us = seconds * 1e6 / frames * per_cycle
     rough = frames < INFO_CYCLE_TRUST_FRAMES
     diverges = not rough and _diverges(measured_us, info_cycle)
 
