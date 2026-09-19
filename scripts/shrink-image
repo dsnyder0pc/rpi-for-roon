@@ -104,7 +104,15 @@ echo "Working on: ${WORK_FILE}"
   # If TARGET_SECTOR is set, fdisk gets the number.
   sudo tee "${MOUNT_POINT}/usr/local/sbin/resize-fs-once.sh" > /dev/null <<EOF
 #!/bin/bash
-fdisk /dev/mmcblk0 <<END
+ROOT_PART=\$(findmnt -n -o SOURCE / | cut -d'[' -f1)
+ROOT_DISK=\$(lsblk -no PKNAME "\${ROOT_PART}" 2>/dev/null || true)
+if [ -z "\${ROOT_DISK}" ]; then
+  ROOT_DISK_PATH="\${ROOT_PART}"
+else
+  ROOT_DISK_PATH="/dev/\${ROOT_DISK}"
+fi
+
+fdisk "\${ROOT_DISK_PATH}" <<END
 d
 2
 n
@@ -115,8 +123,8 @@ ${TARGET_SECTOR}
 N
 w
 END
-partprobe /dev/mmcblk0
-resize2fs /dev/mmcblk0p2
+partprobe "\${ROOT_DISK_PATH}"
+resize2fs "\${ROOT_PART}"
 systemctl disable resize-fs-once.service
 rm /etc/systemd/system/resize-fs-once.service
 rm /usr/local/sbin/resize-fs-once.sh
