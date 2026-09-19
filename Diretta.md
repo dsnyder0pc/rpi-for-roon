@@ -187,7 +187,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 After flashing, you must configure each Raspberry Pi individually to avoid network conflicts.
 
-For the best performance, this guide uses the Raspberry Pi 5 for both the Diretta Target (the device connected to your DAC) and Diretta Host. You will configure the Host first.
+This guide's parts list uses a Raspberry Pi 5 for both the Diretta Target (the device connected to your DAC) and the Diretta Host, but the two roles are hardware agnostic: Pi 4 to Pi 4, Pi 4 to Pi 5, Pi 5 to Pi 4 and Pi 5 to Pi 5 are all equally supported, and every combination reaches the same MTU 10222 link. The one difference is that a Pi 4 Target forgoes the USB interrupt steering in [**Appendix 7**](#20-appendix-7-optional-irq-and-thread-optimizations), which that board's hardware-locked interrupts do not allow. Compute Modules are untested. You will configure the Host first.
 
 > **CRITICAL WARNING:** Because both devices are flashed from the exact same image, they will have identical `machine-id` values. If you power both devices on at the same time while connected to the same LAN, your DHCP server will likely assign them the same IP address, causing a network conflict.
 >
@@ -2902,7 +2902,7 @@ esac
 
 *If you see "STOP" on **either** Host or Target, do not proceed. Your kernel is missing the required patch.*
 
-*The two machines need not agree here. This step reports what each **kernel** will accept, and a Pi 5 reaches 10222 where a Pi 4 on an older kernel stops at 9000. Steps 2 and 3 settle the pair on a single tier by testing the link itself.*
+*The two machines need not agree here. This step reports what each **kernel** will accept: on the kernel these images ship, both boards reach 10222, while a Pi 4 on an older kernel stops at 9000 or lower. Steps 2 and 3 settle the pair on a single tier by testing the link itself.*
 
 ---
 
@@ -3073,7 +3073,7 @@ sudo sync && sudo reboot
 >
 > **Why 3824 and not 3840?** Both are the same driver buffer measured at two layers, and neither was ever a property of the silicon. On the kernels of the day the Raspberry Pi 4's `bcmgenet` driver set its RX ready threshold to `0xF0` in units of 16 bytes — a **3840-byte receive buffer**. Subtract the 2-byte alignment pad and the 14-byte Ethernet header and **3824** is the largest L3 MTU that fits; the 2032 tier is the same arithmetic on the stock 2048-byte buffer.
 >
-> These tiers exist because those were the largest MTUs the prevailing kernel would carry on a Pi 4 — not because the board could do no better. The AudioLinux LTS realtime kernel now carries a patch that gives the same hardware **9000**, with no bootloader or EEPROM change, so the ladder in Steps 2 and 3 finds 9000 where it once stopped at 3824. Mind which kernel you install, though: the patch has landed unevenly. At the time of writing the LTS kernel (`6.18.50-2`) takes a Pi 4 past 9000 — it advertises 16347, of which this guide uses 10222 — while the newer `7.1.8-1` carries only the 2032 patch, so choosing *Audiolinux last RT LTO* in the kernel updater costs a Pi 4 three tiers and drops `CycleTime` from 1500 µs to 700 µs. A Pi 5 reaches 10222 on any of them, because its ceiling is a property of the board rather than of the patch. That is why the smaller tiers stay documented: a kernel patched partly, or not at all, still stops where it always did.
+> These tiers exist because those were the largest MTUs the prevailing kernel would carry on a Pi 4 — not because the board could do no better. The AudioLinux LTS realtime kernel now carries a patch that takes the same hardware well past **9000**, with no bootloader or EEPROM change: the LTS these images ship (`6.18.50-2`) advertises 16347 on a Pi 4, of which this guide uses **10222**. So the ladder in Steps 2 and 3 finds 10222 on both boards where it once stopped at 3824, and these images already ship at that tier. Mind which kernel you install, though: the patch has landed unevenly. The newer `7.1.8-1` carries only the 2032 patch, so choosing *Audiolinux last RT LTO* in the kernel updater costs a Pi 4 three tiers and drops `CycleTime` from 1500 µs to 700 µs. A Pi 5 reaches 10222 on any of them, because its ceiling is a property of the board rather than of the patch. That is why the smaller tiers stay documented: a kernel patched partly, or not at all, still stops where it always did.
 >
 > Whichever tier you land on, never set an MTU by hand. The driver accepts values it cannot actually receive, then silently discards every full-size frame, leaving a link that looks up but carries no music. Step 1 confirms kernel support, which is necessary but not sufficient; only the ping ladder in Steps 2 and 3 finds the real ceiling. That gap is wider than it used to be: a Pi 4 kernel that advertises 16347 will accept any value up to it, including several thousand bytes the link cannot actually carry. (Upstream detail: [raspberrypi/linux#5561](https://github.com/raspberrypi/linux/issues/5561).)
 >
