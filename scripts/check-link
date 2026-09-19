@@ -366,11 +366,26 @@ for side in t h; do
 done
 
 # Throughput floor. A link that technically completes but crawls is also a
-# regression; half of the negotiated rate is generous for ssh over TCP.
+# regression; half of the negotiated rate is generous for ssh over TCP -- but
+# only while the wire is what binds. At 1 Gb/s it is not. ssh on a Cortex-A72
+# caps near 60 Mb/s with the default chacha20 and 110 with aes128-gcm, so an
+# RPi4 end cannot clear a 500 Mb/s floor however healthy the link is. The
+# reported rate is not trustworthy there either: 4 MB needs ~0.03s of wire time
+# at gigabit against a handshake baseline of ~0.10s, and subtracting the larger
+# from the smaller amplifies noise instead of removing it -- this estimator has
+# reported 1087 Mb/s on a 1000 Mb/s link. Skip rather than soften: a floor a
+# healthy link cannot meet is worse than no floor at all, and the checks that
+# actually find a bad link -- the burst, the concurrent streams and the error
+# counters -- are unaffected. In force at 10 and 100 Mb/s, which is where these
+# images run and where every validated measurement in this project was made.
 FLOOR=$(echo "scale=1; $SPEEDNUM * 0.5" | bc)
 SLOW=$(echo "$PUSH_MBPS < $FLOOR || $PULL_MBPS < $FLOOR" | bc -l)
 if [ $PUSH_OK -eq 0 ]; then
     :
+elif [ "$SPEEDNUM" -ge 1000 ]; then
+    printf "  ${C_BLUE}*${C_RESET} %-58s[${C_YELLOW}SKIP${C_RESET}] %s\n" \
+        "Throughput is at least half of ${SPEEDNUM}Mb/s" \
+        "ssh crypto binds below this floor at 1 Gb/s (push=${PUSH_MBPS} pull=${PULL_MBPS})"
 elif [ "$SLOW" == "1" ]; then
     check "Throughput is at least half of ${SPEEDNUM}Mb/s" fail \
         "push=${PUSH_MBPS} pull=${PULL_MBPS}, floor=${FLOOR}" \
