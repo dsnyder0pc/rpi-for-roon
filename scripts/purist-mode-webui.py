@@ -175,7 +175,7 @@ STATUS_CACHE = {"data": None, "timestamp": 0.0, "valid": False}
 # them by name. Deliberately in memory only: a restart empties it, and showing
 # the defaults until someone opens the Purist tab is better than showing a
 # remembered mode that may have changed while we were not looking.
-TARGET_LINK_CACHE = {"mtu": None, "mtu_host": None,
+TARGET_LINK_CACHE = {"mtu": None, "mtu_host": None, "ether_mtu": None,
                      "license_needs_activation": None, "status": None}
 
 # Without an activated Diretta license the Target stops PCM above this rate
@@ -732,6 +732,12 @@ LINK_PANEL_TEMPLATE = """
     <div class="p-3 mt-4 text-xs text-red-400 bg-red-900/20 rounded-lg border border-red-700/30">
         <strong>&#9888;&#65039; MTU mismatch:</strong> the Host is set to {{ link.mtu }} but the Target reports
         {{ link.target_mtu }}. Re-run Appendix 9 on both machines.
+    </div>
+    {% elif link.ether_mtu_split %}
+    <div class="p-3 mt-4 text-xs text-red-400 bg-red-900/20 rounded-lg border border-red-700/30">
+        <strong>&#9888;&#65039; Target MTU split:</strong> the Target's interface is at {{ link.target_mtu }}
+        but Diretta is framing to EtherMTU {{ link.target_ether_mtu }}, so the figures above describe a larger
+        frame than the link is carrying. Re-run Appendix 9 Step 2 on the Target.
     </div>
     {% endif %}
 """
@@ -1329,6 +1335,11 @@ def get_status_from_target(bypass_cache=False):
                 # Stamped with the Host MTU in force when the Target answered,
                 # which is what makes the figure checkable later.
                 TARGET_LINK_CACHE["mtu_host"] = get_host_mtu()
+                # Diretta's own EtherMTU, which is the size it actually frames
+                # to. Targets older than this check omit the field, and the
+                # script reports 0 when the setting is absent; both mean "not
+                # known", which reads as agreement rather than as a fault.
+                TARGET_LINK_CACHE["ether_mtu"] = status_data.get("ether_mtu") or None
             TARGET_LINK_CACHE["license_needs_activation"] = status_data.get(
                 "license_needs_activation"
             )
@@ -2075,6 +2086,7 @@ def get_link_info(measure=True):
     cycle_time = _get_current_cycletime()
     info_cycle = _get_current_infocycle()
     target_mtu = TARGET_LINK_CACHE["mtu"]
+    target_ether_mtu = TARGET_LINK_CACHE["ether_mtu"]
     # A cached Target MTU is evidence only about the link it was read on.
     # Appendix 9 changes the Host's MTU too, and the Home page never talks to
     # the Target, so after a run the cache still holds the old figure -- which
@@ -2185,6 +2197,24 @@ def get_link_info(measure=True):
         "mtu_mismatch": (target_mtu is not None
                          and TARGET_LINK_CACHE["mtu_host"] == mtu
                          and target_mtu != mtu),
+        # A different fault from the one above, and invisible to it. That check
+        # compares the two interfaces; this one compares the Target's interface
+        # against the MTU Diretta actually frames to. They can disagree with
+        # both interfaces in perfect agreement -- Appendix 9 Step 2 writes the
+        # interface MTU and EtherMTU together, but nothing holds them together
+        # afterwards, and a half-applied re-run leaves exactly this state.
+        #
+        # It matters because the Host sizes everything from its own interface:
+        # the elected cycle, the payload budget, and so the PCM and DSD
+        # ceilings. With the Target framing smaller than the Host assumes, those
+        # figures describe a link that is not the one carrying the audio.
+        # Gated on the same verification as the mismatch above, since it rests
+        # on the same cached answer.
+        "target_ether_mtu": target_ether_mtu,
+        "ether_mtu_split": (target_mtu is not None
+                            and target_ether_mtu is not None
+                            and TARGET_LINK_CACHE["mtu_host"] == mtu
+                            and target_ether_mtu != target_mtu),
         # Both cycle figures come straight from setting.inf, as periods rather
         # than as a packet rate. InfoCycle's transport is not the L2 stream: it
         # is UDP over IPv6 link-local, one 78-byte report from the Target per
