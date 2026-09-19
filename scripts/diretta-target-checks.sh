@@ -465,3 +465,16 @@ print_rerun_summary
 echo -e "\n${C_BOLD}QA Check Complete.${C_RESET}"
 
 echo ""
+
+# Exit non-zero when anything failed, so a caller can gate on it: prepare_system
+# refuses to pack a card whose QA did not pass, because a fault baked into an
+# image ships to everyone who flashes it and the remedy is another reflash.
+# check() is the only writer of both arrays and records a failure into exactly
+# one of them -- TARGETED_FIXES when it carries its own remedy, FAILED_SECTIONS
+# otherwise -- so their combined length is the failure count. A SKIP is not a
+# failure, and check_status() never records at all, which is why an unlicensed
+# Target still packs.
+if [ ${#FAILED_SECTIONS[@]} -gt 0 ] || [ ${#TARGETED_FIXES[@]} -gt 0 ]; then
+    exit 1
+fi
+exit 0
