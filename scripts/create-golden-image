@@ -139,7 +139,64 @@ else
   echo "   - Custom image type. Skipping Diretta version detection."
 fi
 
-# 3. Clear Web UI session state that must never ship
+# 3. Detect how far this card was built, and whether Roon Bridge is on it
+#
+# These mirror the check_optional_section() predicates in the QA scripts, which
+# are the project's definition of "this appendix has been run". They have to be
+# file-based here because the card is mounted, not running, so `pacman -Q` and
+# `systemctl is-enabled` are replaced by the on-disk artefacts they report on:
+# a package directory under the pacman DB, and a .wants symlink.
+#
+# The ladder returns the HIGHEST stage that answers yes, because the stages are
+# cumulative -- a card through Appendix 9 has also been through 6, 7 and 8, and
+# it is the furthest point reached that names the image. Roon Bridge is not a
+# stage in that ladder any more: it is content that can sit alongside any of
+# them, so it becomes a suffix instead. That is what lets a Roon Host and a
+# plain Host, built to the same appendix, coexist rather than one silently
+# overwriting the other.
+m_has()  { [ -e "${TMP_MOUNT}/$1" ]; }
+m_grep() { grep -q "$1" "${TMP_MOUNT}/$2" 2>/dev/null; }
+m_pkg()  { compgen -G "${TMP_MOUNT}/var/lib/pacman/local/${1}-[0-9]*" >/dev/null; }
+m_unit_enabled() { compgen -G "${TMP_MOUNT}/etc/systemd/system/*.wants/${1}" >/dev/null; }
+
+detect_stage() {
+  if [[ "$1" == "host" ]]; then
+    m_grep '^FlexCycle=enable' opt/diretta-alsa/setting.inf   && { echo apdx9; return; }
+    m_unit_enabled limit-speed-100m.service                   && { echo apdx8; return; }
+    m_grep '^CpuSend=[0-9]' opt/diretta-alsa/setting.inf      && { echo apdx7; return; }
+    m_grep 'ISOLATED1="2,3"' opt/configuration/isolated.conf  && { echo apdx6; return; }
+    m_has home/audiolinux/purist-mode-webui                   && { echo apdx4; return; }
+    m_has home/audiolinux/roon-ir-remote                      && { echo apdx2; return; }
+    m_pkg argonone-c-git                                      && { echo apdx1; return; }
+    # Roon with no appendix at all is the one case where it names the stage.
+    m_pkg roonbridge                                          && { echo step9; return; }
+  elif [[ "$1" == "target" ]]; then
+    m_grep '^ExtEtherMTU=' opt/diretta-alsa-target/diretta_app_target_setting.inf && { echo apdx9; return; }
+    m_has etc/diretta-100m                                    && { echo apdx8; return; }
+    m_grep 'DEVICES1=.*xhci-hcd' opt/configuration/isolated.conf && { echo apdx7; return; }
+    m_grep 'ISOLATED1="2,3"' opt/configuration/isolated.conf  && { echo apdx6; return; }
+    m_grep '^purist-app:' etc/passwd                          && { echo apdx4; return; }
+    m_has usr/local/bin/purist-mode                           && { echo apdx3; return; }
+    m_pkg argonone-c-git                                      && { echo apdx1; return; }
+  fi
+  echo ""
+}
+
+DETECTED_STAGE=$(detect_stage "${IMG_TYPE}")
+IMG_ROON=""
+if m_pkg roonbridge; then
+  IMG_ROON="-roon"
+  echo "   - Auto-detected Roon Bridge: present"
+else
+  echo "   - Auto-detected Roon Bridge: absent"
+fi
+# Reported for context even though it does not enter the stage-golden filename,
+# because it is the one configuration figure that decides what the image can
+# play, and it is cheap to read while the card is already mounted.
+DETECTED_MTU=$(awk -F= '/^MTUBytes=/ {print $2}' "${TMP_MOUNT}/etc/systemd/network/end0.network" 2>/dev/null)
+[ -n "${DETECTED_MTU}" ] && echo "   - Auto-detected link MTU: ${DETECTED_MTU}"
+
+# 4. Clear Web UI session state that must never ship
 # set-link-speed.sh advertises 10 Mbps at boot on the mere existence of this
 # flag, so a Host captured mid-Super-Purist would hand that link speed to every
 # card flashed from the image. prepare_system removes it too; this is the
@@ -158,7 +215,20 @@ trap - EXIT # Clear exit trap
 
 # --- User Interaction ---
 
-# Prompt for the process stage
+# Prompt for the process stage. The detected answer is offered first, because
+# picking it by hand is the step that clobbered an image: two Host cards from the
+# same build differ only by Roon Bridge, and the menu has no way to say so. The
+# menu stays as the override, and is the only path when nothing was detected.
+if [ -n "${DETECTED_STAGE}" ]; then
+  echo
+  echo "   Detected stage: ${DETECTED_STAGE}${IMG_ROON:+  (with Roon Bridge)}"
+  read -r -p "   Use the detected stage? (Y/n) " use_detected
+  if [[ ! "${use_detected}" =~ ^[Nn] ]]; then
+    IMG_STAGE="${DETECTED_STAGE}"
+  fi
+fi
+
+if [ -z "${IMG_STAGE}" ]; then
 echo
 echo "Select the process stage:"
 options=(
@@ -217,11 +287,27 @@ select stage_choice in "${options[@]}"; do
     echo "Invalid selection. Please try again."
   fi
 done
+fi
 
 # --- Calculation and Execution ---
 
 # 1. Construct the final filename
-FILENAME="diretta-${IMG_TYPE}${DIRETTA_VER}-${IMG_STAGE}-golden.img"
+# -golden stays the last token of this family, so the Roon marker goes before
+# it: diretta-host_v148_5_1-apdx9-roon-golden.img beside the plain one.
+FILENAME="diretta-${IMG_TYPE}${DIRETTA_VER}-${IMG_STAGE}${IMG_ROON}-golden.img"
+
+# Refuse to silently overwrite. dd would truncate an existing image without a
+# word, and the one it truncates is the finished article waiting to be sent.
+if [ -e "${FILENAME}" ]; then
+  echo
+  echo "⚠️  ${FILENAME} already exists:"
+  echo "      $(du -h "${FILENAME}" | cut -f1)  $(date -r "${FILENAME}" '+%Y-%m-%d %H:%M')"
+  read -r -p "   Overwrite it? (y/N) " overwrite_ok
+  if [[ ! "${overwrite_ok}" =~ ^[Yy] ]]; then
+    echo "🚫 Aborted. Nothing was written."
+    exit 1
+  fi
+fi
 
 echo
 echo "⚙️  Preparing to create image..."
