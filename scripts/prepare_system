@@ -58,33 +58,6 @@ update_config_key() {
 }
 
 
-update_network_mtu() {
-    local mtu="$1"
-    local file="/etc/systemd/network/end0.network"
-
-    if [ ! -f "$file" ]; then
-        echo "   - ⚠️  Warning: Network file '$file' not found."
-        return 1
-    fi
-
-    if grep -q "^MTUBytes=" "$file"; then
-        # Replace existing MTUBytes
-        sed -i "s|^MTUBytes=.*|MTUBytes=${mtu}|" "$file"
-        echo "   - Updated MTUBytes to ${mtu} in $(basename "$file")"
-    else
-        # If [Link] section exists, append under [Link]
-        if grep -q -i "^\[Link\]" "$file"; then
-            sed -i "/^\[[Ll]ink\]/a MTUBytes=${mtu}" "$file"
-            echo "   - Added MTUBytes=${mtu} under [Link] in $(basename "$file")"
-        else
-            # Append [Link] and MTUBytes to the file
-            echo -e "\n[Link]\nMTUBytes=${mtu}" >> "$file"
-            echo "   - Appended [Link] and MTUBytes=${mtu} to $(basename "$file")"
-        fi
-    fi
-}
-
-
 if [[ $EUID -ne 0 ]]; then
    echo "🛑 Error: This script must be run with root privileges."
    exit 1
@@ -128,6 +101,13 @@ echo "🧹 Removing RAAT Server ID..."
 rm -fv /var/roon/RAATServer/Settings/unique_id /var/roon/*/Settings/*.json
 echo "🧹 Removing Roon IR Remote Extension Token..."
 rm -fv "/home/audiolinux/roon-ir-remote/.roon-token"
+# Host only, and the one piece of Web UI session state that persists. Its mere
+# existence makes set-link-speed.sh advertise 10 Mbps at every boot, so imaging
+# a Host that was left in Super Purist would ship that link speed to everyone
+# who flashes the card -- with the Web UI reading Standard, because the Target's
+# mode is independent of the Host's link. Absent, the next boot advertises 100.
+echo "🧹 Removing Super Purist flag..."
+rm -fv "/home/audiolinux/purist-mode-webui/super_purist.flag"
 
 echo "------------------------------------------------"
 
@@ -237,15 +217,14 @@ if [ -d "/opt/diretta-alsa-target" ]; then
     echo "   - Target system detected."
     TARGET_CONF="/opt/diretta-alsa-target/diretta_app_target_setting.inf"
     if [ -f "$TARGET_CONF" ]; then
-        # Appendix 9's jumbo MTU. The 3824 tier existed because that was the
-        # largest MTU a Raspberry Pi 4's bcmgenet driver could receive -- its
-        # 3840-byte RX buffer less the 2-byte pad and the 14-byte Ethernet
-        # header. The realtime LTS kernel these images ship carries the patch
-        # that gives the same hardware 9000, so both boards reach it
-        # and there is no reason to hand a customer the smaller tier.
-        # ExtEtherMTU is the same figure plus that header.
-        update_config_key "$TARGET_CONF" "ExtEtherMTU" "9014"
-        update_config_key "$TARGET_CONF" "EtherMTU" "9000"
+        # The MTU is deliberately NOT set here. Appendix 9 probes the link and
+        # writes EtherMTU, ExtEtherMTU and MTUBytes from what it measured; this
+        # script used to overwrite all three with a hardcoded 9000 so that a
+        # mixed RPi4/RPi5 fleet shipped one tier. That reason is gone -- both
+        # boards carry 10222 on the kernel these images ship -- and normalising
+        # down would now hand an RPi5 pair a smaller tier than their hardware
+        # reached, then ask them to re-run Appendix 9 to get it back. A probed
+        # value is a finding; a constant here would only be an assumption.
         update_config_key "$TARGET_CONF" "TrgetName" "AnCaolas Link"
         update_config_key "$TARGET_CONF" "VolumeCtl" "disable"
         update_config_key "$TARGET_CONF" "AlsaLatency" "30"
@@ -254,7 +233,17 @@ if [ -d "/opt/diretta-alsa-target" ]; then
     else
         echo "   - ⚠️  Warning: Target config file not found at $TARGET_CONF"
     fi
-    update_network_mtu "9000"
+
+    # A card must never ship promising to enter Purist Mode on its own. The
+    # revert-on-boot service already undoes the *state*, but the intent lives
+    # in this unit and would survive imaging. --now so a bench card that is
+    # mid-session stops here rather than at the next boot.
+    if systemctl is-enabled --quiet purist-mode-auto.service 2>/dev/null; then
+        systemctl disable --now purist-mode-auto.service
+        echo "   - Disabled purist-mode-auto.service for shipping."
+    else
+        echo "   - purist-mode-auto.service already disabled."
+    fi
 
     ISO_CONF="/opt/configuration/isolated.conf"
     if [ -f "$ISO_CONF" ]; then
@@ -286,7 +275,6 @@ if [ -d "/opt/diretta-alsa" ]; then
     else
         echo "   - ⚠️  Warning: Host config file not found at $HOST_CONF"
     fi
-    update_network_mtu "9000"
 
     ISO_CONF="/opt/configuration/isolated.conf"
     if [ -f "$ISO_CONF" ]; then

@@ -139,6 +139,18 @@ else
   echo "   - Custom image type. Skipping Diretta version detection."
 fi
 
+# 3. Clear Web UI session state that must never ship
+# set-link-speed.sh advertises 10 Mbps at boot on the mere existence of this
+# flag, so a Host captured mid-Super-Purist would hand that link speed to every
+# card flashed from the image. prepare_system removes it too; this is the
+# backstop for an image taken from a card that was not prepared, and it is the
+# last chance to catch it -- once the .img is written the flag is in it.
+SP_FLAG="${TMP_MOUNT}/home/audiolinux/purist-mode-webui/super_purist.flag"
+if [ -f "${SP_FLAG}" ]; then
+  sudo rm -f "${SP_FLAG}"
+  echo "   - Removed Super Purist flag from the image."
+fi
+
 # Unmount immediately
 sudo umount "${TMP_MOUNT}"
 rmdir "${TMP_MOUNT}"
