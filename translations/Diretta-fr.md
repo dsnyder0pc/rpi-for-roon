@@ -2758,7 +2758,7 @@ Bien que cela soit contre-intuitif, réduire la vitesse de la liaison de 1 Gbps 
 > * **Synergie avec la philosophie fondamentale de Diretta :** Tout l'objectif du protocole Diretta est d'éliminer le traitement par rafales et de stabiliser la consommation de courant. Une liaison à 10 Mbps agit comme un égaliseur physique pour le flux de données, évitant les pics de données à haute vitesse qui provoquent des fluctuations d'alimentation électrique.
 >
 > Le résultat de cette restriction « Super Puriste » est une baisse instantanément perceptible du bruit de fond numérique. Les auditeurs signalent fréquemment une scène sonore plus large et plus détendue, un suivi plus propre des transitoires haute fréquence, et un sentiment général de douceur et de sérénité analogique qui complète parfaitement les objectifs d'AudioLinux et de Diretta.
-> ---
+> ***
 
 > **Note :** Vous pourriez voir des avertissements de mémoire tampon basse (« buffer low ») dans les journaux du Target (le `LatencyBuffer` tombant à 1). Il s'agit d'un comportement normal dû à l'augmentation de la latence de sérialisation de la liaison plus lente, et cela ne provoque pas de coupures audio perceptibles.
 

@@ -2758,7 +2758,7 @@ Obwohl es kontraintuitiv erscheint, kann die Reduzierung der Verbindungsgeschwin
 > * **Synergie mit der Kernphilosophie von Diretta:** Das gesamte Ziel des Diretta-Protokolls besteht darin, stoßweise Verarbeitung zu eliminieren und die Stromaufnahme zu stabilisieren. Eine 10-Mbit/s-Leitung fungiert als physischer Ausgleicher für den Datenfluss und verhindert die Hochgeschwindigkeits-Datenspitzen, die Stromversorgungsschwankungen verursachen.
 >
 > Das Ergebnis dieser „Super Purist“-Einschränkung ist ein sofort spürbares Absinken des digitalen Grundrauschens. Hörer berichten häufig von einer breiteren, entspannteren Klangbühne, einer saubereren Einschwinggeschwindigkeit im Hochtonbereich und einem allgemeinen Gefühl von analoger Leichtigkeit und Ruhe, das perfekt zu dem passt, was AudioLinux und Diretta zu erreichen versuchen.
-> ---
+> ***
 
 > **Hinweis:** Sie sehen möglicherweise „buffer low“-Warnungen in den Target-Protokollen (wobei der `LatencyBuffer` auf 1 sinkt). Dies ist ein normales Verhalten aufgrund der erhöhten Serialisierungslatenz der langsameren Verbindung und führt nicht zu hörbaren Aussetzern.
 

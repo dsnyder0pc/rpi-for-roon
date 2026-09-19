@@ -2758,7 +2758,7 @@ Aunque parezca contradictorio, reducir la velocidad del enlace de 1 Gbps a 100 M
 > * **Sinergia con la filosofía central de Diretta:** Todo el objetivo del protocolo Diretta es eliminar el procesamiento en ráfagas y estabilizar el consumo de corriente. Una tubería de 10 Mbps actúa como un ecualizador físico para el flujo de datos, evitando los picos de datos de alta velocidad que causan fluctuaciones en la fuente de alimentación.
 >
 > El resultado de esta constricción "Súper Purista" es una caída instantáneamente reconocible en el piso de ruido digital. Los oyentes reportan con frecuencia un escenario sonoro más amplio y relajado, un seguimiento de transitorios de alta frecuencia más limpio y una sensación general de facilidad y calma analógicas que complementa perfectamente lo que AudioLinux y Diretta intentan lograr.
-> ---
+> ***
 
 > **Nota:** Es posible que vea advertencias de "buffer low" (búfer bajo) en los registros del Target (el `LatencyBuffer` baja a 1). Este es un comportamiento normal debido al aumento de la latencia de serialización del enlace más lento y no causa pérdidas de audio audibles.
 

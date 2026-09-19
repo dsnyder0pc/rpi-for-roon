@@ -2758,7 +2758,7 @@ Sebbene possa apparire controintuitivo, ridurre la velocità dal valore di 1 Gbp
 > * **Sinergia con la filosofia di fondo di Diretta:** L'intero obiettivo del protocollo Diretta è eliminare l'elaborazione a raffiche e stabilizzare il consumo di corrente. Una linea a 10 Mbps funge da equalizzatore fisico per il flusso di dati, prevenendo i picchi di trasmissione dati ad alta velocità che causano fluttuazioni nell'alimentatore.
 >
 > Il risultato di questa restrizione "Super Purist" è un calo immediatamente riconoscibile del rumore di fondo digitale. Gli ascoltatori riferiscono frequentemente una scena sonora più ampia e rilassata, un tracciamento dei transitori ad alta frequenza più pulito e un senso generale di naturalezza e calma analogica che si integra perfettamente con ciò che AudioLinux e Diretta stanno cercando di ottenere.
-> ---
+> ***
 
 > **Nota:** Potreste visualizzare avvisi di "buffer low" nei log del Target (con il `LatencyBuffer` che scende a 1). Questo è un comportamento normale dovuto alla maggiore latenza di serializzazione del collegamento più lento e non causa interruzioni audio udibili.
 

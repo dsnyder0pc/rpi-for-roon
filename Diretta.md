@@ -2758,7 +2758,7 @@ While counter-intuitive, reducing the link speed from 1 Gbps to 100 Mbps (or eve
 > * **Synergy with Diretta's Core Philosophy:** The entire goal of the Diretta protocol is to eliminate bursty processing and stabilize current draw. A 10 Mbps pipe acts as a physical equalizer for the data flow, preventing the high-speed data spikes that cause power supply fluctuations.
 >
 > The result of this "Super Purist" constriction is an instantly recognizable drop in the digital noise floor. Listeners frequently report a wider, more relaxed soundstage, cleaner high-frequency transient tracking, and an overall sense of analog ease and calm that perfectly complements what AudioLinux and Diretta are trying to achieve.
-> ---
+> ***
 
 > **Note:** You may see "buffer low" warnings in the Target logs (`LatencyBuffer` dropping to 1). This is normal behavior due to the increased serialization latency of the slower link and does not cause audible dropouts.
 
