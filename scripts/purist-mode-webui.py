@@ -60,10 +60,20 @@ HOST_POWER_DELAY_SECONDS = 10
 # from the UI having hung. Caching the failure too keeps the queue empty.
 STATUS_CACHE_TTL = 3.0
 STATUS_FAILURE_CACHE_TTL = 10.0
-# How often the startup probe retries while the Target has not answered yet.
-# It stops at the first answer, so this is the interval of a boot-time wait,
-# not a background poll: a reachable pair pays one attempt and never returns.
-TARGET_PRIME_RETRY_SECONDS = 60
+# How long the startup probe waits between attempts while the Target has not
+# answered yet, backing off to the last value and staying there. It stops at the
+# first answer, so this is the shape of a boot-time wait, not a background poll:
+# a reachable pair pays one attempt and never returns.
+#
+# Short at the start because the attempts are nearly free until the link is up:
+# run_remote_command() checks end0's carrier first and reports the Target
+# unreachable without opening SSH at all, so an early retry costs a sysfs read.
+# A flat 60s was far more patient than that warrants -- on a cold boot the Host
+# is ready well before the Target, and the first attempt reliably lands before
+# carrier. Measured on 2026-09-19: boot at 20:14:05, first attempt found no
+# carrier, and the answer did not arrive until 20:16:16. Home showed no licence
+# banner for those two minutes, which is exactly when a new owner opens it.
+TARGET_PRIME_BACKOFF_SECONDS = (2, 4, 8, 15, 30)
 
 # Every elapsed-time measurement below uses time.monotonic(), never time.time().
 # Neither machine has a battery-backed clock: both boot at the fake-hwclock time
@@ -1395,15 +1405,24 @@ def _prime_target_cache():
     answers is one that is off or unplugged, so there is no audio on the link
     to disturb meanwhile, and is_music_playing() covers a restart mid-session.
     """
+    attempt = 0
     while True:
         if not is_music_playing():
             if get_status_from_target(bypass_cache=True) is not None:
                 # WARNING, not info: the Flask logger sits at WARNING, so an
                 # info line never reaches the journal and there would be no way
                 # to confirm from the logs that the probe ever ran.
-                app.logger.warning("Primed Target cache at startup.")
+                app.logger.warning(
+                    "Primed Target cache at startup (attempt %s).", attempt + 1
+                )
                 return
-        time.sleep(TARGET_PRIME_RETRY_SECONDS)
+        # Index past the end of the tuple holds at its last value, so the wait
+        # grows to 30s and stays there for as long as the Target is absent.
+        delay = TARGET_PRIME_BACKOFF_SECONDS[
+            min(attempt, len(TARGET_PRIME_BACKOFF_SECONDS) - 1)
+        ]
+        attempt += 1
+        time.sleep(delay)
 
 
 def roon_bridge_is_installed():
