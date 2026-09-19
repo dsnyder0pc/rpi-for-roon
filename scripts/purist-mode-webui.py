@@ -74,6 +74,12 @@ STATUS_FAILURE_CACHE_TTL = 10.0
 # carrier, and the answer did not arrive until 20:16:16. Home showed no licence
 # banner for those two minutes, which is exactly when a new owner opens it.
 TARGET_PRIME_BACKOFF_SECONDS = (2, 4, 8, 15, 30)
+# Stop waiting for a complete answer after this many attempts -- roughly three
+# and a half minutes with the backoff above. Past that the Target is reachable
+# but cannot reach Diretta's servers, so the URL is not coming and an
+# incomplete answer is better than none: the banner still tells the owner a
+# licence is needed, and the Purist tab refreshes it if the link returns.
+TARGET_PRIME_MAX_ATTEMPTS = 10
 
 # Every elapsed-time measurement below uses time.monotonic(), never time.time().
 # Neither machine has a battery-backed clock: both boot at the fake-hwclock time
@@ -1379,6 +1385,26 @@ def invalidate_status_cache():
         STATUS_CACHE["valid"] = False
 
 
+def _answer_is_complete(status):
+    """True when the Target's answer is worth caching for the life of the process.
+
+    A status alone is not enough. The Target reports that it needs a licence as
+    soon as it is asked, but the URL to buy one comes from
+    /run/diretta/license.cache, which diretta-cache.service writes during the
+    boot window before Purist Mode disables DNS. Ask in between and the honest
+    answer is "unlicensed, and I cannot tell you where to buy one" -- which
+    renders the Home banner with an empty link, worse than no banner at all.
+
+    Caching that would be permanent: the probe stops at its first success and
+    nothing else refreshes TARGET_LINK_CACHE except a visit to the Purist tab.
+    So an answer counts only when there is nothing further to wait for: either
+    the Target is licensed, or it is not and we have its purchase link.
+    """
+    if not status.get("license_needs_activation"):
+        return True
+    return bool(status.get("activation_url"))
+
+
 def _prime_target_cache():
     """Learns the Target's state once at startup, so Home has something to show.
 
@@ -1408,12 +1434,16 @@ def _prime_target_cache():
     attempt = 0
     while True:
         if not is_music_playing():
-            if get_status_from_target(bypass_cache=True) is not None:
+            status = get_status_from_target(bypass_cache=True)
+            if status is not None and (_answer_is_complete(status)
+                                       or attempt + 1 >= TARGET_PRIME_MAX_ATTEMPTS):
                 # WARNING, not info: the Flask logger sits at WARNING, so an
                 # info line never reaches the journal and there would be no way
                 # to confirm from the logs that the probe ever ran.
                 app.logger.warning(
-                    "Primed Target cache at startup (attempt %s).", attempt + 1
+                    "Primed Target cache at startup (attempt %s)%s.",
+                    attempt + 1,
+                    "" if _answer_is_complete(status) else " without an activation URL"
                 )
                 return
         # Index past the end of the tuple holds at its last value, so the wait
