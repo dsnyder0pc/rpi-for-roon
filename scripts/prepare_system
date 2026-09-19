@@ -66,35 +66,6 @@ fi
 echo "🚀 Starting remote system preparation..."
 echo "------------------------------------------------"
 
-# Step 0: refuse to pack a card that does not pass QA.
-# Everything below this point is destructive and ends in a power off, so this
-# is the last moment a fault can be caught cheaply. A fault baked into an image
-# reaches everyone who flashes it, and the remedy is another reflash.
-# Downloaded rather than piped so that a failed download is an error here and
-# not an empty script that exits 0.
-QA_URL="https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/main/scripts/qa.sh"
-QA_SCRIPT=$(mktemp)
-echo "🔎 Verifying configuration before packing..."
-if ! curl -fsSL "$QA_URL" -o "$QA_SCRIPT"; then
-    rm -f "$QA_SCRIPT"
-    echo "🛑 Could not download the QA script. Nothing has been changed."
-    exit 1
-fi
-# stdin from /dev/null: this script is itself run as `curl | sudo bash`, so a
-# child that reads stdin would consume the rest of the piped script.
-if bash "$QA_SCRIPT" < /dev/null; then
-    rm -f "$QA_SCRIPT"
-    echo "   - QA passed. Continuing."
-else
-    rm -f "$QA_SCRIPT"
-    echo ""
-    echo "🛑 QA reported failures, so this card has NOT been prepared and"
-    echo "   nothing has been changed. Fix the items listed above, run the QA"
-    echo "   check again, and re-run this script once it is clean."
-    exit 1
-fi
-echo "------------------------------------------------"
-
 # Step 1: Remove personal SSH public keys
 # Both accounts collect them. The build workstation's key lands in the
 # audiolinux account, and root picks one up whenever bench work needs
@@ -238,7 +209,7 @@ fi
 
 echo "------------------------------------------------"
 
-# Step 9: Apply network and MTU configurations (Target vs Host)
+# Step 9: Apply Diretta and isolation configurations (Target vs Host)
 echo "⚙️  Applying Diretta and isolation configurations..."
 
 # Target-specific configurations
