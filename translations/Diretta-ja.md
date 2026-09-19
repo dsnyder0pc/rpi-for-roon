@@ -1992,8 +1992,15 @@ source ~/.bashrc
     # 両端が食い違っているリンクをHostが検出できるよう、自身のMTUを報告する
     MTU=$(cat /sys/class/net/end0/mtu 2>/dev/null || echo 0)
 
+    # そしてDiretta自身のMTU。1サイクル分のペイロードが単一フレームに
+    # 収まるかを決めるのはこちらです。ステップ2で両者をまとめて書き込むため
+    # 通常は一致しますが、その後それを強制するものはなく、両者がずれると
+    # Hostは本来の半分の長さのサイクルを報告してしまいます。
+    ETHER_MTU=$(awk -F= '/^EtherMTU=/ {print $2}' /opt/diretta-alsa-target/diretta_app_target_setting.inf 2>/dev/null)
+    [ -n "$ETHER_MTU" ] || ETHER_MTU=0
+
     # すべてのステータスフラグを単一のJSONオブジェクトとして出力する
-    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED, \"mtu\": $MTU}"
+    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED, \"mtu\": $MTU, \"ether_mtu\": $ETHER_MTU}"
     EOT
 
     # ピュリストモードを切り替えるスクリプト
@@ -2469,7 +2476,7 @@ source ~/.bashrc
 
 トップページの上部にあるナビゲーションバーから、各コントロールパネルに移動できます：
 
-* **Home:** 各アプリケーションへのリンクが並ぶメインのトップページです。**Point-to-Point Link（ポイント・ツー・ポイントリンク）**パネルもここにあり、ネゴシエートされたリンク速度とMTU、現在`setting.inf`に設定されている`CycleTime`と`InfoCycle`の周期、そしてそれらの値がサポートするDSDおよびPCMの最高フォーマットを表示します。デスクトップのブラウザーで各セルにマウスカーソルを合わせると、その値の意味が表示されます。フォーマットの値は[**付録 9**](#22-appendix-9-optional-jumbo-frames-optimization)で説明されている「1サイクルにつき1回の送信」の原則から導かれるため、ジャンボフレームの各段階を進めるにつれて変化し、2つの周期はPuristモードとSuper Puristモードの間でも変化します。HostとTargetのMTUが食い違っている場合、パネルは赤色でそれを示します — これは、リンクは確立されているのにフルサイズのフレームがすべて破棄されるという、表面に現れない障害です。
+* **Home:** 各アプリケーションへのリンクが並ぶメインのトップページです。**Point-to-Point Link（ポイント・ツー・ポイントリンク）**パネルもここにあり、ネゴシエートされたリンク速度とMTU、現在`setting.inf`に設定されている`CycleTime`と`InfoCycle`の周期、そしてそれらの値がサポートするDSDおよびPCMの最高フォーマットを表示します。音楽の再生中はリンク自体も測定し、設定値の下に実測値を表示します。すなわち、Hostが実際に送信しているサイクル、Targetが実際に報告している間隔、平均フレームサイズ、そして使用中の帯域の割合です。測定値は最初の数秒間`~`が付きます。まだ確定した結果ではなく概算である間の印です。デスクトップブラウザでセルにカーソルを合わせると、その値の意味が表示されます。フォーマットの数値は[**付録 9**](#22-appendix-9-optional-jumbo-frames-optimization)で説明されている「1サイクルにつき1回の送信」という規則から導かれるため、ジャンボフレームの各段階を進めるにつれて変化し、2つのサイクル周期はPuristモードとSuper Puristモードの間で再び変わります。パネルに根拠がある場合、2種類のMTUの不具合が赤色で示されます。1つはHostとTargetでインターフェースのMTUが食い違っている場合——リンクは確立しているのにフルサイズのフレームがすべて破棄される、あの静かな障害です——もう1つはTarget自身の`EtherMTU`がそのインターフェースと異なる場合で、これはDirettaが上記のどの数値よりも小さいフレームを組むことを意味します。どちらも確認には**Purist Mode App**タブを開く必要があります。他のページはTargetに一切問い合わせないためです。それまでパネルは両端が一致しているものとして扱いますが、片方だけを変更したのでないかぎり実際に一致しています。
 
 * **Power Button（電源ボタン）:** 各ページの右上にある赤い電源ボタンから、**Reboot System**と**Power Off System**を選択できます。どちらも2台1組に作用し、まずTargetを、その数秒後にHostをシャットダウンします。Targetの操作はHost経由でしか行えないためです。いずれの操作も、実行前に確認を求められます。電源オフの後は、両方のマシンを手動で電源投入する必要があります。
 
@@ -2879,21 +2886,23 @@ sudo systemctl enable --now limit-speed-100m.service
 
 #### **ステップ 1：** インターフェースの準備
 
-カーネルのサポート状況を検証し、リンクテストを準備するために、一時的にネットワークインターフェースのMTUを強制的に9000にする必要があります。
+カーネルのサポートを確認し、リンクテストに備えるため、ネットワークインターフェースを一時的にこのカーネルが受け入れる最大のジャンボMTUへ強制的に設定します。このブロックはまず**10222**を試し、だめなら**9000**に戻ります。ドライバーは自身の上限を超えるMTUを何も変更せずにきっぱり拒否するので、大きいほうを先に試しても損はありません。
 
 **最初にTargetで実行し、次にHostで実行します：**
 
 ```bash
-sudo sh -c 'ip link set end0 down; sleep 2; ip link set end0 mtu 9000; ip link set end0 up'
+sudo sh -c 'ip link set end0 down; sleep 2; for m in 10222 9000; do ip link set end0 mtu $m 2>/dev/null && break; done; ip link set end0 up'
 end0_mtu=$(ip link show dev end0 | awk '/mtu/ {print $5}')
-if [[ "9000" == "$end0_mtu" ]]; then
-  echo "成功: カーネルはジャンボフレームをサポートしています。ステップ2に進んでください。"
-else
-  echo "停止: カーネルがジャンボフレームをサポートしていないようです。"
-fi
+case "$end0_mtu" in
+  10222) echo "成功: このカーネルはMTU 10222に対応しています。ステップ2へ進んでください。" ;;
+  9000)  echo "成功: このカーネルはMTU 9000に対応しています。ステップ2へ進んでください。" ;;
+  *)     echo "中止: このカーネルはジャンボMTUに対応していないようです。" ;;
+esac
 ```
 
 *HostまたはTargetの**いずれか**で「STOP」と表示された場合は、先に進まないでください。お使いのカーネルに必要なパッチが適用されていません。*
+
+*ここでは2台が一致している必要はありません。このステップが報告するのは各**カーネル**が受け入れる値であり、古いカーネルのPi 4が9000で止まるところをPi 5は10222まで到達します。ステップ2と3が、リンク自体を試験して2台を単一の段階に落ち着かせます。*
 
 ---
 
@@ -2902,17 +2911,20 @@ fi
 Target（`diretta-target`）にSSH接続し、以下のブロックを貼り付けます。
 
 ```bash
-# 1. リンク制限の検出（Full vs Medium vs Baby）
+# 1. このリンクが実際に運べる最大のMTUを検出する
 echo "リンクの性能をテストしています..."
-if ping -c 1 -w 1 -M "do" -s 8972 host &>/dev/null; then
+if ping -c 1 -w 1 -M "do" -s 10194 host &>/dev/null; then
+  NEW_MTU=10222
+  echo "SUCCESS: MTU 10222 supported."
+elif ping -c 1 -w 1 -M "do" -s 8972 host &>/dev/null; then
   NEW_MTU=9000
-  echo "成功: 完全なジャンボフレーム (9000 MTU) がサポートされています。"
+  echo "SUCCESS: MTU 9000 supported."
 elif ping -c 1 -w 1 -M "do" -s 3796 host &>/dev/null; then
   NEW_MTU=3824
-  echo "成功: 中間ジャンボフレーム (3824 MTU) がサポートされています。"
+  echo "SUCCESS: MTU 3824 supported."
 elif ping -c 1 -w 1 -M "do" -s 2004 host &>/dev/null; then
   NEW_MTU=2032
-  echo "成功: ベビージャンボフレーム (2032 MTU) がサポートされています。"
+  echo "SUCCESS: MTU 2032 supported."
 else
   echo "失敗: リンクはジャンボフレームをサポートできません。安全なデフォルト値に戻します。"
   sudo ip link set end0 mtu 1500
@@ -2956,20 +2968,23 @@ EOF
 Host（`diretta-host`）にSSH接続し、以下のブロックを貼り付けます。これにより、リンクの調査、永続的なネットワーク設定の構成、およびDirettaのアップデートが行われます。
 
 ```bash
-# 1. リンク制限の検出（Full vs Medium vs Baby）
+# 1. このリンクが実際に運べる最大のMTUを検出する
 echo "リンクの性能をテストしています..."
 # 手動によるMTU変更後、リンクが落ち着くまで少し時間を与える
 sleep 2
 
-if ping -c 1 -w 1 -M "do" -s 8972 target &>/dev/null; then
+if ping -c 1 -w 1 -M "do" -s 10194 target &>/dev/null; then
+  NEW_MTU=10222
+  echo "SUCCESS: MTU 10222 supported."
+elif ping -c 1 -w 1 -M "do" -s 8972 target &>/dev/null; then
   NEW_MTU=9000
-  echo "成功: 完全なジャンボフレーム (9000 MTU) がサポートされています。"
+  echo "SUCCESS: MTU 9000 supported."
 elif ping -c 1 -w 1 -M "do" -s 3796 target &>/dev/null; then
   NEW_MTU=3824
-  echo "成功: 中間ジャンボフレーム (3824 MTU) がサポートされています。"
+  echo "SUCCESS: MTU 3824 supported."
 elif ping -c 1 -w 1 -M "do" -s 2004 target &>/dev/null; then
   NEW_MTU=2032
-  echo "成功: ベビージャンボフレーム (2032 MTU) がサポートされています。"
+  echo "SUCCESS: MTU 2032 supported."
 else
   echo "失敗: リンクはジャンボフレームをサポートできません。安全なデフォルト値に戻します。"
   sudo ip link set end0 mtu 1500
@@ -3002,16 +3017,20 @@ EOF
   sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
 
   # 条件付きのCycleTimeおよびInfoCycleの最適化
-  if [ "$NEW_MTU" -eq 9000 ]; then
-    echo "最適化: 完全なジャンボフレームが検出されました。CycleTimeを1500usに緩和します。"
+  if [ "$NEW_MTU" -eq 10222 ]; then
+    echo "最適化: MTU 10222。CycleTimeを1500usに維持します。"
+    sudo sed -i 's/^CycleTime=.*/CycleTime=1500/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=150000/' /opt/diretta-alsa/setting.inf
+  elif [ "$NEW_MTU" -eq 9000 ]; then
+    echo "最適化: MTU 9000。CycleTimeを1500usに緩和します。"
     sudo sed -i 's/^CycleTime=.*/CycleTime=1500/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=150000/' /opt/diretta-alsa/setting.inf
   elif [ "$NEW_MTU" -eq 3824 ]; then
-    echo "最適化: 中間ジャンボフレームが検出されました。CycleTimeを1300usに緩和します。"
+    echo "最適化: MTU 3824。CycleTimeを1300usに緩和します。"
     sudo sed -i 's/^CycleTime=.*/CycleTime=1300/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=130000/' /opt/diretta-alsa/setting.inf
   else
-    echo "最適化: ベビージャンボフレームが検出されました。CycleTimeを700usに設定します。"
+    echo "最適化: MTU 2032。CycleTimeを700usに設定します。"
     sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=70000/' /opt/diretta-alsa/setting.inf
   fi
@@ -3021,35 +3040,45 @@ EOF
 }
 ```
 
+#### **ステップ 4：** MTUの変更を反映させるための再起動
+先にTargetを、次にHostを再起動してください：
+```bash
+sudo sync && sudo reboot
+```
+
+*これで設定は完了です。ボードが戻ってくるまで1〜2分かかります。以降は、これらの数値がどこから来ているのかの説明であり、あなたに何かを求めるものではありません。*
+
 ***
 > **MTUの段階と`CycleTime`に関する注記：**
-> `CycleTime`は選ぶものではなく、算出されるものです。各値は、サポートされる最高フォーマットが**1サイクルあたり1回の送信**に収まる範囲で最も緩和された設定です。上限は`(MTU - 2) / 2.8224`です。2バイトはDiretta自身のヘッダーで、IPもUDPも介さず、イーサタイプ`0xcb4b`の生のL2で動作します。2.8224バイト/µsはDSD256およびDXD（32ビット、352.8 kHz）のレートです。
+> `CycleTime`は選ぶものではなく、導かれるものです。各値は、サポートされる最高フォーマットが**1サイクルにつき1回の送信**に収まる範囲で最も緩やかな設定です。上限は`(MTU - 2) / 2.8224`で、2バイトはDiretta自身のヘッダーです——Direttaはethertype `0xcb4b`の生のL2で動作し、その下にIPもUDPもありません——そして2.8224バイト/µsはDSD256とDXD（32ビット、352.8 kHz）のレートです。この除数は9000までのすべてのMTUで制約となるフォーマットですが、10222では表の下に述べる理由により、より高速なフォーマットが制約となります。
 >
 > これらはすべて **`TargetProfileLimitTime=0`** を前提としており、上記の各設定ブロックがこの値を設定しているのはそのためです。AudioLinux の出荷時の値は `200` で、0 以外のどの値でも Diretta はサイクルの選択を自動ターゲットプロファイルに委ねます。その場合、Host はプロファイルが選んだサイクルで送信し、`CycleTime` はまったく効果を持ちません。MTU 3824 のリンクで測定したところ、`200` では `CycleTime` の値にかかわらず一律 2000 µs となり、DXD は 1 サイクルあたり 2 回、768 kHz は 4 回の送信を必要としました。これはまさに、これらの階層が防ごうとしている分割です。その代償として、`0` では Host の負荷が高いときにプロファイルが自動的に軽い処理へ切り替わる機能は失われます。今後これらのブロックを標準インストールから作り直す場合も、`0` は維持してください。
 >
 > | リンクMTU | `CycleTime` | 上限 | 備考 |
 > | :--- | :--- | :--- | :--- |
-> | 2032（ベビー） | 700 µs | 719 µs | 上限を下回る最大のきりの良い値 |
-> | 3824（中間） | 1300 µs | 1354 µs | 上限を下回る最大のきりの良い値 |
-> | 9000（フル） | 1500 µs | 3188 µs | 意図的に制限。2000 µsを超えると効果は逓減します |
+> | 2032 | 700 µs | 719 µs | 上限を下回る最大のきりのよい値 |
+> | 3824 | 1300 µs | 1354 µs | 上限を下回る最大のきりのよい値 |
+> | 9000 | 1500 µs | 3188 µs | 意図的に抑制。2000 µsを超えると効果は薄れます |
+> | 10222 | 1500 µs | 3621 µs | 9000と同じサイクル。増えたバイトはフォーマットを買うのであって、長いサイクルを買うのではありません |
+>
+> この4つは同じものの等級ではなく、ここでは名前も付けていません。これらは単に、Raspberry PiのEthernetドライバーがその時々に受信できるようパッチを当てられてきたサイズと、Pi 5の受信バッファがもとから許容するサイズにすぎません。お使いのペアがどれに到達できるかは、動かしているカーネルと所有しているボードで決まるものであり、選択するものではありません。ステップ2と3が、リンクの応答したサイズを採用し、そこから`CycleTime`を設定します。
 >
 > MTUが大きいほど、サイクルは長く静かになります。9000では、制限は算術ではなく試聴上の好みの問題になります。
 >
+> **なぜ10222では`CycleTime`をさらに緩めないのか。** 9000までの各段階は、増えたバイトをより長く静かなサイクルに費やします。この段階では代わりにペイロードに費やし、サイクルは1500 µsのまま保ちます。1サイクルが運べる量は`(MTU - 2) / CycleTime`バイト/µsで、MTU 9000では**5.9987**、10222では**6.8133**です。ステレオ32ビット768 kHzは**6.1440**を必要とするため、9000では218バイト足りずに1サイクル1送信を逃して2フレームに分割されますが、10222では余裕をもって収まります。このプラットフォーム上でこれ以上を要求するものはありません——DSD512と2xDXDはいずれも5.6448で、9000ですでに収まります——したがってこの段階はただ1つのフォーマットのために存在し、それも2フレームへの分割こそがこれらの段階が避けるために作られた断片化そのものだからです。
+>
+> **10222はハードウェア上の上限であり、きりのよい数字ではありません。** Raspberry Pi 5の`macb`ドライバーは10240バイトの受信バッファを持ちます。そこから14バイトのEthernetヘッダーと4バイトのFCSを引くと10222が残ります。したがってこれはPi 5が受け入れる最大のMTUであり、Pi 5を含むあらゆるペアが合意できる最高値ということになります。現行カーネルのPi 4ははるかに大きな値——16347——を公表しますが、本ガイドはその余裕を意図的に見送ります。それは、大きすぎるフレームが拒否されずに静かに壊れる領域に踏み込むうえ、このプラットフォームで再生できるフォーマットを何ら増やさないからです。10222は、**両方**のボードでそれを超えて安定だと証明するカーネルが現れるまで、本プロジェクトがサポートする上限です。
+>
+> The 10222 tier was measured on a Pi 5 Host and Pi 4 Target at both of the speeds these modes use. At 100 Mb/s: 12,000 single frames at 10194 bytes with none lost, sustained bursts at line rate in both directions, and no error counter moving at either end. At 10 Mb/s in Super Purist: a further 1,000 with none lost, round-tripping in 16.607 ms against the 16.39 ms that 10222 bytes of pure serialization predicts, with a standard deviation of six microseconds — nothing was ever retried or requeued. This matters even though Super Purist cannot use the bandwidth, because the MTU persists across a mode change: the link stays at 10222 while running at 10 Mb/s, so the tier has to be safe there regardless. It has not been soaked at 1 Gb/s, which is the Standard-mode speed on a system that has not applied [**Appendix 8**](#21-appendix-8-optional-purist-network-speeds).
+>
 > **なぜ3840ではなく3824なのか：** どちらも同じドライバーのバッファを異なる層で測っただけの数字であり、いずれもハードウェア自体の制約ではありませんでした。当時のカーネルでは、Raspberry Pi 4の`bcmgenet`ドライバーが受信レディ閾値を16バイト単位で`0xF0`に設定していました。つまり**3840バイトの受信バッファ**です。ここから2バイトのアライメント用パディングと14バイトのイーサネットヘッダーを引くと**3824**、すなわち収まる最大のL3 MTUになります。2032の段階も、標準の2048バイトバッファに対する同じ計算です。
 >
-> これらの段階が存在するのは、当時のカーネルがPi 4で扱えた最大のMTUがその値だったからであり、基板の能力が足りなかったからではありません。AudioLinuxのLTSリアルタイムカーネルには現在パッチが入っており、同じハードウェアで完全な**9000**が使えます。ブートローダーやEEPROMの変更も不要です。そのためステップ2と3のラダーは、かつて3824で止まっていたところで9000を見つけます。ただし、どのカーネルを入れるかには注意してください。パッチの適用状況は一様ではありません。本稿執筆時点では、LTSカーネル（`6.18.50-1`）が完全な9000に対応している一方、より新しい`7.1.8-1`には2032のパッチしか入っていません。カーネル更新メニューで*Audiolinux last RT LTO*を選ぶと、Pi 4では段階が2つ下がり、`CycleTime`は1500 µsから700 µsになります。小さい段階を残してあるのはこのためです。パッチが一部しか当たっていないカーネルも、まったく当たっていないカーネルも、従来どおりの上限で止まります。
+> これらの段階が存在するのは、当時のカーネルがPi 4で運べる最大のMTUがそれだったからであり、ボードにそれ以上の能力がなかったからではありません。AudioLinux LTSリアルタイムカーネルは現在、同じハードウェアに**9000**を与えるパッチを含んでおり、ブートローダーやEEPROMの変更は不要です。そのためステップ2と3のはしごは、かつて3824で止まっていたところで9000を見つけます。ただしどのカーネルを入れるかには注意してください。パッチの反映は一様ではありません。本稿執筆時点で、LTSカーネル（`6.18.50-2`）はPi 4を9000より先へ進めます——16347を公表し、本ガイドはそのうち10222を使用します——一方、より新しい`7.1.8-1`は2032のパッチしか持たないため、カーネル更新画面で*Audiolinux last RT LTO*を選ぶとPi 4は3段階を失い、`CycleTime`は1500 µsから700 µsへ下がります。Pi 5はどのカーネルでも10222に到達します。その上限がパッチではなくボードの性質だからです。小さい段階の記載を残しているのはそのためです。部分的にしかパッチが当たっていない、あるいはまったく当たっていないカーネルは、従来どおりの位置で止まります。
 >
-> どの段階になったとしても、MTUを手動で設定してはいけません。ドライバーは実際には受信できない値でも受け付け、その後フルサイズのフレームをすべて黙って破棄するため、リンクは上がって見えるのに音楽が流れなくなります。ステップ1はカーネルのサポートを確認しますが、それは必要条件であって十分条件ではありません。実際の上限は、ステップ2と3のpingラダーでしか判明しません。（上流の詳細：[raspberrypi/linux#5561](https://github.com/raspberrypi/linux/issues/5561)）
+> どの段階に落ち着いたとしても、MTUを手作業で設定しては絶対にいけません。ドライバーは実際には受信できない値でも受け付け、その後フルサイズのフレームをすべて黙って破棄するため、リンクは上がっているように見えて音楽はまったく流れません。ステップ1はカーネルのサポートを確認しますが、それは必要条件であって十分条件ではありません。本当の上限を見つけるのはステップ2と3のpingのはしごだけです。この差は以前より広がっています。16347を公表するPi 4のカーネルは、リンクが実際には運べない数千バイトを含め、その値までのあらゆる設定を受け付けてしまいます。（上流の詳細: [raspberrypi/linux#5561](https://github.com/raspberrypi/linux/issues/5561)）
 >
 > Super Puristモード（付録8）は、MTUにかかわらずこれらの値を1800 µsで上書きします。10 Mbpsのリンクにより、サポートされるフォーマットはDSD64と32ビット、96 kHzに制限されます。
 ***
-
-#### **ステップ 4：** MTUの変更を反映するための再起動
-最初にTargetを再起動し、次にHostを再起動します：
-```bash
-sudo sync && sudo reboot
-```
-
 >
 >
 > ---

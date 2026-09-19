@@ -1992,8 +1992,15 @@ En el **Diretta Target**, crearemos un nuevo usuario con permisos muy limitados.
     # Informar nuestra MTU para que el Host pueda señalar un enlace cuyos dos extremos no coinciden
     MTU=$(cat /sys/class/net/end0/mtu 2>/dev/null || echo 0)
 
+    # Y la MTU propia de Diretta, que es la que decide si la carga útil de un
+    # ciclo cabe en una sola trama. El paso 2 escribe ambas juntas, de modo que
+    # normalmente coinciden, pero nada lo impone después, y cuando divergen el
+    # Host informaría de un ciclo de la mitad de su duración real.
+    ETHER_MTU=$(awk -F= '/^EtherMTU=/ {print $2}' /opt/diretta-alsa-target/diretta_app_target_setting.inf 2>/dev/null)
+    [ -n "$ETHER_MTU" ] || ETHER_MTU=0
+
     # Mostrar todos los indicadores de estado como un único objeto JSON
-    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED, \"mtu\": $MTU}"
+    echo "{\"purist_mode_active\": $IS_ACTIVE, \"auto_start_enabled\": $IS_AUTO_ENABLED, \"license_needs_activation\": $LICENSE_LIMITED, \"mtu\": $MTU, \"ether_mtu\": $ETHER_MTU}"
     EOT
 
     # Script para alternar el Modo Purista
@@ -2469,7 +2476,7 @@ Presione `CTRL-C` una vez que esté satisfecho de que las cosas funcionan como s
 
 Desde la página de inicio, una barra de navegación en la parte superior le guiará a los diferentes paneles de control:
 
-* **Home:** La página principal con enlaces a las diferentes aplicaciones. También incluye el panel **Point-to-Point Link**, que muestra la velocidad de enlace negociada y la MTU, los periodos `CycleTime` e `InfoCycle` configurados actualmente en `setting.inf`, y los formatos DSD y PCM más altos que esos valores admiten. Al pasar el ratón por encima de cualquier celda en un navegador de escritorio se explica qué significa ese valor. Las cifras de formato se derivan de la regla de una transmisión por ciclo descrita en el [**Apéndice 9**](#22-apéndice-9-optimización-de-tramas-jumbo-opcional), por lo que cambian a medida que avanza por los niveles de tramas jumbo, y los dos periodos de ciclo cambian además entre los modos Purist y Super Purist. Si el Host y el Target llegaran a discrepar sobre la MTU, el panel lo indica en rojo — ese es el fallo silencioso en el que el enlace se establece pero se descarta cada trama de tamaño completo.
+* **Home:** La página de inicio principal con enlaces a las distintas aplicaciones. También incluye el panel **Point-to-Point Link**, que muestra la velocidad de enlace negociada y la MTU, los periodos `CycleTime` e `InfoCycle` definidos actualmente en `setting.inf`, y los formatos DSD y PCM más altos que esos valores permiten. Mientras suena la música también mide el propio enlace y muestra lo que encuentra bajo cada valor configurado: el ciclo en el que el Host transmite realmente, el intervalo al que el Target informa realmente, el tamaño medio de trama y la porción del cable en uso. Un valor medido lleva una `~` durante sus primeros segundos, mientras sigue siendo una aproximación y no un hallazgo. Al pasar el cursor sobre cualquier celda en un navegador de escritorio se explica qué significa ese valor. Las cifras de formato se derivan de la regla de una sola transmisión por ciclo descrita en [**Apéndice 9**](#22-apéndice-9-optimización-de-tramas-jumbo-opcional), por lo que cambian a medida que avanza por los niveles de tramas jumbo, y los dos periodos de ciclo vuelven a cambiar entre los modos Purist y Super Purist. Dos fallos de MTU se señalan en rojo cuando el panel tiene pruebas de ellos: que el Host y el Target discrepen sobre la MTU de la interfaz — el fallo silencioso en el que el enlace se establece pero se descarta cada trama de tamaño completo — y que la `EtherMTU` del propio Target difiera de su propia interfaz, lo que deja a Diretta formando tramas más pequeñas de lo que suponen todas las cifras anteriores. Ambos necesitan una visita a la pestaña **Purist Mode App** para comprobarse, porque ninguna otra página pregunta nada al Target; hasta entonces el panel da por hecho que los dos extremos coinciden, como así será salvo que haya cambiado uno de ellos por separado.
 
 * **Botón de encendido:** El botón rojo de encendido en la esquina superior derecha de cada página ofrece **Reboot System** y **Power Off System**. Ambos actúan sobre el par, apagando primero el Target y unos segundos después el Host, ya que solo se puede acceder al Target a través del Host. Cada opción pide confirmación antes de hacer nada. Tras un apagado, ambas máquinas deben encenderse a mano.
 
@@ -2879,21 +2886,23 @@ Este sección optimiza el transporte para alta eficiencia de ancho de banda.
 
 #### **Paso 1:** Preparar interfaces
 
-Debemos forzar temporalmente las interfaces de red a un MTU de 9000 para verificar el soporte del kernel y prepararnos para la prueba de enlace.
+Debemos forzar temporalmente las interfaces de red a la mayor MTU jumbo que acepte este kernel, para verificar la compatibilidad del kernel y preparar la prueba de enlace. El bloque prueba **10222** y recurre a **9000**; un controlador rechaza de plano una MTU superior a su propio techo, sin cambiar nada, así que probar primero la mayor no cuesta nada.
 
 **Ejecute esto en el Target primero, luego en el Host:**
 
 ```bash
-sudo sh -c 'ip link set end0 down; sleep 2; ip link set end0 mtu 9000; ip link set end0 up'
+sudo sh -c 'ip link set end0 down; sleep 2; for m in 10222 9000; do ip link set end0 mtu $m 2>/dev/null && break; done; ip link set end0 up'
 end0_mtu=$(ip link show dev end0 | awk '/mtu/ {print $5}')
-if [[ "9000" == "$end0_mtu" ]]; then
-  echo "ÉXITO: El kernel admite tramas Jumbo. Proceda al Paso 2."
-else
-  echo "ALTO: Su kernel no parece admitir tramas Jumbo."
-fi
+case "$end0_mtu" in
+  10222) echo "ÉXITO: Este kernel admite MTU 10222. Continúe con el paso 2." ;;
+  9000)  echo "ÉXITO: Este kernel admite MTU 9000. Continúe con el paso 2." ;;
+  *)     echo "ALTO: Este kernel no parece admitir ninguna MTU jumbo." ;;
+esac
 ```
 
 *Si ve "ALTO" en **cualquiera** de los dos (Host o Target), no proceda. Su kernel no tiene el parche requerido.*
+
+*Las dos máquinas no tienen por qué coincidir aquí. Este paso informa de lo que aceptará cada **kernel**, y un Pi 5 alcanza 10222 donde un Pi 4 con un kernel más antiguo se detiene en 9000. Los pasos 2 y 3 fijan la pareja en un único nivel probando el enlace en sí.*
 
 ---
 
@@ -2902,17 +2911,20 @@ fi
 Conéctese por SSH al Target (`diretta-target`) y pegue el siguiente bloque.
 
 ```bash
-# 1. Detectar límite de enlace (Completo vs Medio vs Baby)
+# 1. Detectar la mayor MTU que este enlace transportará realmente
 echo "Probando la capacidad del enlace..."
-if ping -c 1 -w 1 -M "do" -s 8972 host &>/dev/null; then
+if ping -c 1 -w 1 -M "do" -s 10194 host &>/dev/null; then
+  NEW_MTU=10222
+  echo "SUCCESS: MTU 10222 supported."
+elif ping -c 1 -w 1 -M "do" -s 8972 host &>/dev/null; then
   NEW_MTU=9000
-  echo "ÉXITO: Tramas Jumbo completas (MTU 9000) admitidas."
+  echo "SUCCESS: MTU 9000 supported."
 elif ping -c 1 -w 1 -M "do" -s 3796 host &>/dev/null; then
   NEW_MTU=3824
-  echo "ÉXITO: Tramas Jumbo medianas (MTU 3824) admitidas."
+  echo "SUCCESS: MTU 3824 supported."
 elif ping -c 1 -w 1 -M "do" -s 2004 host &>/dev/null; then
   NEW_MTU=2032
-  echo "ÉXITO: Tramas Jumbo pequeñas (MTU 2032) admitidas."
+  echo "SUCCESS: MTU 2032 supported."
 else
   echo "FALLO: El enlace no admite tramas Jumbo. Revirtiendo a los valores predeterminados seguros."
   sudo ip link set end0 mtu 1500
@@ -2956,20 +2968,23 @@ EOF
 Conéctese por SSH al Host (`diretta-host`) y pegue el siguiente bloque. Probará el enlace, configurará los ajustes permanentes de red y actualizará Diretta.
 
 ```bash
-# 1. Detectar límite de enlace (Completo vs Medio vs Baby)
+# 1. Detectar la mayor MTU que este enlace transportará realmente
 echo "Probando la capacidad del enlace..."
 # Dar un momento para que el enlace se estabilice después del cambio manual de MTU
 sleep 2
 
-if ping -c 1 -w 1 -M "do" -s 8972 target &>/dev/null; then
+if ping -c 1 -w 1 -M "do" -s 10194 target &>/dev/null; then
+  NEW_MTU=10222
+  echo "SUCCESS: MTU 10222 supported."
+elif ping -c 1 -w 1 -M "do" -s 8972 target &>/dev/null; then
   NEW_MTU=9000
-  echo "ÉXITO: Tramas Jumbo completas (MTU 9000) admitidas."
+  echo "SUCCESS: MTU 9000 supported."
 elif ping -c 1 -w 1 -M "do" -s 3796 target &>/dev/null; then
   NEW_MTU=3824
-  echo "ÉXITO: Tramas Jumbo medianas (MTU 3824) admitidas."
+  echo "SUCCESS: MTU 3824 supported."
 elif ping -c 1 -w 1 -M "do" -s 2004 target &>/dev/null; then
   NEW_MTU=2032
-  echo "ÉXITO: Tramas Jumbo pequeñas (MTU 2032) admitidas."
+  echo "SUCCESS: MTU 2032 supported."
 else
   echo "FALLO: El enlace no admite tramas Jumbo. Revirtiendo a los valores predeterminados seguros."
   sudo ip link set end0 mtu 1500
@@ -3002,16 +3017,20 @@ EOF
   sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
 
   # Optimización condicional de CycleTime e InfoCycle
-  if [ "$NEW_MTU" -eq 9000 ]; then
-    echo "Optimización: Tramas Jumbo completas detectadas. Relajando CycleTime a 1500us."
+  if [ "$NEW_MTU" -eq 10222 ]; then
+    echo "Optimización: MTU 10222. Se mantiene CycleTime en 1500us."
+    sudo sed -i 's/^CycleTime=.*/CycleTime=1500/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=150000/' /opt/diretta-alsa/setting.inf
+  elif [ "$NEW_MTU" -eq 9000 ]; then
+    echo "Optimización: MTU 9000. Se relaja CycleTime a 1500us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=1500/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=150000/' /opt/diretta-alsa/setting.inf
   elif [ "$NEW_MTU" -eq 3824 ]; then
-    echo "Optimización: Tramas Jumbo medianas detectadas. Relajando CycleTime a 1300us."
+    echo "Optimización: MTU 3824. Se relaja CycleTime a 1300us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=1300/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=130000/' /opt/diretta-alsa/setting.inf
   else
-    echo "Optimización: Tramas Jumbo pequeñas detectadas. Estableciendo CycleTime a 700us."
+    echo "Optimización: MTU 2032. Se ajusta CycleTime a 700us."
     sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=70000/' /opt/diretta-alsa/setting.inf
   fi
@@ -3021,35 +3040,45 @@ EOF
 }
 ```
 
+#### **Paso 4:** Reiniciar para aplicar los cambios de MTU
+Reinicie primero el Target y después el Host:
+```bash
+sudo sync && sudo reboot
+```
+
+*Con esto finaliza la configuración. Las placas tardan uno o dos minutos en volver; lo que sigue explica de dónde salen estas cifras y no le pide nada.*
+
 ***
 > **Nota sobre los niveles de MTU y `CycleTime`:**
-> `CycleTime` se deriva, no se elige. Cada valor es el ajuste más relajado con el que el formato más exigente admitido todavía cabe en una **única transmisión por ciclo**. El límite es `(MTU - 2) / 2.8224`, donde 2 bytes son la propia cabecera de Diretta — funciona en L2 puro sobre el ethertype `0xcb4b`, sin IP ni UDP por debajo — y 2,8224 bytes/µs es la tasa de DSD256 y DXD (32 bits, 352,8 kHz).
+> `CycleTime` se deriva, no se elige. Cada valor es el ajuste más holgado con el que el formato más alto admitido todavía cabe en una **única transmisión por ciclo**. El techo es `(MTU - 2) / 2.8224`, donde 2 bytes son la cabecera propia de Diretta — funciona en L2 puro sobre el ethertype `0xcb4b`, sin IP ni UDP por debajo — y 2.8224 bytes/µs es la tasa de DSD256 y DXD (32 bits, 352.8 kHz). Ese divisor es el formato vinculante en toda MTU hasta 9000; en 10222 vincula en su lugar uno más rápido, por la razón expuesta bajo la tabla.
 >
 > Todo esto depende de **`TargetProfileLimitTime=0`**, y por eso cada bloque de configuración anterior lo establece. AudioLinux distribuye `200`, y con cualquier valor distinto de cero Diretta cede la elección del ciclo a su perfil de destino automático: el Host transmite entonces con un ciclo elegido por ese perfil y `CycleTime` deja de tener efecto alguno. Medido en un enlace con MTU 3824, `200` impone 2000 µs fijos diga lo que diga `CycleTime` — suficiente para que DXD necesite dos transmisiones por ciclo y 768 kHz cuatro, justo la fragmentación que estos niveles existen para evitar. A cambio, `0` renuncia al repliegue automático del perfil hacia un procesamiento más ligero cuando el Host está cargado. Si alguna vez actualiza estos bloques a partir de una instalación de fábrica, conserve el `0`.
 >
 > | MTU del enlace | `CycleTime` | Límite | Notas |
 > | :--- | :--- | :--- | :--- |
-> | 2032 (Baby) | 700 µs | 719 µs | Mayor valor redondo por debajo del límite |
-> | 3824 (Medio) | 1300 µs | 1354 µs | Mayor valor redondo por debajo del límite |
-> | 9000 (Completo) | 1500 µs | 3188 µs | Limitado a propósito; más allá de 2000 µs los beneficios decrecen |
+> | 2032 | 700 µs | 719 µs | Mayor valor redondo por debajo del techo |
+> | 3824 | 1300 µs | 1354 µs | Mayor valor redondo por debajo del techo |
+> | 9000 | 1500 µs | 3188 µs | Limitado deliberadamente; más allá de 2000 µs los beneficios decrecen |
+> | 10222 | 1500 µs | 3621 µs | Mismo ciclo que 9000; los bytes extra compran un formato, no un ciclo más largo |
+>
+> Estos cuatro no son grados de una misma cosa y aquí no llevan nombre. Son simplemente los tamaños que el controlador Ethernet de una Raspberry Pi ha sido parcheado para recibir en un momento u otro, más el que el búfer de recepción de una Pi 5 permite de entrada. Cuál de ellos puede alcanzar su pareja se deduce del kernel que ejecuta y de las placas que posee; no es algo que usted seleccione. Los pasos 2 y 3 toman el tamaño al que responda el enlace y fijan `CycleTime` a partir de él.
 >
 > Una MTU mayor permite un ciclo más largo y silencioso. En 9000 el límite deja de ser aritmético y pasa a ser una preferencia de escucha.
 >
+> **Por qué 10222 no relaja más el `CycleTime`.** Todo nivel hasta 9000 gasta sus bytes adicionales en un ciclo más largo y silencioso. Este los gasta en carga útil y mantiene el ciclo en 1500 µs. Lo que un ciclo puede transportar es `(MTU - 2) / CycleTime` bytes por µs: **5.9987** con MTU 9000 y **6.8133** con 10222. El estéreo de 32 bits a 768 kHz necesita **6.1440**, de modo que a 9000 se queda a 218 bytes de la transmisión única por ciclo y se envía como dos tramas; a 10222 cabe con margen. Nada más en esta plataforma pide más — DSD512 y 2xDXD necesitan ambos 5.6448 y ya caben a 9000 —, así que este nivel existe para exactamente un formato, y solo porque dividirlo en dos tramas es la fragmentación que estos niveles se crearon para evitar.
+>
+> **10222 es un techo de hardware, no una cifra redonda.** El controlador `macb` de la Raspberry Pi 5 tiene un búfer de recepción de 10240 bytes; reste los 14 bytes de cabecera Ethernet y los 4 bytes de FCS y quedan 10222. Es por tanto la mayor MTU que una Pi 5 aceptará siquiera, y así el valor más alto en el que puede convenir cualquier pareja que incluya una. Una Pi 4 con un kernel actual anuncia bastante más — 16347 — pero esta guía declina ese margen deliberadamente: alcanza una banda en la que las tramas sobredimensionadas se corrompen en silencio en lugar de ser rechazadas, y no compra ningún formato que esta plataforma pueda reproducir. 10222 es el techo que este proyecto admite hasta que un kernel demuestre ser estable por encima en **ambas** placas.
+>
+> The 10222 tier was measured on a Pi 5 Host and Pi 4 Target at both of the speeds these modes use. At 100 Mb/s: 12,000 single frames at 10194 bytes with none lost, sustained bursts at line rate in both directions, and no error counter moving at either end. At 10 Mb/s in Super Purist: a further 1,000 with none lost, round-tripping in 16.607 ms against the 16.39 ms that 10222 bytes of pure serialization predicts, with a standard deviation of six microseconds — nothing was ever retried or requeued. This matters even though Super Purist cannot use the bandwidth, because the MTU persists across a mode change: the link stays at 10222 while running at 10 Mb/s, so the tier has to be safe there regardless. It has not been soaked at 1 Gb/s, which is the Standard-mode speed on a system that has not applied [**Appendix 8**](#21-appendix-8-optional-purist-network-speeds).
+>
 > **¿Por qué 3824 y no 3840?** Ambos son el mismo búfer del controlador medido en dos capas distintas, y ninguno fue nunca una propiedad del silicio. En los kernels de entonces, el controlador `bcmgenet` de la Raspberry Pi 4 fijaba su umbral de recepción en `0xF0` en unidades de 16 bytes: un **búfer de recepción de 3840 bytes**. Reste los 2 bytes de relleno de alineación y los 14 bytes de la cabecera Ethernet y obtendrá **3824**, la mayor MTU de nivel 3 que cabe; el nivel de 2032 es la misma aritmética sobre el búfer original de 2048 bytes.
 >
-> Estos niveles existen porque eran las MTU más grandes que el kernel de la época transportaba en una Pi 4, no porque la placa no diera para más. El kernel de tiempo real LTS de AudioLinux incluye ahora un parche que da al mismo hardware los **9000** completos, sin cambiar el bootloader ni la EEPROM, de modo que la escalera de los Pasos 2 y 3 encuentra 9000 donde antes se detenía en 3824. Fíjese, eso sí, en qué kernel instala: el parche ha llegado de forma desigual. En el momento de escribir esto, el kernel LTS (`6.18.50-1`) admite los 9000 completos mientras que el más reciente `7.1.8-1` solo lleva el parche de 2032, así que elegir *Audiolinux last RT LTO* en el actualizador de kernel le cuesta a una Pi 4 dos niveles y baja `CycleTime` de 1500 µs a 700 µs. Por eso los niveles menores siguen documentados: un kernel parcheado a medias, o sin parchear, se detiene donde siempre lo hizo.
+> Estos niveles existen porque esas eran las mayores MTU que el kernel entonces vigente transportaba en una Pi 4, no porque la placa no pudiera dar más de sí. El kernel de tiempo real AudioLinux LTS incorpora ahora un parche que da **9000** al mismo hardware, sin cambiar el bootloader ni la EEPROM, de modo que la escalera de los pasos 2 y 3 encuentra 9000 donde antes se detenía en 3824. Fíjese, eso sí, en qué kernel instala: el parche ha llegado de forma desigual. Al momento de escribir esto, el kernel LTS (`6.18.50-2`) lleva una Pi 4 más allá de 9000 — anuncia 16347, de los cuales esta guía usa 10222 — mientras que el más reciente `7.1.8-1` solo lleva el parche de 2032, así que elegir *Audiolinux last RT LTO* en el actualizador de kernel le cuesta tres niveles a una Pi 4 y baja el `CycleTime` de 1500 µs a 700 µs. Una Pi 5 alcanza 10222 con cualquiera de ellos, porque su techo es una propiedad de la placa y no del parche. Por eso los niveles menores siguen documentados: un kernel parcheado en parte, o nada en absoluto, sigue deteniéndose donde siempre lo hizo.
 >
-> Sea cual sea el nivel que le corresponda, nunca fije la MTU a mano. El controlador acepta valores que en realidad no puede recibir y luego descarta silenciosamente todas las tramas de tamaño completo, dejando un enlace que parece activo pero no transporta música. El Paso 1 confirma la compatibilidad del kernel, lo cual es necesario pero no suficiente; solo la escalera de pings de los Pasos 2 y 3 encuentra el techo real. (Detalle original: [raspberrypi/linux#5561](https://github.com/raspberrypi/linux/issues/5561).)
+> Sea cual sea el nivel en el que acabe, nunca fije una MTU a mano. El controlador acepta valores que en realidad no puede recibir y luego descarta en silencio cada trama de tamaño completo, dejando un enlace que parece activo pero no transporta música. El paso 1 confirma la compatibilidad del kernel, que es necesaria pero no suficiente; solo la escalera de pings de los pasos 2 y 3 encuentra el techo real. Esa brecha es más ancha que antes: un kernel de Pi 4 que anuncia 16347 aceptará cualquier valor hasta ahí, incluidos varios miles de bytes que el enlace no puede transportar realmente. (Detalle upstream: [raspberrypi/linux#5561](https://github.com/raspberrypi/linux/issues/5561).)
 >
 > El modo Super Purista (Apéndice 8) sustituye estos valores por 1800 µs con cualquier MTU. Su enlace de 10 Mbps limita los formatos admitidos a DSD64 y 32 bits, 96 kHz.
 ***
-
-#### **Paso 4:** Reiniciar para aplicar los cambios de MTU
-Reinicie el Target primero, luego el Host:
-```bash
-sudo sync && sudo reboot
-```
-
 >
 >
 > ---
