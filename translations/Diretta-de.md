@@ -3013,8 +3013,8 @@ EOF
   # Zielprofil den Zyklus und ignoriert stillschweigend jeden Wert weiter unten.
   sudo sed -i 's/^TargetProfileLimitTime=.*/TargetProfileLimitTime=0/' /opt/diretta-alsa/setting.inf
 
-  # FlexCycle für Jumbo Frames immer aktivieren, um Stabilität zu gewährleisten
-  sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
+  # FlexCycle deaktivieren: festes Senderaster, Taktdrift wird über die Framegröße ausgeglichen
+  sudo sed -i 's/^FlexCycle=.*/FlexCycle=disable/' /opt/diretta-alsa/setting.inf
 
   # Konditionale Optimierung von CycleTime und InfoCycle
   if [ "$NEW_MTU" -eq 10222 ]; then
@@ -3030,9 +3030,9 @@ EOF
     sudo sed -i 's/^CycleTime=.*/CycleTime=1300/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=130000/' /opt/diretta-alsa/setting.inf
   else
-    echo "Optimierung: MTU 2032. CycleTime wird auf 700us gesetzt."
-    sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
-    sudo sed -i 's/^InfoCycle=.*/InfoCycle=70000/' /opt/diretta-alsa/setting.inf
+    echo "Optimierung: MTU 2032. CycleTime wird auf 696us gesetzt."
+    sudo sed -i 's/^CycleTime=.*/CycleTime=696/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=69600/' /opt/diretta-alsa/setting.inf
   fi
 
   sudo systemctl restart diretta_alsa
@@ -3050,16 +3050,18 @@ sudo sync && sudo reboot
 
 ***
 > **Hinweis zu MTU-Stufen und `CycleTime`:**
-> `CycleTime` wird abgeleitet, nicht gewählt. Jeder Wert ist die entspannteste Einstellung, bei der das höchste unterstützte Format noch in eine **einzige Übertragung pro Zyklus** passt. Die Obergrenze ist `(MTU - 2) / 2.8224`, wobei 2 Byte Direttas eigener Header sind — es läuft als rohes L2 auf Ethertype `0xcb4b`, ohne IP oder UDP darunter — und 2.8224 Byte/µs die Rate von DSD256 und DXD (32 Bit, 352.8 kHz) ist. Dieser Divisor ist bei jeder MTU bis 9000 das bindende Format; bei 10222 bindet stattdessen ein schnelleres, aus dem unter der Tabelle dargelegten Grund.
+> `CycleTime` wird abgeleitet, nicht gewählt. Jeder Wert ist die entspannteste Einstellung, bei der das höchste unterstützte Format noch in eine **einzige Übertragung pro Zyklus** passt. Die Obergrenze ist `8 × floor((MTU - 2) / 8) / (2.8224 × 1.03)`, wobei 2 Byte Direttas eigener Header sind — es läuft als rohes L2 auf Ethertype `0xcb4b`, ohne IP oder UDP darunter — und 2.8224 Byte/µs die Rate von DSD256 und DXD (32 Bit, 352.8 kHz) ist; `floor` rundet die Nutzlast auf ganze 8-Byte-Stereo-Samples ab, und 1.03 ist die 3-%-Reserve, die Diretta bei deaktiviertem `FlexCycle` für Taktdrift freihält. Dieser Divisor ist bei jeder MTU bis 9000 das bindende Format; bei 10222 bindet stattdessen ein schnelleres, aus dem unter der Tabelle dargelegten Grund.
 >
 > All dies hängt von **`TargetProfileLimitTime=0`** ab, weshalb jeder Konfigurationsblock oben diesen Wert setzt. AudioLinux liefert `200` aus, und bei jedem Wert ungleich null überlässt Diretta die Wahl des Zyklus seinem automatischen Zielprofil: Der Host sendet dann mit einem vom Profil gewählten Zyklus und `CycleTime` bleibt vollkommen wirkungslos. Auf einer MTU-3824-Verbindung gemessen erzwingt `200` unabhängig von `CycleTime` konstante 2000 µs — genug, dass DXD zwei Übertragungen pro Zyklus benötigt und 768 kHz vier, also genau die Fragmentierung, die diese Stufen verhindern sollen. Der Preis dafür ist, dass `0` auf den automatischen Rückfall des Profils auf leichtere Verarbeitung bei hoher Host-Last verzichtet. Falls Sie diese Blöcke jemals anhand einer Standardinstallation auffrischen, behalten Sie die `0` bei.
 >
+> **Warum `FlexCycle` deaktiviert ist.** Aktiviert hält Diretta jeden Frame gleich groß und folgt dem Takt des Targets, indem es das Sendetiming nachführt, sodass aufeinanderfolgende Zyklen gemeinsam um mehrere Mikrosekunden driften. Deaktiviert sendet der Host auf einem festen Raster und gleicht den Taktunterschied aus, indem er gelegentlich ein Sample hinzufügt oder weglässt. Gemessen an einem Pi-5-Host und Pi-4-Target auf jeder Stufe der Tabelle unten, bei MTU 1500 mit beiden Zyklen und in Super Purist, war das feste Raster nie schlechter und senkte den Paket-Jitter bei den längeren Zyklen um das 1.5- bis 10-Fache — ein Interquartilsabstand von 4.0 µs wurde bei 1800 µs zu 0.4 µs —, ohne Underruns oder Fehler in einem der zehnminütigen Läufe. Der einzige Preis ist die 3-%-Reserve in der Formel oben, weshalb die 2032-Stufe 696 µs statt 700 µs verwendet.
+>
 > | Link-MTU | `CycleTime` | Obergrenze | Anmerkungen |
 > | :--- | :--- | :--- | :--- |
-> | 2032 | 700 µs | 719 µs | Größter runder Wert unter der Obergrenze |
-> | 3824 | 1300 µs | 1354 µs | Größter runder Wert unter der Obergrenze |
-> | 9000 | 1500 µs | 3188 µs | Bewusst gedeckelt; jenseits von 2000 µs nimmt der Nutzen ab |
-> | 10222 | 1500 µs | 3621 µs | Gleicher Zyklus wie 9000; die zusätzlichen Bytes kaufen ein Format, keinen längeren Zyklus |
+> | 2032 | 696 µs | 696 µs | Die Obergrenze selbst; 700 µs passen in die MTU, nicht aber in die 3-%-Reserve |
+> | 3824 | 1300 µs | 1312 µs | Größter runder Wert unter der Obergrenze |
+> | 9000 | 1500 µs | 3093 µs | Bewusst gedeckelt; jenseits von 2000 µs nimmt der Nutzen ab |
+> | 10222 | 1500 µs | 3514 µs | Gleicher Zyklus wie 9000; die zusätzlichen Bytes kaufen ein Format, keinen längeren Zyklus |
 >
 > Diese vier sind keine Abstufungen einer Sache und tragen hier keine Namen. Sie sind schlicht die Größen, für deren Empfang der Ethernet-Treiber eines Raspberry Pi zu dieser oder jener Zeit gepatcht wurde, zuzüglich derjenigen, die der Empfangspuffer eines Pi 5 von sich aus erlaubt. Welche davon Ihr Paar erreicht, ergibt sich aus dem Kernel, den Sie betreiben, und den Boards, die Sie besitzen; es ist nichts, was Sie auswählen. Die Schritte 2 und 3 nehmen die Größe, auf die die Verbindung antwortet, und leiten daraus die `CycleTime` ab.
 >
@@ -3073,7 +3075,7 @@ sudo sync && sudo reboot
 >
 > **Warum 3824 und nicht 3840?** Beides ist derselbe Treiberpuffer, nur auf zwei verschiedenen Schichten gemessen — und keines von beiden war je eine Eigenschaft der Hardware. In den Kerneln der damaligen Zeit setzte der `bcmgenet`-Treiber des Raspberry Pi 4 seine RX-Ready-Schwelle auf `0xF0` in Einheiten zu 16 Byte — also einen **3840 Byte großen Empfangspuffer**. Zieht man die 2 Byte Ausrichtungs-Padding und die 14 Byte des Ethernet-Headers ab, bleiben **3824**, die größte hineinpassende L3-MTU; die 2032er-Stufe ist dieselbe Rechnung mit dem serienmäßigen 2048-Byte-Puffer.
 >
-> Diese Stufen existieren, weil das die größten MTUs waren, die der jeweils vorherrschende Kernel auf einem Pi 4 trug — nicht, weil das Board nicht mehr gekonnt hätte. Der AudioLinux-LTS-Echtzeitkernel trägt inzwischen einen Patch, der dieselbe Hardware weit über **9000** hinausbringt, ohne Bootloader- oder EEPROM-Änderung: Der LTS-Kernel, den diese Images mitbringen (`6.18.50-2`), meldet auf einem Pi 4 16347, wovon dieser Leitfaden **10222** nutzt. So findet die Leiter in den Schritten 2 und 3 auf beiden Boards 10222, wo sie einst bei 3824 stehen blieb, und diese Images werden bereits mit dieser Stufe ausgeliefert. Achten Sie jedoch darauf, welchen Kernel Sie installieren: Der Patch ist ungleichmäßig angekommen. Der neuere `7.1.8-1` trägt nur den 2032-Patch, sodass die Wahl von *Audiolinux last RT LTO* im Kernel-Updater einen Pi 4 drei Stufen kostet und die `CycleTime` von 1500 µs auf 700 µs senkt. Ein Pi 5 erreicht 10222 mit jedem von ihnen, denn seine Obergrenze ist eine Eigenschaft des Boards und nicht des Patches. Deshalb bleiben die kleineren Stufen dokumentiert: Ein teilweise oder gar nicht gepatchter Kernel bleibt weiterhin dort stehen, wo er immer stehen blieb.
+> Diese Stufen existieren, weil das die größten MTUs waren, die der jeweils vorherrschende Kernel auf einem Pi 4 trug — nicht, weil das Board nicht mehr gekonnt hätte. Der AudioLinux-LTS-Echtzeitkernel trägt inzwischen einen Patch, der dieselbe Hardware weit über **9000** hinausbringt, ohne Bootloader- oder EEPROM-Änderung: Der LTS-Kernel, den diese Images mitbringen (`6.18.50-2`), meldet auf einem Pi 4 16347, wovon dieser Leitfaden **10222** nutzt. So findet die Leiter in den Schritten 2 und 3 auf beiden Boards 10222, wo sie einst bei 3824 stehen blieb, und diese Images werden bereits mit dieser Stufe ausgeliefert. Achten Sie jedoch darauf, welchen Kernel Sie installieren: Der Patch ist ungleichmäßig angekommen. Der neuere `7.1.8-1` trägt nur den 2032-Patch, sodass die Wahl von *Audiolinux last RT LTO* im Kernel-Updater einen Pi 4 drei Stufen kostet und die `CycleTime` von 1500 µs auf 696 µs senkt. Ein Pi 5 erreicht 10222 mit jedem von ihnen, denn seine Obergrenze ist eine Eigenschaft des Boards und nicht des Patches. Deshalb bleiben die kleineren Stufen dokumentiert: Ein teilweise oder gar nicht gepatchter Kernel bleibt weiterhin dort stehen, wo er immer stehen blieb.
 >
 > Auf welcher Stufe Sie auch landen: Setzen Sie eine MTU niemals von Hand. Der Treiber akzeptiert Werte, die er tatsächlich nicht empfangen kann, verwirft danach still jeden Frame voller Größe und hinterlässt eine Verbindung, die zu stehen scheint, aber keine Musik trägt. Schritt 1 bestätigt die Kernel-Unterstützung, was notwendig, aber nicht hinreichend ist; erst die Ping-Leiter in den Schritten 2 und 3 findet die wirkliche Obergrenze. Diese Lücke ist größer als früher: Ein Pi-4-Kernel, der 16347 meldet, akzeptiert jeden Wert bis dorthin, darunter mehrere tausend Byte, die die Verbindung tatsächlich nicht tragen kann. (Upstream-Detail: [raspberrypi/linux#5561](https://github.com/raspberrypi/linux/issues/5561).)
 >

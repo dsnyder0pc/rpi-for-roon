@@ -3013,8 +3013,8 @@ EOF
   # elects the cycle instead, silently ignoring every value set below.
   sudo sed -i 's/^TargetProfileLimitTime=.*/TargetProfileLimitTime=0/' /opt/diretta-alsa/setting.inf
 
-  # Always enable FlexCycle for Jumbo Frames to ensure stability
-  sudo sed -i 's/^FlexCycle=.*/FlexCycle=enable/' /opt/diretta-alsa/setting.inf
+  # Disable FlexCycle: a fixed send grid, with clock drift absorbed in the frame size
+  sudo sed -i 's/^FlexCycle=.*/FlexCycle=disable/' /opt/diretta-alsa/setting.inf
 
   # Conditional CycleTime and InfoCycle Optimization
   if [ "$NEW_MTU" -eq 10222 ]; then
@@ -3030,9 +3030,9 @@ EOF
     sudo sed -i 's/^CycleTime=.*/CycleTime=1300/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=130000/' /opt/diretta-alsa/setting.inf
   else
-    echo "Optimization: MTU 2032. Setting CycleTime to 700us."
-    sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
-    sudo sed -i 's/^InfoCycle=.*/InfoCycle=70000/' /opt/diretta-alsa/setting.inf
+    echo "Optimization: MTU 2032. Setting CycleTime to 696us."
+    sudo sed -i 's/^CycleTime=.*/CycleTime=696/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=69600/' /opt/diretta-alsa/setting.inf
   fi
 
   sudo systemctl restart diretta_alsa
@@ -3050,16 +3050,18 @@ sudo sync && sudo reboot
 
 ***
 > **Note on MTU Tiers and `CycleTime`:**
-> `CycleTime` is derived, not chosen. Each value is the most relaxed setting at which the highest supported format still fits into a **single transmission per cycle**. The ceiling is `(MTU - 2) / 2.8224`, where 2 bytes is Diretta's own header — it runs raw L2 on ethertype `0xcb4b`, with no IP or UDP beneath it — and 2.8224 bytes/µs is the rate of DSD256 and DXD (32-bit, 352.8 kHz). That divisor is the binding format at every MTU up to 9000; at 10222 a faster one binds instead, for the reason set out below the table.
+> `CycleTime` is derived, not chosen. Each value is the most relaxed setting at which the highest supported format still fits into a **single transmission per cycle**. The ceiling is `8 × floor((MTU - 2) / 8) / (2.8224 × 1.03)`, where 2 bytes is Diretta's own header — it runs raw L2 on ethertype `0xcb4b`, with no IP or UDP beneath it — and 2.8224 bytes/µs is the rate of DSD256 and DXD (32-bit, 352.8 kHz); the `floor` rounds the payload down to whole 8-byte stereo samples, and 1.03 is the 3% headroom Diretta reserves for clock drift when `FlexCycle` is disabled. That divisor is the binding format at every MTU up to 9000; at 10222 a faster one binds instead, for the reason set out below the table.
 >
 > All of this depends on **`TargetProfileLimitTime=0`**, which is why every configuration block above sets it. AudioLinux ships `200`, and at any non-zero value Diretta hands cycle selection to its automatic target profile: the Host then transmits on a cycle of the profile's choosing and `CycleTime` has no effect at all. Measured on an MTU 3824 link, `200` elects a flat 2000 µs whatever `CycleTime` says — enough that DXD needs two transmissions per cycle and 768 kHz needs four, the exact fragmentation these tiers exist to prevent. The trade is that `0` gives up the profile's automatic fallback to lighter processing under Host load. If you ever refresh these blocks against a stock install, keep the `0`.
 >
+> **Why `FlexCycle` is disabled.** Enabled, Diretta keeps every frame the same size and tracks the Target's clock by nudging the send timing, so consecutive cycles drift together by several microseconds. Disabled, the Host sends on a fixed grid and absorbs the clock difference by adding or dropping a sample now and then. Measured on a Pi 5 Host and Pi 4 Target at every tier in the table below, at MTU 1500 with both of its cycles, and in Super Purist, the fixed grid was never worse, and at the longer cycles it cut packet jitter by between 1.5 and 10 times — an interquartile range of 4.0 µs became 0.4 µs at 1800 µs — with no underruns or errors in any ten-minute run. Its one cost is the 3% headroom in the formula above, which is why the 2032 tier uses 696 µs rather than 700 µs.
+>
 > | Link MTU | `CycleTime` | Ceiling | Notes |
 > | :--- | :--- | :--- | :--- |
-> | 2032 | 700 µs | 719 µs | Largest round value under the ceiling |
-> | 3824 | 1300 µs | 1354 µs | Largest round value under the ceiling |
-> | 9000 | 1500 µs | 3188 µs | Capped deliberately; past 2000 µs the returns diminish |
-> | 10222 | 1500 µs | 3621 µs | Same cycle as 9000; the extra bytes buy a format, not a longer cycle |
+> | 2032 | 696 µs | 696 µs | The ceiling itself; 700 µs fits the MTU but not the 3% headroom |
+> | 3824 | 1300 µs | 1312 µs | Largest round value under the ceiling |
+> | 9000 | 1500 µs | 3093 µs | Capped deliberately; past 2000 µs the returns diminish |
+> | 10222 | 1500 µs | 3514 µs | Same cycle as 9000; the extra bytes buy a format, not a longer cycle |
 >
 > These four are not grades of a thing and have no names here. They are simply the sizes a Raspberry Pi's Ethernet driver has been patched to receive at one time or another, plus the one a Pi 5's receive buffer allows outright. Which of them your pair can reach follows from the kernel you are running and the boards you own; it is not something you select. Steps 2 and 3 take whichever size the link answers to and set `CycleTime` from it.
 >
@@ -3073,7 +3075,7 @@ sudo sync && sudo reboot
 >
 > **Why 3824 and not 3840?** Both are the same driver buffer measured at two layers, and neither was ever a property of the silicon. On the kernels of the day the Raspberry Pi 4's `bcmgenet` driver set its RX ready threshold to `0xF0` in units of 16 bytes — a **3840-byte receive buffer**. Subtract the 2-byte alignment pad and the 14-byte Ethernet header and **3824** is the largest L3 MTU that fits; the 2032 tier is the same arithmetic on the stock 2048-byte buffer.
 >
-> These tiers exist because those were the largest MTUs the prevailing kernel would carry on a Pi 4 — not because the board could do no better. The AudioLinux LTS realtime kernel now carries a patch that takes the same hardware well past **9000**, with no bootloader or EEPROM change: the LTS these images ship (`6.18.50-2`) advertises 16347 on a Pi 4, of which this guide uses **10222**. So the ladder in Steps 2 and 3 finds 10222 on both boards where it once stopped at 3824, and these images already ship at that tier. Mind which kernel you install, though: the patch has landed unevenly. The newer `7.1.8-1` carries only the 2032 patch, so choosing *Audiolinux last RT LTO* in the kernel updater costs a Pi 4 three tiers and drops `CycleTime` from 1500 µs to 700 µs. A Pi 5 reaches 10222 on any of them, because its ceiling is a property of the board rather than of the patch. That is why the smaller tiers stay documented: a kernel patched partly, or not at all, still stops where it always did.
+> These tiers exist because those were the largest MTUs the prevailing kernel would carry on a Pi 4 — not because the board could do no better. The AudioLinux LTS realtime kernel now carries a patch that takes the same hardware well past **9000**, with no bootloader or EEPROM change: the LTS these images ship (`6.18.50-2`) advertises 16347 on a Pi 4, of which this guide uses **10222**. So the ladder in Steps 2 and 3 finds 10222 on both boards where it once stopped at 3824, and these images already ship at that tier. Mind which kernel you install, though: the patch has landed unevenly. The newer `7.1.8-1` carries only the 2032 patch, so choosing *Audiolinux last RT LTO* in the kernel updater costs a Pi 4 three tiers and drops `CycleTime` from 1500 µs to 696 µs. A Pi 5 reaches 10222 on any of them, because its ceiling is a property of the board rather than of the patch. That is why the smaller tiers stay documented: a kernel patched partly, or not at all, still stops where it always did.
 >
 > Whichever tier you land on, never set an MTU by hand. The driver accepts values it cannot actually receive, then silently discards every full-size frame, leaving a link that looks up but carries no music. Step 1 confirms kernel support, which is necessary but not sufficient; only the ping ladder in Steps 2 and 3 finds the real ceiling. That gap is wider than it used to be: a Pi 4 kernel that advertises 16347 will accept any value up to it, including several thousand bytes the link cannot actually carry. (Upstream detail: [raspberrypi/linux#5561](https://github.com/raspberrypi/linux/issues/5561).)
 >

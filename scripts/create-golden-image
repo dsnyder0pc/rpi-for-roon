@@ -161,7 +161,7 @@ m_unit_enabled() { compgen -G "${TMP_MOUNT}/etc/systemd/system/*.wants/${1}" >/d
 
 detect_stage() {
   if [[ "$1" == "host" ]]; then
-    m_grep '^FlexCycle=enable' opt/diretta-alsa/setting.inf   && { echo apdx9; return; }
+    m_grep '^MTUBytes=\(2032\|3824\|9000\|10222\)$' etc/systemd/network/end0.network && { echo apdx9; return; }
     m_unit_enabled limit-speed-100m.service                   && { echo apdx8; return; }
     m_grep '^CpuSend=[0-9]' opt/diretta-alsa/setting.inf      && { echo apdx7; return; }
     m_grep 'ISOLATED1="2,3"' opt/configuration/isolated.conf  && { echo apdx6; return; }

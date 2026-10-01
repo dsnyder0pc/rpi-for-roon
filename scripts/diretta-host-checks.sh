@@ -384,7 +384,11 @@ run_appendix9_checks() {
     # own profile: at any non-zero TargetProfileLimitTime, Diretta's automatic
     # target profile elects the cycle and CycleTime never reaches the wire.
     check "TargetProfileLimitTime is 0" "grep -q '^TargetProfileLimitTime=0' $CONFIG"
-    check "FlexCycle is enabled" "grep -q '^FlexCycle=enable' $CONFIG"
+    # FlexCycle steers the send timing to track the Target's clock; disabled,
+    # the cycle holds a fixed grid and drift is absorbed in the frame size.
+    # Measured 2026-09-30 at every tier below: never worse, and up to 10x less
+    # jitter at the longer cycles.
+    check "FlexCycle is disabled" "grep -q '^FlexCycle=disable' $CONFIG"
     if [ -f "$CONFIG" ]; then
         CT=$(grep '^CycleTime=' "$CONFIG" | cut -d= -f2)
         IC=$(grep '^InfoCycle=' "$CONFIG" | cut -d= -f2)
@@ -408,7 +412,7 @@ run_appendix9_checks() {
     elif [ "$CURRENT_MTU" -eq 3824 ]; then
         check "CycleTime is optimized (1300us for MTU 3824)" "grep -q '^CycleTime=1300' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
-        check "CycleTime is optimized (700us for MTU 2032)" "grep -q '^CycleTime=700' $CONFIG"
+        check "CycleTime is optimized (696us for MTU 2032)" "grep -q '^CycleTime=696' $CONFIG"
     else
         check "CycleTime is optimized" "false"
     fi
@@ -545,7 +549,7 @@ check_optional_section "[ -d /home/audiolinux/purist-mode-webui ]" "run_appendix
 check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf 2>/dev/null" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
 check_optional_section "grep -q '^CpuSend=[0-9]' /opt/diretta-alsa/setting.inf 2>/dev/null" "run_appendix7_checks" "Appendix 7 (Diretta Tuning)"
 check_optional_section "systemctl is-enabled limit-speed-100m.service" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
-check_optional_section "grep -q '^FlexCycle=enable' /opt/diretta-alsa/setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
+check_optional_section "grep -qE '^MTUBytes=(2032|3824|9000|10222)$' /etc/systemd/network/end0.network 2>/dev/null" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
 
 print_rerun_summary
 

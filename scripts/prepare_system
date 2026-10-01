@@ -269,7 +269,7 @@ if [ -d "/opt/diretta-alsa" ]; then
         # value Diretta's automatic target profile elects the cycle instead,
         # silently ignoring the values below.
         update_config_key "$HOST_CONF" "TargetProfileLimitTime" "0"
-        update_config_key "$HOST_CONF" "FlexCycle" "enable"
+        update_config_key "$HOST_CONF" "FlexCycle" "disable"
         update_config_key "$HOST_CONF" "InfoCycle" "150000"
         update_config_key "$HOST_CONF" "CycleTime" "1500"
     else
