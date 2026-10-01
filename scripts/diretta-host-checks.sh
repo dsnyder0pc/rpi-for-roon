@@ -387,9 +387,12 @@ run_appendix9_checks() {
     # FlexCycle steers the send timing to track the Target's clock; disabled,
     # the cycle holds a fixed grid and drift is absorbed in the frame size.
     # Measured 2026-09-30 at every tier below: never worse, and up to 10x less
-    # jitter at the longer cycles.
+    # jitter at the longer cycles. The fix reloads units before restarting:
+    # AudioLinux's own menus rewrite diretta_alsa.service, and a restart
+    # without the reload keeps running the previously loaded definition.
     check "FlexCycle is disabled" "grep -q '^FlexCycle=disable' $CONFIG" \
         "sudo sed -i 's/^FlexCycle=.*/FlexCycle=disable/' /opt/diretta-alsa/setting.inf
+sudo systemctl daemon-reload
 sudo systemctl restart diretta_alsa"
     if [ -f "$CONFIG" ]; then
         CT=$(grep '^CycleTime=' "$CONFIG" | cut -d= -f2)
@@ -419,6 +422,7 @@ sudo systemctl restart diretta_alsa"
         check "CycleTime is optimized (696us for MTU 2032)" "grep -q '^CycleTime=696' $CONFIG" \
             "sudo sed -i 's/^CycleTime=.*/CycleTime=696/' /opt/diretta-alsa/setting.inf
 sudo sed -i 's/^InfoCycle=.*/InfoCycle=69600/' /opt/diretta-alsa/setting.inf
+sudo systemctl daemon-reload
 sudo systemctl restart diretta_alsa"
     else
         check "CycleTime is optimized" "false"
