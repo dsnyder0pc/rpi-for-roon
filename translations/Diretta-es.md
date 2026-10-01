@@ -3030,9 +3030,9 @@ EOF
     sudo sed -i 's/^CycleTime=.*/CycleTime=1300/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=130000/' /opt/diretta-alsa/setting.inf
   else
-    echo "Optimización: MTU 2032. Se ajusta CycleTime a 700us."
-    sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
-    sudo sed -i 's/^InfoCycle=.*/InfoCycle=70000/' /opt/diretta-alsa/setting.inf
+    echo "Optimización: MTU 2032. Se ajusta CycleTime a 696us."
+    sudo sed -i 's/^CycleTime=.*/CycleTime=696/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=69600/' /opt/diretta-alsa/setting.inf
   fi
 
   sudo systemctl restart diretta_alsa
@@ -3050,16 +3050,18 @@ sudo sync && sudo reboot
 
 ***
 > **Nota sobre los niveles de MTU y `CycleTime`:**
-> `CycleTime` se deriva, no se elige. Cada valor es el ajuste más holgado con el que el formato más alto admitido todavía cabe en una **única transmisión por ciclo**. El techo es `(MTU - 2) / 2.8224`, donde 2 bytes son la cabecera propia de Diretta — funciona en L2 puro sobre el ethertype `0xcb4b`, sin IP ni UDP por debajo — y 2.8224 bytes/µs es la tasa de DSD256 y DXD (32 bits, 352.8 kHz). Ese divisor es el formato vinculante en toda MTU hasta 9000; en 10222 vincula en su lugar uno más rápido, por la razón expuesta bajo la tabla.
+> `CycleTime` se deriva, no se elige. Cada valor es el ajuste más holgado con el que el formato más alto admitido todavía cabe en una **única transmisión por ciclo**. El techo es `8 × floor((MTU - 2) / 8) / (2.8224 × 1.03)`, donde 2 bytes son la cabecera propia de Diretta — funciona en L2 puro sobre el ethertype `0xcb4b`, sin IP ni UDP por debajo — y 2.8224 bytes/µs es la tasa de DSD256 y DXD (32 bits, 352.8 kHz); `floor` redondea la carga útil hacia abajo a muestras estéreo completas de 8 bytes, y 1.03 es el margen del 3 % que Diretta reserva para la deriva del reloj cuando `FlexCycle` está deshabilitado. Ese divisor es el formato vinculante en toda MTU hasta 9000; en 10222 vincula en su lugar uno más rápido, por la razón expuesta bajo la tabla.
 >
 > Todo esto depende de **`TargetProfileLimitTime=0`**, y por eso cada bloque de configuración anterior lo establece. AudioLinux distribuye `200`, y con cualquier valor distinto de cero Diretta cede la elección del ciclo a su perfil de destino automático: el Host transmite entonces con un ciclo elegido por ese perfil y `CycleTime` deja de tener efecto alguno. Medido en un enlace con MTU 3824, `200` impone 2000 µs fijos diga lo que diga `CycleTime` — suficiente para que DXD necesite dos transmisiones por ciclo y 768 kHz cuatro, justo la fragmentación que estos niveles existen para evitar. A cambio, `0` renuncia al repliegue automático del perfil hacia un procesamiento más ligero cuando el Host está cargado. Si alguna vez actualiza estos bloques a partir de una instalación de fábrica, conserve el `0`.
 >
+> **Por qué `FlexCycle` está deshabilitado.** Habilitado, Diretta mantiene todas las tramas del mismo tamaño y sigue el reloj del Target ajustando el instante de envío, de modo que ciclos consecutivos derivan juntos varios microsegundos. Deshabilitado, el Host envía sobre una rejilla fija y absorbe la diferencia de reloj añadiendo o quitando una muestra de vez en cuando. Medido en un Host Pi 5 y un Target Pi 4 en cada nivel de la tabla de abajo, en MTU 1500 con sus dos ciclos y en Super Purist, la rejilla fija nunca fue peor, y en los ciclos más largos redujo el jitter de paquetes entre 1.5 y 10 veces — un rango intercuartílico de 4.0 µs pasó a 0.4 µs a 1800 µs —, sin underruns ni errores en ninguna prueba de diez minutos. Su único coste es el margen del 3 % de la fórmula anterior, y por eso el nivel 2032 usa 696 µs en lugar de 700 µs.
+>
 > | MTU del enlace | `CycleTime` | Límite | Notas |
 > | :--- | :--- | :--- | :--- |
-> | 2032 | 700 µs | 719 µs | Mayor valor redondo por debajo del techo |
-> | 3824 | 1300 µs | 1354 µs | Mayor valor redondo por debajo del techo |
-> | 9000 | 1500 µs | 3188 µs | Limitado deliberadamente; más allá de 2000 µs los beneficios decrecen |
-> | 10222 | 1500 µs | 3621 µs | Mismo ciclo que 9000; los bytes extra compran un formato, no un ciclo más largo |
+> | 2032 | 696 µs | 696 µs | El propio techo; 700 µs cabe en la MTU pero no en el margen del 3 % |
+> | 3824 | 1300 µs | 1312 µs | Mayor valor redondo por debajo del techo |
+> | 9000 | 1500 µs | 3093 µs | Limitado deliberadamente; más allá de 2000 µs los beneficios decrecen |
+> | 10222 | 1500 µs | 3514 µs | Mismo ciclo que 9000; los bytes extra compran un formato, no un ciclo más largo |
 >
 > Estos cuatro no son grados de una misma cosa y aquí no llevan nombre. Son simplemente los tamaños que el controlador Ethernet de una Raspberry Pi ha sido parcheado para recibir en un momento u otro, más el que el búfer de recepción de una Pi 5 permite de entrada. Cuál de ellos puede alcanzar su pareja se deduce del kernel que ejecuta y de las placas que posee; no es algo que usted seleccione. Los pasos 2 y 3 toman el tamaño al que responda el enlace y fijan `CycleTime` a partir de él.
 >
@@ -3073,7 +3075,7 @@ sudo sync && sudo reboot
 >
 > **¿Por qué 3824 y no 3840?** Ambos son el mismo búfer del controlador medido en dos capas distintas, y ninguno fue nunca una propiedad del silicio. En los kernels de entonces, el controlador `bcmgenet` de la Raspberry Pi 4 fijaba su umbral de recepción en `0xF0` en unidades de 16 bytes: un **búfer de recepción de 3840 bytes**. Reste los 2 bytes de relleno de alineación y los 14 bytes de la cabecera Ethernet y obtendrá **3824**, la mayor MTU de nivel 3 que cabe; el nivel de 2032 es la misma aritmética sobre el búfer original de 2048 bytes.
 >
-> Estos niveles existen porque esas eran las mayores MTU que el kernel entonces vigente transportaba en una Pi 4, no porque la placa no pudiera dar más de sí. El kernel de tiempo real AudioLinux LTS incorpora ahora un parche que lleva al mismo hardware muy por encima de **9000**, sin cambiar el bootloader ni la EEPROM: el LTS que llevan estas imágenes (`6.18.50-2`) anuncia 16347 en una Pi 4, de los cuales esta guía usa **10222**. Así, la escalera de los pasos 2 y 3 encuentra 10222 en ambas placas donde antes se detenía en 3824, y estas imágenes ya se entregan en ese nivel. Fíjese, eso sí, en qué kernel instala: el parche ha llegado de forma desigual. El más reciente `7.1.8-1` solo lleva el parche de 2032, así que elegir *Audiolinux last RT LTO* en el actualizador de kernel le cuesta tres niveles a una Pi 4 y baja el `CycleTime` de 1500 µs a 700 µs. Una Pi 5 alcanza 10222 con cualquiera de ellos, porque su techo es una propiedad de la placa y no del parche. Por eso los niveles menores siguen documentados: un kernel parcheado en parte, o nada en absoluto, sigue deteniéndose donde siempre lo hizo.
+> Estos niveles existen porque esas eran las mayores MTU que el kernel entonces vigente transportaba en una Pi 4, no porque la placa no pudiera dar más de sí. El kernel de tiempo real AudioLinux LTS incorpora ahora un parche que lleva al mismo hardware muy por encima de **9000**, sin cambiar el bootloader ni la EEPROM: el LTS que llevan estas imágenes (`6.18.50-2`) anuncia 16347 en una Pi 4, de los cuales esta guía usa **10222**. Así, la escalera de los pasos 2 y 3 encuentra 10222 en ambas placas donde antes se detenía en 3824, y estas imágenes ya se entregan en ese nivel. Fíjese, eso sí, en qué kernel instala: el parche ha llegado de forma desigual. El más reciente `7.1.8-1` solo lleva el parche de 2032, así que elegir *Audiolinux last RT LTO* en el actualizador de kernel le cuesta tres niveles a una Pi 4 y baja el `CycleTime` de 1500 µs a 696 µs. Una Pi 5 alcanza 10222 con cualquiera de ellos, porque su techo es una propiedad de la placa y no del parche. Por eso los niveles menores siguen documentados: un kernel parcheado en parte, o nada en absoluto, sigue deteniéndose donde siempre lo hizo.
 >
 > Sea cual sea el nivel en el que acabe, nunca fije una MTU a mano. El controlador acepta valores que en realidad no puede recibir y luego descarta en silencio cada trama de tamaño completo, dejando un enlace que parece activo pero no transporta música. El paso 1 confirma la compatibilidad del kernel, que es necesaria pero no suficiente; solo la escalera de pings de los pasos 2 y 3 encuentra el techo real. Esa brecha es más ancha que antes: un kernel de Pi 4 que anuncia 16347 aceptará cualquier valor hasta ahí, incluidos varios miles de bytes que el enlace no puede transportar realmente. (Detalle upstream: [raspberrypi/linux#5561](https://github.com/raspberrypi/linux/issues/5561).)
 >
