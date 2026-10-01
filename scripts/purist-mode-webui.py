@@ -2674,7 +2674,7 @@ def get_target_profile(current_state):
     # Read the physical hardware environment first
     mtu = get_host_mtu()
     if mtu == 2032:
-        return 696, 69600  # MTU 2032: DXD plus FlexCycle-off headroom
+        return 700, 70000  # MTU 2032
     if mtu == 3824:
         return 1300, 130000  # MTU 3824
     if mtu >= 9000:

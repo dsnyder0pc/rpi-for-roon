@@ -3030,9 +3030,9 @@ EOF
     sudo sed -i 's/^CycleTime=.*/CycleTime=1300/' /opt/diretta-alsa/setting.inf
     sudo sed -i 's/^InfoCycle=.*/InfoCycle=130000/' /opt/diretta-alsa/setting.inf
   else
-    echo "Optimisation : MTU 2032. CycleTime réglé à 696us."
-    sudo sed -i 's/^CycleTime=.*/CycleTime=696/' /opt/diretta-alsa/setting.inf
-    sudo sed -i 's/^InfoCycle=.*/InfoCycle=69600/' /opt/diretta-alsa/setting.inf
+    echo "Optimisation : MTU 2032. CycleTime réglé à 700us."
+    sudo sed -i 's/^CycleTime=.*/CycleTime=700/' /opt/diretta-alsa/setting.inf
+    sudo sed -i 's/^InfoCycle=.*/InfoCycle=70000/' /opt/diretta-alsa/setting.inf
   fi
 
   sudo systemctl restart diretta_alsa
@@ -3050,18 +3050,16 @@ sudo sync && sudo reboot
 
 ***
 > **Note sur les paliers de MTU et le `CycleTime` :**
-> `CycleTime` est dérivé, non choisi. Chaque valeur est le réglage le plus détendu auquel le format le plus élevé pris en charge tient encore dans une **seule transmission par cycle**. Le plafond est `8 × floor((MTU - 2) / 8) / (2.8224 × 1.03)`, où 2 octets correspondent à l'en-tête propre à Diretta — il fonctionne en L2 brut sur l'ethertype `0xcb4b`, sans IP ni UDP en dessous — et 2.8224 octets/µs est le débit du DSD256 et du DXD (32 bits, 352.8 kHz) ; `floor` arrondit la charge utile à des échantillons stéréo entiers de 8 octets, et 1.03 est la marge de 3 % que Diretta réserve à la dérive d'horloge lorsque `FlexCycle` est désactivé. Ce diviseur est le format contraignant à toutes les MTU jusqu'à 9000 ; à 10222, c'est un format plus rapide qui contraint, pour la raison exposée sous le tableau.
+> `CycleTime` est dérivé, non choisi. Chaque valeur est le réglage le plus détendu auquel le format le plus élevé pris en charge tient encore dans une **seule transmission par cycle**. Le plafond est `(MTU - 2) / 2.8224`, où 2 octets correspondent à l'en-tête propre à Diretta — il fonctionne en L2 brut sur l'ethertype `0xcb4b`, sans IP ni UDP en dessous — et 2.8224 octets/µs est le débit du DSD256 et du DXD (32 bits, 352.8 kHz). Ce diviseur est le format contraignant à toutes les MTU jusqu'à 9000 ; à 10222, c'est un format plus rapide qui contraint, pour la raison exposée sous le tableau.
 >
 > Tout ceci repose sur **`TargetProfileLimitTime=0`**, et c'est pourquoi chaque bloc de configuration ci-dessus le définit. AudioLinux livre `200`, et à toute valeur non nulle Diretta confie le choix du cycle à son profil de cible automatique : l'Hôte émet alors sur un cycle choisi par ce profil et `CycleTime` n'a plus aucun effet. Mesuré sur un lien MTU 3824, `200` impose un cycle fixe de 2000 µs quelle que soit la valeur de `CycleTime` — assez pour que le DXD exige deux transmissions par cycle et le 768 kHz quatre, précisément la fragmentation que ces paliers doivent empêcher. En contrepartie, `0` renonce au repli automatique du profil vers un traitement plus léger lorsque l'Hôte est chargé. Si vous rafraîchissez un jour ces blocs à partir d'une installation d'origine, conservez le `0`.
 >
-> **Pourquoi `FlexCycle` est désactivé.** Activé, Diretta garde toutes les trames de même taille et suit l'horloge du Target en ajustant l'instant d'envoi, si bien que les cycles consécutifs dérivent ensemble de plusieurs microsecondes. Désactivé, le Host émet sur une grille fixe et absorbe l'écart d'horloge en ajoutant ou en retirant un échantillon de temps à autre. Mesurée sur un Host Pi 5 et un Target Pi 4 à chaque palier du tableau ci-dessous, à la MTU 1500 avec ses deux cycles et en Super Purist, la grille fixe n'a jamais été moins bonne, et aux cycles les plus longs elle a réduit la gigue des paquets d'un facteur 1.5 à 10 — un écart interquartile de 4.0 µs est devenu 0.4 µs à 1800 µs —, sans underrun ni erreur sur aucun essai de dix minutes. Son seul coût est la marge de 3 % de la formule ci-dessus, d'où les 696 µs du palier 2032 au lieu de 700 µs.
->
 > | MTU de la liaison | `CycleTime` | Plafond | Remarques |
 > | :--- | :--- | :--- | :--- |
-> | 2032 | 696 µs | 696 µs | Le plafond lui-même ; 700 µs tient dans la MTU mais pas dans la marge de 3 % |
-> | 3824 | 1300 µs | 1312 µs | Plus grande valeur ronde sous le plafond |
-> | 9000 | 1500 µs | 3093 µs | Plafonné délibérément ; au-delà de 2000 µs les gains diminuent |
-> | 10222 | 1500 µs | 3514 µs | Même cycle qu'à 9000 ; les octets supplémentaires achètent un format, pas un cycle plus long |
+> | 2032 | 700 µs | 719 µs | Plus grande valeur ronde sous le plafond |
+> | 3824 | 1300 µs | 1354 µs | Plus grande valeur ronde sous le plafond |
+> | 9000 | 1500 µs | 3188 µs | Plafonné délibérément ; au-delà de 2000 µs les gains diminuent |
+> | 10222 | 1500 µs | 3621 µs | Même cycle qu'à 9000 ; les octets supplémentaires achètent un format, pas un cycle plus long |
 >
 > Ces quatre paliers ne sont pas les grades d'une même chose et n'ont pas de noms ici. Ce sont simplement les tailles que le pilote Ethernet d'un Raspberry Pi a été corrigé pour recevoir à un moment ou à un autre, plus celle que le tampon de réception d'un Pi 5 autorise d'emblée. Celui que votre paire peut atteindre découle du noyau que vous exécutez et des cartes que vous possédez ; ce n'est pas quelque chose que vous choisissez. Les étapes 2 et 3 prennent la taille à laquelle le lien répond et en déduisent le `CycleTime`.
 >
@@ -3075,7 +3073,7 @@ sudo sync && sudo reboot
 >
 > **Pourquoi 3824 et non 3840 ?** Ce sont deux mesures du même tampon du pilote, prises à deux couches différentes, et aucune n'a jamais été une propriété du silicium. Dans les noyaux de l'époque, le pilote `bcmgenet` du Raspberry Pi 4 fixait son seuil de réception à `0xF0` par unités de 16 octets, soit un **tampon de réception de 3840 octets**. Retirez les 2 octets de remplissage d'alignement et les 14 octets de l'en-tête Ethernet et il reste **3824**, la plus grande MTU de niveau 3 qui tienne ; le palier 2032 est le même calcul sur le tampon d'origine de 2048 octets.
 >
-> Ces paliers existent parce que c'étaient les plus grandes MTU que le noyau de l'époque transportait sur un Pi 4 — non parce que la carte ne pouvait pas faire mieux. Le noyau temps réel AudioLinux LTS embarque désormais un correctif qui emmène le même matériel bien au-delà de **9000**, sans changement de bootloader ni d'EEPROM : le LTS que ces images embarquent (`6.18.50-2`) annonce 16347 sur un Pi 4, dont ce guide utilise **10222**. Ainsi l'échelle des étapes 2 et 3 trouve 10222 sur les deux cartes là où elle s'arrêtait autrefois à 3824, et ces images sont déjà livrées à ce palier. Attention toutefois au noyau que vous installez : le correctif a été déployé de façon inégale. Le plus récent `7.1.8-1` ne porte que le correctif 2032, si bien que choisir *Audiolinux last RT LTO* dans le gestionnaire de noyau coûte trois paliers à un Pi 4 et fait passer le `CycleTime` de 1500 µs à 696 µs. Un Pi 5 atteint 10222 sur n'importe lequel d'entre eux, car son plafond est une propriété de la carte et non du correctif. C'est pourquoi les paliers inférieurs restent documentés : un noyau partiellement corrigé, ou pas du tout, s'arrête toujours là où il s'est toujours arrêté.
+> Ces paliers existent parce que c'étaient les plus grandes MTU que le noyau de l'époque transportait sur un Pi 4 — non parce que la carte ne pouvait pas faire mieux. Le noyau temps réel AudioLinux LTS embarque désormais un correctif qui emmène le même matériel bien au-delà de **9000**, sans changement de bootloader ni d'EEPROM : le LTS que ces images embarquent (`6.18.50-2`) annonce 16347 sur un Pi 4, dont ce guide utilise **10222**. Ainsi l'échelle des étapes 2 et 3 trouve 10222 sur les deux cartes là où elle s'arrêtait autrefois à 3824, et ces images sont déjà livrées à ce palier. Attention toutefois au noyau que vous installez : le correctif a été déployé de façon inégale. Le plus récent `7.1.8-1` ne porte que le correctif 2032, si bien que choisir *Audiolinux last RT LTO* dans le gestionnaire de noyau coûte trois paliers à un Pi 4 et fait passer le `CycleTime` de 1500 µs à 700 µs. Un Pi 5 atteint 10222 sur n'importe lequel d'entre eux, car son plafond est une propriété de la carte et non du correctif. C'est pourquoi les paliers inférieurs restent documentés : un noyau partiellement corrigé, ou pas du tout, s'arrête toujours là où il s'est toujours arrêté.
 >
 > Quel que soit le palier auquel vous aboutissez, ne réglez jamais une MTU à la main. Le pilote accepte des valeurs qu'il ne peut pas réellement recevoir, puis rejette silencieusement chaque trame pleine taille, laissant un lien qui paraît actif mais ne transporte aucune musique. L'étape 1 confirme la prise en charge par le noyau, ce qui est nécessaire mais pas suffisant ; seule l'échelle de pings des étapes 2 et 3 trouve le vrai plafond. Cet écart est plus large qu'avant : un noyau de Pi 4 qui annonce 16347 acceptera n'importe quelle valeur jusque-là, y compris plusieurs milliers d'octets que le lien ne peut pas réellement transporter. (Détail amont : [raspberrypi/linux#5561](https://github.com/raspberrypi/linux/issues/5561).)
 >

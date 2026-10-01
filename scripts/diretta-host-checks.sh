@@ -417,13 +417,7 @@ sudo systemctl restart diretta_alsa"
     elif [ "$CURRENT_MTU" -eq 3824 ]; then
         check "CycleTime is optimized (1300us for MTU 3824)" "grep -q '^CycleTime=1300' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
-        # 696, not 700: with FlexCycle disabled, DXD needs 3% headroom in the
-        # frame, and at 700us it is split across two.
-        check "CycleTime is optimized (696us for MTU 2032)" "grep -q '^CycleTime=696' $CONFIG" \
-            "sudo sed -i 's/^CycleTime=.*/CycleTime=696/' /opt/diretta-alsa/setting.inf
-sudo sed -i 's/^InfoCycle=.*/InfoCycle=69600/' /opt/diretta-alsa/setting.inf
-sudo systemctl daemon-reload
-sudo systemctl restart diretta_alsa"
+        check "CycleTime is optimized (700us for MTU 2032)" "grep -q '^CycleTime=700' $CONFIG"
     else
         check "CycleTime is optimized" "false"
     fi
