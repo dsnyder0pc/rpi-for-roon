@@ -388,7 +388,9 @@ run_appendix9_checks() {
     # the cycle holds a fixed grid and drift is absorbed in the frame size.
     # Measured 2026-09-30 at every tier below: never worse, and up to 10x less
     # jitter at the longer cycles.
-    check "FlexCycle is disabled" "grep -q '^FlexCycle=disable' $CONFIG"
+    check "FlexCycle is disabled" "grep -q '^FlexCycle=disable' $CONFIG" \
+        "sudo sed -i 's/^FlexCycle=.*/FlexCycle=disable/' /opt/diretta-alsa/setting.inf
+sudo systemctl restart diretta_alsa"
     if [ -f "$CONFIG" ]; then
         CT=$(grep '^CycleTime=' "$CONFIG" | cut -d= -f2)
         IC=$(grep '^InfoCycle=' "$CONFIG" | cut -d= -f2)
@@ -412,7 +414,12 @@ run_appendix9_checks() {
     elif [ "$CURRENT_MTU" -eq 3824 ]; then
         check "CycleTime is optimized (1300us for MTU 3824)" "grep -q '^CycleTime=1300' $CONFIG"
     elif [ "$CURRENT_MTU" -eq 2032 ]; then
-        check "CycleTime is optimized (696us for MTU 2032)" "grep -q '^CycleTime=696' $CONFIG"
+        # 696, not 700: with FlexCycle disabled, DXD needs 3% headroom in the
+        # frame, and at 700us it is split across two.
+        check "CycleTime is optimized (696us for MTU 2032)" "grep -q '^CycleTime=696' $CONFIG" \
+            "sudo sed -i 's/^CycleTime=.*/CycleTime=696/' /opt/diretta-alsa/setting.inf
+sudo sed -i 's/^InfoCycle=.*/InfoCycle=69600/' /opt/diretta-alsa/setting.inf
+sudo systemctl restart diretta_alsa"
     else
         check "CycleTime is optimized" "false"
     fi
