@@ -173,7 +173,8 @@ detect_stage() {
   elif [[ "$1" == "target" ]]; then
     m_grep '^ExtEtherMTU=' opt/diretta-alsa-target/diretta_app_target_setting.inf && { echo apdx9; return; }
     m_has etc/diretta-100m                                    && { echo apdx8; return; }
-    m_grep 'DEVICES1=.*xhci-hcd' opt/configuration/isolated.conf && { echo apdx7; return; }
+    { m_grep 'DEVICES1=.*xhci-hcd' opt/configuration/isolated.conf ||
+      m_has etc/systemd/system/usb-irq-thread-isolation.service; } && { echo apdx7; return; }
     m_grep 'ISOLATED1="2,3"' opt/configuration/isolated.conf  && { echo apdx6; return; }
     m_grep '^purist-app:' etc/passwd                          && { echo apdx4; return; }
     m_has usr/local/bin/purist-mode                           && { echo apdx3; return; }
