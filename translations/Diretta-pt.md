@@ -187,7 +187,7 @@ Uma lista completa de materiais é fornecida abaixo. Embora outras partes possam
 
 Após a gravação, você deve configurar cada Raspberry Pi individualmente para evitar conflitos de rede.
 
-A lista de materiais deste guia usa um Raspberry Pi 5 tanto para o Diretta Target (o dispositivo conectado ao seu DAC) quanto para o Diretta Host, mas os dois papéis são independentes do hardware: Pi 4 para Pi 4, Pi 4 para Pi 5, Pi 5 para Pi 4 e Pi 5 para Pi 5 são todos igualmente suportados, e cada combinação alcança o mesmo enlace com MTU 10222. A única diferença é que um Pi 4 como Target abre mão do direcionamento de interrupções USB do [**Apêndice 7**](#20-appendix-7-optional-irq-and-thread-optimizations), que as interrupções fixadas por hardware dessa placa não permitem. Os Compute Modules não foram testados. Você configurará o Host primeiro.
+A lista de materiais deste guia usa um Raspberry Pi 5 tanto para o Diretta Target (o dispositivo conectado ao seu DAC) quanto para o Diretta Host, mas os dois papéis são independentes do hardware: Pi 4 para Pi 4, Pi 4 para Pi 5, Pi 5 para Pi 4 e Pi 5 para Pi 5 são todos igualmente suportados, e cada combinação alcança o mesmo enlace com MTU 10222. A única diferença está no [**Apêndice 7**](#20-appendix-7-optional-irq-and-thread-optimizations): em um Pi 4 como Target, ele move o processamento USB para os núcleos de áudio, mas a interrupção USB em si permanece no núcleo 0, porque o hardware dessa placa não permite movê-la. Os Compute Modules não foram testados. Você configurará o Host primeiro.
 
 > **AVISO CRÍTICO:** Como ambos os dispositivos são gravados a partir da mesma imagem, eles terão valores de `machine-id` idênticos. Se você ligar ambos os dispositivos ao mesmo tempo enquanto estiverem conectados à mesma LAN, seu servidor DHCP provavelmente atribuirá a eles o mesmo endereço IP, causando um conflito de rede.
 >
@@ -2672,10 +2672,10 @@ sudo sync && sudo reboot
 ### Parte 1: Isolamento do Caminho USB do Target Diretta
 Por padrão, mesmo quando os núcleos da CPU estão isolados, as interrupções USB ainda podem competir por recursos nos núcleos de sistema "ruidosos" (0 e 1). Este script identifica dinamicamente o controlador USB específico ao qual seu DAC está conectado e fixa suas interrupções de hardware aos núcleos de áudio isolados (2 e 3). No Raspberry Pi 5, os controladores USB são gerenciados pelo chip RP1, o que nos permite direcionar as interrupções de hardware para núcleos específicos.
 
-**Nota:** Esta otimização não é aplicável ao Raspberry Pi 4 devido a interrupções bloqueadas por hardware.
+**Nota:** No Raspberry Pi 4, todas as portas USB dependem de um único controlador cuja interrupção não pode sair do núcleo 0. O script detecta isso e, em vez disso, fixa nos núcleos 2 e 3 a thread do kernel que faz o trabalho USB propriamente dito; depois, instala um pequeno serviço que repete isso a cada inicialização. Apenas um breve sinal de despertar permanece no núcleo 0.
 
 1.  Certifique-se de que seu DAC esteja ligado e conectado ao Target.
-2.  Inicie a reprodução de música no Target Diretta. Isso garante que o script possa detectar o tráfego de interrupção ativo. Se você não tiver nada à mão, poderá executar este comando no Host:
+2.  Inicie a reprodução de música no Target Diretta. Isso garante que o script possa detectar o tráfego de interrupção ativo; um Raspberry Pi 4 não precisa disso. Se você não tiver nada à mão, poderá executar este comando no Host:
     ```bash
     aplay /usr/share/sounds/alsa/Noise.wav
     ```
@@ -2688,7 +2688,7 @@ Por padrão, mesmo quando os núcleos da CPU estão isolados, as interrupções 
     sudo sync && sudo reboot
     ```
 
-**O que isso faz:** O script localiza o caminho ativo do DAC (por exemplo, `xhci-hcd:usb1` ou `xhci-hcd:usb3`). Em seguida, adiciona o identificador específico ao seu grupo de isolamento do AudioLinux para criar um caminho de dados 100% isolado, desde a entrada de rede até a saída USB.
+**O que isso faz:** O script localiza o caminho ativo do DAC (por exemplo, `xhci-hcd:usb1` ou `xhci-hcd:usb3`). Em seguida, adiciona o identificador específico ao seu grupo de isolamento do AudioLinux para criar um caminho de dados 100% isolado, desde a entrada de rede até a saída USB. Em um Raspberry Pi 4, em vez disso, fixa a thread de IRQ do xHCI (`irq/<n>-xhci_hcd`) nos núcleos 2 e 3 e habilita `usb-irq-thread-isolation.service` para repetir isso na inicialização.
 
 ---
 

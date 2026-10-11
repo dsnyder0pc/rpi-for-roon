@@ -1,11 +1,13 @@
 #!/bin/bash
 # Diretta Target USB Optimization for AudioLinux
 # Smart Hardware Detection & Dynamic IRQ Affinity
-# NOTE: This optimization is strictly for Raspberry Pi 5.
+# NOTE: Raspberry Pi 5 steers the USB IRQ itself; Raspberry Pi 4 can only
+# move the IRQ's handler thread (see below).
 
 ISO_CONFIG="/opt/configuration/isolated.conf"
 ISO_CORES="2,3"
 ISO_CORES_DASH="2-3"
+RPI4_UNIT="/etc/systemd/system/usb-irq-thread-isolation.service"
 
 echo "--- Diretta Target Smart USB Optimization ---"
 
@@ -13,11 +15,54 @@ echo "--- Diretta Target Smart USB Optimization ---"
 MODEL=$(tr -d '\0' < /proc/device-tree/model)
 echo "System: $MODEL"
 
-# 2. Platform Validation
+# 2. Raspberry Pi 4: pin the xHCI IRQ thread instead of the IRQ
+#
+# Every RPi4 USB port sits behind the VL805 xHCI on PCIe. Its interrupt is an
+# MSI that the PCIe driver demultiplexes from one chained GIC interrupt, so
+# /proc/irq/<n>/smp_affinity_list refuses writes (EPERM) and the hard IRQ
+# always lands on CPU0. On the PREEMPT_RT kernel, though, the hard IRQ only
+# wakes a handler thread, irq/<n>-xhci_hcd, and that thread does the actual
+# USB work. It can be moved, and it stays where it is put: the kernel only
+# re-syncs it to the IRQ's mask when that mask changes, which it cannot.
+# On an RPi5 the same thread follows its IRQ onto the isolated cores, so this
+# puts the USB work in the same place. The difference is that each USB event
+# now reaches the isolated cores as a wake-up from CPU0.
+#
+# A boot-time unit reapplies it, since thread affinity does not survive a
+# reboot and nothing in AudioLinux sets it. There is only one xHCI on an RPi4,
+# so no playback is needed to find the DAC's controller.
 if [[ "$MODEL" == *"Raspberry Pi 4"* ]]; then
-    echo "Notice: Raspberry Pi 4 detected."
-    echo "USB IRQ (29) is hardware-locked on this platform."
-    echo "Skipping USB isolation optimization (not applicable)."
+    echo "Raspberry Pi 4 detected: the USB IRQ cannot be steered on this board."
+    echo "Pinning the xHCI IRQ handler thread to cores $ISO_CORES_DASH instead."
+
+    if ! pgrep -x 'irq/[0-9]+-xhci_hcd' > /dev/null; then
+        echo "Error: No xHCI IRQ thread found. This needs the AudioLinux realtime kernel."
+        exit 1
+    fi
+
+    sudo tee "$RPI4_UNIT" > /dev/null <<EOF
+[Unit]
+Description=Pin the xHCI IRQ thread to the isolated audio cores (Raspberry Pi 4)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'for p in \$\$(pgrep -x "irq/[0-9]+-xhci_hcd"); do taskset -pc $ISO_CORES_DASH \$\$p || exit 1; done'
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    sudo systemctl daemon-reload
+    sudo systemctl enable usb-irq-thread-isolation.service > /dev/null 2>&1
+    if ! sudo systemctl restart usb-irq-thread-isolation.service; then
+        echo "Error: Could not pin the xHCI IRQ thread."
+        exit 1
+    fi
+
+    for P in $(pgrep -x 'irq/[0-9]+-xhci_hcd'); do
+        echo "$(cat /proc/$P/comm) (pid $P) -> cores $(taskset -pc $P | awk '{print $NF}')"
+    done
+    echo "Done. The boot-time unit reapplies this after every reboot."
     exit 0
 fi
 

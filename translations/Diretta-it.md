@@ -187,7 +187,7 @@ Di seguito viene fornito un elenco completo dei materiali. Sebbene sia possibile
 
 Dopo la scrittura dell'immagine, è necessario configurare singolarmente ciascun Raspberry Pi per evitare conflitti di rete.
 
-La distinta dei materiali di questa guida usa un Raspberry Pi 5 sia per il Diretta Target (il dispositivo collegato al DAC) sia per il Diretta Host, ma i due ruoli sono indipendenti dall'hardware: Pi 4 verso Pi 4, Pi 4 verso Pi 5, Pi 5 verso Pi 4 e Pi 5 verso Pi 5 sono tutti supportati allo stesso modo, e ogni combinazione raggiunge lo stesso collegamento a MTU 10222. L'unica differenza è che un Pi 4 come Target rinuncia all'orientamento degli interrupt USB dell'[**Appendice 7**](#20-appendix-7-optional-irq-and-thread-optimizations), che gli interrupt fissati via hardware di quella scheda non consentono. I Compute Module non sono stati provati. Configurerete prima l'Host.
+La distinta dei materiali di questa guida usa un Raspberry Pi 5 sia per il Diretta Target (il dispositivo collegato al DAC) sia per il Diretta Host, ma i due ruoli sono indipendenti dall'hardware: Pi 4 verso Pi 4, Pi 4 verso Pi 5, Pi 5 verso Pi 4 e Pi 5 verso Pi 5 sono tutti supportati allo stesso modo, e ogni combinazione raggiunge lo stesso collegamento a MTU 10222. L'unica differenza riguarda l'[**Appendice 7**](#20-appendix-7-optional-irq-and-thread-optimizations): su un Pi 4 come Target sposta l'elaborazione USB sui core audio, ma l'interrupt USB vero e proprio resta sul core 0, perché l'hardware di quella scheda non ne consente lo spostamento. I Compute Module non sono stati provati. Configurerete prima l'Host.
 
 > **AVVERTIMENTO CRITICO:** Poiché entrambi i dispositivi vengono inizializzati con la stessa identica immagine, avranno valori di `machine-id` identici. Se accendete entrambi i dispositivi contemporaneamente mentre sono collegati alla stessa LAN, il vostro server DHCP assegnerà probabilmente loro lo stesso indirizzo IP, causando un conflitto di rete.
 >
@@ -2672,10 +2672,10 @@ sudo sync && sudo reboot
 ### Parte 1: Isolamento del percorso USB del Diretta Target
 Per impostazione predefinita, anche quando i core della CPU sono isolati, gli interrupt USB possono ancora competere per le risorse sui core di sistema "rumorosi" (0 e 1). Questo script identifica dinamicamente il controller USB specifico a cui è collegato il vostro DAC e assegna i suoi interrupt hardware ai core audio isolati (2 e 3). Sul Raspberry Pi 5, i controller USB sono gestiti dal chip RP1, il che ci consente di indirizzare gli interrupt hardware verso core specifici.
 
-**Nota:** Questa ottimizzazione non è applicabile al Raspberry Pi 4 a causa degli interrupt bloccati dall'hardware.
+**Nota:** Sul Raspberry Pi 4, tutte le porte USB dipendono da un unico controller il cui interrupt non può essere spostato dal core 0. Lo script lo rileva e assegna invece ai core 2 e 3 il thread del kernel che svolge l'effettivo lavoro USB, quindi installa un piccolo servizio che ripete l'operazione a ogni avvio. Sul core 0 resta solo un breve segnale di risveglio.
 
 1.  Assicuratevi che il vostro DAC sia acceso e collegato al Target.
-2.  Avvia la riproduzione musicale sul Target Diretta. Ciò garantisce che lo script possa rilevare il traffico di interrupt attivo. Se non hai nulla a portata di mano, puoi eseguire questo comando sull'Host:
+2.  Avvia la riproduzione musicale sul Target Diretta. Ciò garantisce che lo script possa rilevare il traffico di interrupt attivo; un Raspberry Pi 4 non ne ha bisogno. Se non hai nulla a portata di mano, puoi eseguire questo comando sull'Host:
     ```bash
     aplay /usr/share/sounds/alsa/Noise.wav
     ```
@@ -2688,7 +2688,7 @@ Per impostazione predefinita, anche quando i core della CPU sono isolati, gli in
     sudo sync && sudo reboot
     ```
 
-**Cosa fa lo script:** Rileva il percorso del DAC attivo (ad es. xhci-hcd:usb1 o xhci-hcd:usb3). Quindi aggiunge l'identificatore specifico al vostro gruppo di isolamento AudioLinux per creare un percorso dati isolato al 100% dall'ingresso di rete all'uscita USB.
+**Cosa fa lo script:** Rileva il percorso del DAC attivo (ad es. xhci-hcd:usb1 o xhci-hcd:usb3). Quindi aggiunge l'identificatore specifico al vostro gruppo di isolamento AudioLinux per creare un percorso dati isolato al 100% dall'ingresso di rete all'uscita USB. Su un Raspberry Pi 4, assegna invece il thread IRQ xHCI (`irq/<n>-xhci_hcd`) ai core 2 e 3 e abilita `usb-irq-thread-isolation.service` per ripetere l'operazione all'avvio.
 
 ---
 

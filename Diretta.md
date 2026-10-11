@@ -187,7 +187,7 @@ A complete bill of materials is provided below. While other parts can be substit
 
 After flashing, you must configure each Raspberry Pi individually to avoid network conflicts.
 
-This guide's parts list uses a Raspberry Pi 5 for both the Diretta Target (the device connected to your DAC) and the Diretta Host, but the two roles are hardware agnostic: Pi 4 to Pi 4, Pi 4 to Pi 5, Pi 5 to Pi 4 and Pi 5 to Pi 5 are all equally supported, and every combination reaches the same MTU 10222 link. The one difference is that a Pi 4 Target forgoes the USB interrupt steering in [**Appendix 7**](#20-appendix-7-optional-irq-and-thread-optimizations), which that board's hardware-locked interrupts do not allow. Compute Modules are untested. You will configure the Host first.
+This guide's parts list uses a Raspberry Pi 5 for both the Diretta Target (the device connected to your DAC) and the Diretta Host, but the two roles are hardware agnostic: Pi 4 to Pi 4, Pi 4 to Pi 5, Pi 5 to Pi 4 and Pi 5 to Pi 5 are all equally supported, and every combination reaches the same MTU 10222 link. The one difference is in [**Appendix 7**](#20-appendix-7-optional-irq-and-thread-optimizations): on a Pi 4 Target it moves the USB processing onto the audio cores, but the USB interrupt itself stays on core 0, because that board's hardware does not allow it to move. Compute Modules are untested. You will configure the Host first.
 
 > **CRITICAL WARNING:** Because both devices are flashed from the exact same image, they will have identical `machine-id` values. If you power both devices on at the same time while connected to the same LAN, your DHCP server will likely assign them the same IP address, causing a network conflict.
 >
@@ -2672,10 +2672,10 @@ sudo sync && sudo reboot
 ### Part 1: Diretta Target USB Path Isolation
 By default, even when CPU cores are isolated, USB interrupts may still compete for resources on the "noisy" system cores (0 and 1). This script dynamically identifies the specific USB controller your DAC is connected to and pins its hardware interrupts to your isolated audio cores (2 and 3).  On the Raspberry Pi 5, the USB controllers are managed by the RP1 chip, allowing us to steer hardware interrupts to specific cores.
 
-**Note:** This optimization is not applicable to the Raspberry Pi 4 due to hardware-locked interrupts.
+**Note:** On the Raspberry Pi 4, every USB port sits behind a single controller whose interrupt cannot be moved off core 0. The script detects this and instead pins the kernel thread that does the actual USB work to cores 2 and 3, then installs a small service that repeats this at every boot. Only a brief wake-up signal remains on core 0.
 
 1.  Ensure your DAC is powered on and connected to the Target.
-2.  Start music playback to the Diretta Target. This ensures the script can detect active interrupt traffic. If you don't have anything handy, you can run this command on the Host:
+2.  Start music playback to the Diretta Target. This ensures the script can detect active interrupt traffic; a Raspberry Pi 4 does not need it. If you don't have anything handy, you can run this command on the Host:
     ```bash
     aplay /usr/share/sounds/alsa/Noise.wav
     ```
@@ -2688,7 +2688,7 @@ By default, even when CPU cores are isolated, USB interrupts may still compete f
     sudo sync && sudo reboot
     ```
 
-**What this does:** The script locates the active DAC path (e.g., xhci-hcd:usb1 or xhci-hcd:usb3). It then adds the specific identifier to your AudioLinux isolation group to create a 100% isolated data path from network-in to USB-out.
+**What this does:** The script locates the active DAC path (e.g., xhci-hcd:usb1 or xhci-hcd:usb3). It then adds the specific identifier to your AudioLinux isolation group to create a 100% isolated data path from network-in to USB-out. On a Raspberry Pi 4, it instead pins the xHCI IRQ thread (`irq/<n>-xhci_hcd`) to cores 2 and 3 and enables `usb-irq-thread-isolation.service` to repeat this at boot.
 
 ---
 

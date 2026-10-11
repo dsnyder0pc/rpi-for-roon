@@ -230,10 +230,30 @@ sudo systemctl disable rtapp.timer"
 run_appendix7_checks() {
     header "Appendix 7" "Optional: USB IRQ Isolation"
 
-    # 1. Hardware Detection & Skip Logic
+    # 1. Raspberry Pi 4: the IRQ cannot be steered, so usb-isolation.sh pins
+    # the xHCI IRQ handler thread instead and installs a unit to redo it at
+    # boot. Check both. The thread exists from boot, so no playback is needed.
+    # With the unit installed the fix is local and works in Purist Mode, where
+    # the Target has no internet; only a missing unit needs the script fetched.
     MODEL=$(tr -d '\0' < /proc/device-tree/model)
     if [[ "$MODEL" == *"Raspberry Pi 4"* ]]; then
-        echo -e "  ${C_YELLOW}* Skipping check: Optimization not applicable to Raspberry Pi 4${C_RESET}"
+        if [ -f /etc/systemd/system/usb-irq-thread-isolation.service ]; then
+            RPI4_FIX="sudo systemctl enable usb-irq-thread-isolation.service
+sudo systemctl restart usb-irq-thread-isolation.service"
+        else
+            RPI4_FIX="# Needs internet access: switch to Standard mode first if Purist Mode is on.
+curl -fsSL https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/usb-isolation.sh | sudo bash"
+        fi
+        check "USB IRQ thread pinning runs at boot" "systemctl is-enabled --quiet usb-irq-thread-isolation.service" "$RPI4_FIX"
+        XHCI_PIDS=$(pgrep -x 'irq/[0-9]+-xhci_hcd')
+        THREADS_OK=false
+        if [ -n "$XHCI_PIDS" ]; then
+            THREADS_OK=true
+            for P in $XHCI_PIDS; do
+                grep -qE '^Cpus_allowed_list:[[:space:]]*2-3$' "/proc/$P/status" || THREADS_OK=false
+            done
+        fi
+        check "Runtime: xHCI IRQ thread is pinned to cores 2-3" "$THREADS_OK" "$RPI4_FIX"
         return
     fi
 
@@ -456,7 +476,7 @@ check_optional_section "pacman -Q argonone-c-git" "run_appendix1_checks" "Append
 check_optional_section "[ -f /usr/local/bin/purist-mode ]" "run_appendix3_checks" "Appendix 3 (Purist Mode)"
 check_optional_section "id purist-app" "run_appendix4_checks" "Appendix 4 (Web UI Backend)"
 check_optional_section "grep -q 'ISOLATED1=\"2,3\"' /opt/configuration/isolated.conf 2>/dev/null" "run_appendix6_checks" "Appendix 6 (Realtime Tuning)"
-check_optional_section "grep -q 'DEVICES1=.*xhci-hcd' /opt/configuration/isolated.conf" "run_appendix7_checks" "Appendix 7 (USB Isolation)"
+check_optional_section "grep -q 'DEVICES1=.*xhci-hcd' /opt/configuration/isolated.conf || [ -f /etc/systemd/system/usb-irq-thread-isolation.service ]" "run_appendix7_checks" "Appendix 7 (USB Isolation)"
 check_optional_section "[ -f /etc/diretta-100m ]" "run_appendix8_checks" "Appendix 8 (100Mbps Mode)"
 check_optional_section "grep -q '^ExtEtherMTU=' /opt/diretta-alsa-target/diretta_app_target_setting.inf" "run_appendix9_checks" "Appendix 9 (Jumbo Frames)"
 
