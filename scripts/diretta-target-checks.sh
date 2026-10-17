@@ -184,7 +184,9 @@ run_appendix4_checks() {
     check "'create-diretta-cache.sh' script is up-to-date" "check_hash /usr/local/bin/create-diretta-cache.sh https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh" \
         "curl -LO https://raw.githubusercontent.com/dsnyder0pc/rpi-for-roon/refs/heads/main/scripts/create-diretta-cache.sh
 sudo install -m 0755 create-diretta-cache.sh /usr/local/bin/
-rm create-diretta-cache.sh"
+rm create-diretta-cache.sh
+sudo systemctl daemon-reload
+sudo /usr/local/bin/create-diretta-cache.sh"
     check "'diretta-cache' service file exists" "[ -f /etc/systemd/system/diretta-cache.service ]"
     check "'diretta-cache' service is enabled" "systemctl is-enabled --quiet diretta-cache.service"
     check "'diretta-cache' service defines its runtime directory" "grep -q '^RuntimeDirectory=diretta' /etc/systemd/system/diretta-cache.service"
