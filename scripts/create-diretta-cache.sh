@@ -33,11 +33,23 @@ write_cache() {
     mv -f "$tmp" "$CACHE_FILE"
 }
 
+# The license file is the one file in TARGET_DIR that is not part of the Diretta
+# application -- the same criterion prepare_system uses to strip it from a card.
+license_file_present() {
+    [ -n "$(find "$TARGET_DIR" -maxdepth 1 -type f ! -name 'diretta*' -print -quit 2>/dev/null)" ]
+}
+
 # 1. Verify the activation binary is accessible
 if [ ! -x "$LICENSE_APP" ]; then
     logger -t "$LOG_TAG" "Error: Activation binary not found or not executable at $LICENSE_APP"
     exit 0
 fi
+
+# On a card's first boot there is no license file. diretta_alsa_target asks the
+# license server once, at start, and if the Host is not routing yet it runs in
+# limited mode and never rereads the file that diretta_app_activate fetches below.
+had_license_file=false
+license_file_present && had_license_file=true
 
 # 2. Loop until we receive a definitive response from the hardware activation binary
 attempt=0
@@ -50,6 +62,12 @@ while (( attempt < MAX_ATTEMPTS )); do
     if [[ "$activation_output" == "valid" || -z "$activation_output" ]]; then
         write_cache "Licensed"
         logger -t "$LOG_TAG" "Valid local hardware license verified."
+        # A license fetched just now means the running daemon may be limited.
+        # try-restart leaves a stopped daemon stopped.
+        if ! $had_license_file && license_file_present; then
+            logger -t "$LOG_TAG" "License file fetched; restarting diretta_alsa_target to leave limited mode."
+            systemctl try-restart diretta_alsa_target.service
+        fi
         exit 0
     fi
 
