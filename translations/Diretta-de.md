@@ -9,7 +9,7 @@ Der **Diretta-Host** wird mit Ihrem Hauptnetzwerk verbunden (für den Zugriff au
 Ich bemühe mich, diesen Leitfaden mit dem aktuellen offiziellen AudioLinux-Download-Link von Piero kompatibel zu halten.
 
 **Aktuelle Validierung:**
-Diese Anweisungen wurden zuletzt mit **AudioLinux V5** getestet (Image: `audiolinux_pi4-pi5_530`, Menüversion: `544`).
+Diese Anweisungen wurden zuletzt mit **AudioLinux V5** getestet (Image: `audiolinux_pi4-pi5_540`, Menüversion: `548`).
 
 **Ein Hinweis zu Updates:**
 Da AudioLinux auf Arch (einem Rolling Release) basiert, zieht eine Neuinstallation immer die absolut neueste Software. Sobald Ihr System wunschgemäß läuft, haben Sie zwei Möglichkeiten:
@@ -981,8 +981,10 @@ sudo sync && sudo reboot
         InfoCycle=80000
         FlexCycle=disable
         CycleTime=800
+        CyclePrio=0
         CycleMinTime=
         Debug=stdout
+        DebugTarget=disable
         periodMax=32
         periodMin=16
         periodSizeMax=38400
@@ -996,6 +998,7 @@ sudo sync && sudo reboot
         CpuOther=
         LatencyBuffer=0
         disConnectDelay=enable
+        disConnectWorkaround=disable
         singleMode=
         EOT
         ```
@@ -1534,7 +1537,7 @@ fi
 pyenv global "$PYVER"
 ```
 
-**Hinweis:** Es ist normal, dass der Teil `Installing Python-3.14.7...` etwa 10 Minuten dauert, da Python aus den Quellen kompiliert wird. Geben Sie nicht auf! Entspannen Sie sich bei schöner Musik über Ihre neue Diretta-Zone in Roon, während Sie warten. Diese sollte verfügbar sein, während Python auf dem Host installiert wird.
+**Hinweis:** Es ist normal, dass der Teil `Installing Python-3.15.1...` etwa 10 Minuten dauert, da Python aus den Quellen kompiliert wird. Geben Sie nicht auf! Entspannen Sie sich bei schöner Musik über Ihre neue Diretta-Zone in Roon, während Sie warten. Diese sollte verfügbar sein, während Python auf dem Host installiert wird.
 
 ---
 
@@ -2292,7 +2295,7 @@ Nun führen wir auf dem **Diretta-Host** alle Schritte zur Installation und Konf
     pyenv global $PYVER
     ```
 
-    **Hinweis:** Es ist normal, dass der Teil `Installing Python-3.14.7...` etwa 10 Minuten dauert, da Python aus den Quellen kompiliert wird. Geben Sie nicht auf! Entspannen Sie sich bei schöner Musik über Ihre neue Diretta-Zone in Roon, während Sie warten. Diese sollte verfügbar sein, während Python auf dem Host installiert wird.
+    **Hinweis:** Es ist normal, dass der Teil `Installing Python-3.15.1...` etwa 10 Minuten dauert, da Python aus den Quellen kompiliert wird. Geben Sie nicht auf! Entspannen Sie sich bei schöner Musik über Ihre neue Diretta-Zone in Roon, während Sie warten. Diese sollte verfügbar sein, während Python auf dem Host installiert wird.
 
 7.  **Avahi und Python-Abhängigkeiten auf dem Diretta-Host installieren:**
 
@@ -2710,8 +2713,10 @@ Mit den Echtzeit-Kernel-Optimierungen kann der Diretta-Host nun ein aggressivere
     InfoCycle=51400
     FlexCycle=disable
     CycleTime=514
+    CyclePrio=0
     CycleMinTime=
     Debug=disable
+    DebugTarget=disable
     periodMax=32
     periodMin=16
     periodSizeMax=38400
@@ -2726,6 +2731,7 @@ Mit den Echtzeit-Kernel-Optimierungen kann der Diretta-Host nun ein aggressivere
     CPUFLOW=3
     LatencyBuffer=0
     disConnectDelay=enable
+    disConnectWorkaround=disable
     singleMode=
     EOT
     ```

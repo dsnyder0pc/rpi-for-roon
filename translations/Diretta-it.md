@@ -9,7 +9,7 @@ Il **Diretta Host** si collegherà alla rete principale (per accedere al server 
 L'obiettivo è mantenere questa guida compatibile con il link di download ufficiale di AudioLinux attualmente fornito da Piero.
 
 **Validazione attuale:**
-Queste istruzioni sono state testate l'ultima volta con **AudioLinux V5** (Immagine: `audiolinux_pi4-pi5_530`, Versione Menu: `544`).
+Queste istruzioni sono state testate l'ultima volta con **AudioLinux V5** (Immagine: `audiolinux_pi4-pi5_540`, Versione Menu: `548`).
 
 **Nota sugli aggiornamenti:**
 Poiché AudioLinux è basato su Arch (una rolling release), una nuova installazione scaricherà sempre l'ultima versione assoluta del software. Una volta che il sistema è configurato e funzionante, avete due scelte:
@@ -981,8 +981,10 @@ sudo sync && sudo reboot
         InfoCycle=80000
         FlexCycle=disable
         CycleTime=800
+        CyclePrio=0
         CycleMinTime=
         Debug=stdout
+        DebugTarget=disable
         periodMax=32
         periodMin=16
         periodSizeMax=38400
@@ -996,6 +998,7 @@ sudo sync && sudo reboot
         CpuOther=
         LatencyBuffer=0
         disConnectDelay=enable
+        disConnectWorkaround=disable
         singleMode=
         EOT
         ```
@@ -1534,7 +1537,7 @@ fi
 pyenv global "$PYVER"
 ```
 
-**Nota:** È normale che la fase `Installing Python-3.14.7...` richieda circa 10 minuti, poiché compila Python a partire dai sorgenti. Non arrendetevi! Nell'attesa, rilassatevi ascoltando dell'ottima musica utilizzando la vostra nuovo sistema Diretta. Dovrebbe essere disponibile mentre Python si installa sull'Host.
+**Nota:** È normale che la fase `Installing Python-3.15.1...` richieda circa 10 minuti, poiché compila Python a partire dai sorgenti. Non arrendetevi! Nell'attesa, rilassatevi ascoltando dell'ottima musica utilizzando la vostra nuovo sistema Diretta. Dovrebbe essere disponibile mentre Python si installa sull'Host.
 
 ---
 
@@ -2292,7 +2295,7 @@ Ora, sul **Diretta Host**, eseguiremo tutti i passaggi per installare e configur
     pyenv global $PYVER
     ```
 
-    **Nota:** È normale che la fase `Installing Python-3.14.7...` richieda circa 10 minuti, poiché compila Python a partire dai sorgenti. Non arrendetevi! Nell'attesa, rilassatevi ascoltando dell'ottima musica utilizzando la vostra nuovo sistema Diretta. Dovrebbe essere disponibile mentre Python si installa sull'Host.
+    **Nota:** È normale che la fase `Installing Python-3.15.1...` richieda circa 10 minuti, poiché compila Python a partire dai sorgenti. Non arrendetevi! Nell'attesa, rilassatevi ascoltando dell'ottima musica utilizzando la vostra nuovo sistema Diretta. Dovrebbe essere disponibile mentre Python si installa sull'Host.
 
 7.  **Installare Avahi e le dipendenze di Python sul Diretta Host:**
 
@@ -2710,8 +2713,10 @@ Grazie alle ottimizzazioni del kernel in tempo reale, il Diretta Host può ora g
     InfoCycle=51400
     FlexCycle=disable
     CycleTime=514
+    CyclePrio=0
     CycleMinTime=
     Debug=disable
+    DebugTarget=disable
     periodMax=32
     periodMin=16
     periodSizeMax=38400
@@ -2726,6 +2731,7 @@ Grazie alle ottimizzazioni del kernel in tempo reale, il Diretta Host può ora g
     CPUFLOW=3
     LatencyBuffer=0
     disConnectDelay=enable
+    disConnectWorkaround=disable
     singleMode=
     EOT
     ```

@@ -9,7 +9,7 @@ Le **Host Diretta** se connectera à votre réseau principal (pour accéder à v
 Mon objectif est de maintenir ce guide compatible avec le lien de téléchargement officiel actuel d'AudioLinux fourni par Piero.
 
 **Validation actuelle :**
-Ces instructions ont été testées pour la dernière fois avec **AudioLinux V5** (Image : `audiolinux_pi4-pi5_530`, Version du menu : `544`).
+Ces instructions ont été testées pour la dernière fois avec **AudioLinux V5** (Image : `audiolinux_pi4-pi5_540`, Version du menu : `548`).
 
 **Note concernant les mises à jour :**
 Comme AudioLinux est basé sur Arch (une rolling release), une nouvelle installation téléchargera toujours les logiciels les plus récents. Une fois que votre système fonctionne à merveille, vous avez deux choix :
@@ -981,8 +981,10 @@ sudo sync && sudo reboot
         InfoCycle=80000
         FlexCycle=disable
         CycleTime=800
+        CyclePrio=0
         CycleMinTime=
         Debug=stdout
+        DebugTarget=disable
         periodMax=32
         periodMin=16
         periodSizeMax=38400
@@ -996,6 +998,7 @@ sudo sync && sudo reboot
         CpuOther=
         LatencyBuffer=0
         disConnectDelay=enable
+        disConnectWorkaround=disable
         singleMode=
         EOT
         ```
@@ -1534,7 +1537,7 @@ fi
 pyenv global "$PYVER"
 ```
 
-**Note :** Il est normal que l'étape `Installing Python-3.14.7...` prenne environ 10 minutes car elle compile Python à partir des sources. N'abandonnez pas ! N'hésitez pas à vous détendre en écoutant de la belle musique sur votre nouveau système Diretta pendant que vous attendez. Elle devrait être disponible pendant l'installation de Python sur le Host.
+**Note :** Il est normal que l'étape `Installing Python-3.15.1...` prenne environ 10 minutes car elle compile Python à partir des sources. N'abandonnez pas ! N'hésitez pas à vous détendre en écoutant de la belle musique sur votre nouveau système Diretta pendant que vous attendez. Elle devrait être disponible pendant l'installation de Python sur le Host.
 
 ---
 
@@ -2292,7 +2295,7 @@ Maintenant, sur le **Host Diretta**, nous allons effectuer toutes les étapes po
     pyenv global $PYVER
     ```
 
-    **Note :** Il est normal que l'étape `Installing Python-3.14.7...` prenne environ 10 minutes car elle compile Python à partir des sources. N'abandonnez pas ! N'hésitez pas à vous détendre en écoutant de la belle musique sur votre nouveau système Diretta pendant que vous attendez. Elle devrait être disponible pendant l'installation de Python sur le Host.
+    **Note :** Il est normal que l'étape `Installing Python-3.15.1...` prenne environ 10 minutes car elle compile Python à partir des sources. N'abandonnez pas ! N'hésitez pas à vous détendre en écoutant de la belle musique sur votre nouveau système Diretta pendant que vous attendez. Elle devrait être disponible pendant l'installation de Python sur le Host.
 
 7.  **Installer Avahi et les dépendances Python sur le Host Diretta :**
 
@@ -2710,8 +2713,10 @@ Grâce aux optimisations du noyau en temps réel, le Host Diretta peut désormai
     InfoCycle=51400
     FlexCycle=disable
     CycleTime=514
+    CyclePrio=0
     CycleMinTime=
     Debug=disable
+    DebugTarget=disable
     periodMax=32
     periodMin=16
     periodSizeMax=38400
@@ -2726,6 +2731,7 @@ Grâce aux optimisations du noyau en temps réel, le Host Diretta peut désormai
     CPUFLOW=3
     LatencyBuffer=0
     disConnectDelay=enable
+    disConnectWorkaround=disable
     singleMode=
     EOT
     ```

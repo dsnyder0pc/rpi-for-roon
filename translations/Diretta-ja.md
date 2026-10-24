@@ -9,7 +9,7 @@
 このガイドは、Piero氏が提供する現在の公式AudioLinuxダウンロードリンクとの互換性を維持することを目的としています。
 
 **現在の動作確認状況：**
-これらの手順は、**AudioLinux V5**（イメージ：`audiolinux_pi4-pi5_530`、メニューバージョン：`544`）で最後にテストされました。
+これらの手順は、**AudioLinux V5**（イメージ：`audiolinux_pi4-pi5_540`、メニューバージョン：`548`）で最後にテストされました。
 
 **アップデートに関する注意：**
 AudioLinuxはArch Linux（ローリングリリース）ベースであるため、新規インストール時には常に最新のソフトウェアが取得されます。システムが正常に動作し始めたら、次の2つの選択肢があります。
@@ -981,8 +981,10 @@ sudo sync && sudo reboot
         InfoCycle=80000
         FlexCycle=disable
         CycleTime=800
+        CyclePrio=0
         CycleMinTime=
         Debug=stdout
+        DebugTarget=disable
         periodMax=32
         periodMin=16
         periodSizeMax=38400
@@ -996,6 +998,7 @@ sudo sync && sudo reboot
         CpuOther=
         LatencyBuffer=0
         disConnectDelay=enable
+        disConnectWorkaround=disable
         singleMode=
         EOT
         ```
@@ -1534,7 +1537,7 @@ fi
 pyenv global "$PYVER"
 ```
 
-**注意：** ソースからPythonをコンパイルするため、`Installing Python-3.14.7...`のステップには通常10分程度かかります。途中で止めないでください！待ち時間の間は、新しいDirettaシステムから流れる素晴らしい音楽を聴いてリラックスしましょう。Host側でPythonのインストールが実行されている間も、音楽の再生は可能です。
+**注意：** ソースからPythonをコンパイルするため、`Installing Python-3.15.1...`のステップには通常10分程度かかります。途中で止めないでください！待ち時間の間は、新しいDirettaシステムから流れる素晴らしい音楽を聴いてリラックスしましょう。Host側でPythonのインストールが実行されている間も、音楽の再生は可能です。
 
 ---
 
@@ -2292,7 +2295,7 @@ source ~/.bashrc
     pyenv global $PYVER
     ```
 
-    **注意：** ソースからPythonをコンパイルするため、`Installing Python-3.14.7...`のステップには通常10分程度かかります。途中で止めないでください！待ち時間の間は、新しいDirettaシステムから流れる素晴らしい音楽を聴いてリラックスしましょう。Host側でPythonのインストールが実行されている間も、音楽の再生は可能です。
+    **注意：** ソースからPythonをコンパイルするため、`Installing Python-3.15.1...`のステップには通常10分程度かかります。途中で止めないでください！待ち時間の間は、新しいDirettaシステムから流れる素晴らしい音楽を聴いてリラックスしましょう。Host側でPythonのインストールが実行されている間も、音楽の再生は可能です。
 
 7.  **Diretta HostへのAvahiおよびPython依存関係のインストール：**
 
@@ -2710,8 +2713,10 @@ sudo sync && sudo reboot
     InfoCycle=51400
     FlexCycle=disable
     CycleTime=514
+    CyclePrio=0
     CycleMinTime=
     Debug=disable
+    DebugTarget=disable
     periodMax=32
     periodMin=16
     periodSizeMax=38400
@@ -2726,6 +2731,7 @@ sudo sync && sudo reboot
     CPUFLOW=3
     LatencyBuffer=0
     disConnectDelay=enable
+    disConnectWorkaround=disable
     singleMode=
     EOT
     ```
