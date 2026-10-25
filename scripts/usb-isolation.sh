@@ -11,6 +11,14 @@ RPI4_UNIT="/etc/systemd/system/usb-irq-thread-isolation.service"
 
 echo "--- Diretta Target Smart USB Optimization ---"
 
+# 0. Target only. A Host's USB Ethernet uplink busies an xHCI IRQ just like a
+# DAC does, so on a Host this would pin the uplink onto the audio cores.
+if [[ "$(hostname)" != "diretta-target" ]]; then
+    echo "Error: This script is for the Diretta Target only (this is '$(hostname)')."
+    echo "Nothing was changed. Run it on the Target, while music is playing."
+    exit 1
+fi
+
 # 1. Hardware Detection
 MODEL=$(tr -d '\0' < /proc/device-tree/model)
 echo "System: $MODEL"
